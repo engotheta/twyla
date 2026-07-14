@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm view *)",
+      "Bash(pkill -f \"ng serve\")",
+      "Bash(pkill -f \"port 4300\")",
+      "Bash(npx prettier *)",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(node -e \"require.resolve\\('playwright'\\)\")",
+      "Bash(npx --yes playwright install --dry-run chromium)",
+      "Bash(npm install *)",
+      "Bash(npx playwright *)",
+      "Bash(node \"C:/Users/abrah/AppData/Local/Temp/claude/x--Work-WorkY-Apps-STUDIO-studio/2906880e-d989-4937-8447-bda412ecdae1/scratchpad/verify.js\")",
+      "Bash(node verify-tmp.js)",
+      "Bash(netstat -ano)",
+      "Bash(powershell -Command \"Stop-Process -Id 16088 -Force\")",
+      "Bash(node debug2-tmp.js)",
+      "Bash(rm -f verify-tmp.js debug-tmp.js debug2-tmp.js verify2-tmp.js)",
+      "Bash(powershell -Command 'Get-NetTCPConnection -LocalPort 4300 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }')",
+      "Bash(npm uninstall *)",
+      "Bash(node debug4-tmp.js)",
+      "Bash(rm -f verify-tmp.js verify2-tmp.js verify3-tmp.js debug-tmp.js debug2-tmp.js debug3-tmp.js debug4-tmp.js debug5-tmp.js)",
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(npm --version)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(npm config *)",
+      "Bash(tail -60 \"$\\(npm config get cache\\)/_logs/2026-07-13T13_51_23_832Z-debug-0.log\")",
+      "Bash(tail -80 \"$\\(npm config get cache\\)/_logs/2026-07-13T13_51_22_407Z-debug-0.log\")",
+      "Bash(wc -l \"$\\(npm config get cache\\)/_logs/2026-07-13T13_51_07_507Z-debug-0.log\")",
+      "Bash(ls -t \"$\\(npm config get cache\\)/_logs\")",
+      "Bash(wc -l \"$\\(npm config get cache\\)/_logs/2026-07-13T14_08_39_752Z-debug-0.log\")",
+      "Bash(tail -30 \"$\\(npm config get cache\\)/_logs/2026-07-13T14_08_39_752Z-debug-0.log\")",
+      "PowerShell(Get-MpThreatDetection -ErrorAction SilentlyContinue)",
+      "Bash(tasklist)",
+      "Bash(git stash *)"
+    ]
+  }
+}

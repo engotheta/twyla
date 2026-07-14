@@ -1,0 +1,47 @@
+<div
+  class="{{
+    'flex px-3 p-2 min-h-[50px] w-full justify-between items-center flex-wrap'
+      | mergeClasses: containerClass_()
+  }}"
+>
+  <div class="inline-flex items-center justify-center opacity-60">
+    @if (icon_() || title_()) {
+      @if (icon_(); as icon) {
+        <mat-icon
+          class="{{ 'me-2' | mergeClasses: iconClass_() }} {{ animation_() }} --order-3"
+          [svgIcon]="icon"
+        />
+      }
+
+      <div class="flex items-center h-full">
+        @if (title_(); as title) {
+          <span
+            class="{{ 'font-bold text-lg' | mergeClasses: titleClass_() }}
+             {{ animation_() }} --order-4"
+          >
+            {{ title | signal }}
+          </span>
+        }
+
+        @if (subtitle_(); as subtitle) {
+          <span
+            class="{{
+              'ms-2 px-2 bg-primary text-white rounded-lg small' | mergeClasses: subtitleClass_()
+            }} {{ animation_() }} --order-5"
+          >
+            {{ subtitle }}
+          </span>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="inline-flex items-center flex-wrap">
+    <action-buttons
+      class="inline-flex flex-wrap {{ animation_() }} --order-4"
+      [data]="data_()"
+      [buttons]="actionButtons_()"
+      [animation]="animation_()"
+    />
+  </div>
+</div>

@@ -1,0 +1,116 @@
+@let vm = viewModel();
+
+@if (vm.visible) {
+  <ng-template #buttonContent>
+    <span class="flex items-center justify-center gap-2 flex-1">
+      @if (vm.icon && vm.iconPosition === 'before') {
+        <ng-container [ngTemplateOutlet]="iconTemplate" />
+      }
+      @if (showLabel()) {
+        <span class="truncate" [class]="vm.labelClass">{{ displayLabel() }}</span>
+      }
+      @if (vm.icon && vm.iconPosition === 'after') {
+        <ng-container [ngTemplateOutlet]="iconTemplate" />
+      }
+    </span>
+  </ng-template>
+
+  <ng-template #iconTemplate>
+    @switch (vm.iconType) {
+      @case ('material') {
+        <mat-icon [class]="vm.iconClass" aria-hidden="true">{{ vm.icon }}</mat-icon>
+      }
+      @case ('SVG') {
+        <mat-icon [svgIcon]="vm.icon ?? ''" [class]="vm.iconClass" aria-hidden="true" />
+      }
+      @default {
+        <img [src]="vm.icon" alt="" class="h-5 w-5 object-contain" [class]="vm.iconClass" />
+      }
+    }
+  </ng-template>
+
+  @if (isFileButton()) {
+    <input
+      #fileInput
+      type="file"
+      class="hidden"
+      [multiple]="vm.fileConfig?.multiple ?? false"
+      [attr.accept]="acceptAttribute()"
+      (change)="onFileSelected($event)"
+    />
+  }
+
+  <mat-menu #childMenu="matMenu">
+    <div class="flex flex-col gap-1 p-1" [class]="vm.childrenHolderClass">
+      @for (child of childButtons(); track child.slug ?? $index) {
+        <action-button [button]="child" [parentData]="data()" />
+      }
+    </div>
+  </mat-menu>
+
+  <div
+    class="inline-flex"
+    [matTooltip]="vm.tooltip ?? ''"
+    [matTooltipDisabled]="!vm.tooltip"
+    [matTooltipPosition]="vm.tooltipPosition"
+    [matTooltipClass]="vm.tooltipClass ?? ''"
+    [matMenuTriggerFor]="hasChildren() ? childMenu : null"
+    [attr.aria-label]="ariaLabel()"
+    (click)="handleClick($event)"
+  >
+    @switch (type()) {
+      @case ('fab') {
+        <button
+          mat-fab
+          type="button"
+          [class]="vm.class"
+          [extended]="!!displayLabel()"
+          [disabled]="vm.disabled"
+          [buttonLoading]="vm.loading"
+        >
+          <ng-container [ngTemplateOutlet]="buttonContent" />
+        </button>
+      }
+      @case ('mini-fab') {
+        <button
+          mat-mini-fab
+          type="button"
+          [class]="vm.class"
+          [disabled]="vm.disabled"
+          [buttonLoading]="vm.loading"
+        >
+          <ng-container [ngTemplateOutlet]="buttonContent" />
+        </button>
+      }
+      @case ('icon') {
+        <ng-container *ngTemplateOutlet="iconButton; context: { $implicit: false }" />
+      }
+      @case ('mini-icon') {
+        <ng-container *ngTemplateOutlet="iconButton; context: { $implicit: true }" />
+      }
+      @default {
+        <button
+          matButton="outlined"
+          type="button"
+          [class]="vm.class"
+          [buttonLoading]="vm.loading"
+          [disabled]="vm.disabled"
+        >
+          <ng-container [ngTemplateOutlet]="buttonContent" />
+        </button>
+      }
+    }
+  </div>
+
+  <ng-template #iconButton let-mini>
+    <button
+      mat-icon-button
+      type="button"
+      [class]="mini ? '!h-8 !w-8 scale-90 ' + vm.class : vm.class"
+      [disabled]="vm.disabled"
+      [buttonLoading]="vm.loading"
+    >
+      <ng-container [ngTemplateOutlet]="buttonContent" />
+    </button>
+  </ng-template>
+}

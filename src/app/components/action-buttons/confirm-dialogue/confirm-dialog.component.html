@@ -1,0 +1,31 @@
+<h2 mat-dialog-title class="flex items-center gap-2">
+  @if (data.icon) {
+    <mat-icon aria-hidden="true">{{ data.icon }}</mat-icon>
+  }
+  {{ data.title ?? 'Please confirm' }}
+</h2>
+
+<mat-dialog-content>
+  @if (data.subTitle) {
+    <p class="font-medium">{{ data.subTitle }}</p>
+  }
+  @if (data.message) {
+    <p>{{ data.message }}</p>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" [class]="data.cancelButtonClass" (click)="cancel()">
+    {{ data.cancelText ?? 'Cancel' }}
+  </button>
+
+  <button
+    mat-flat-button
+    type="button"
+    cdkFocusInitial
+    [class]="data.confirmButtonClass"
+    (click)="confirm()"
+  >
+    {{ data.confirmText ?? 'Confirm' }}
+  </button>
+</mat-dialog-actions>
