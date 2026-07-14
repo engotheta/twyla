@@ -8,25 +8,50 @@ export interface FieldsProperties {
 // inputs
 export interface DetailsParameter<TEntity = Record<string, unknown>> {
   header?: HeaderConfig;
+
+  //a css animation class
   animation?: string;
+
+  // if set, fields will be sorted by this order,
+  // otherwise they will be sorted by the order in the object
   sortby?: FieldsSort | FieldsSort[];
-  sortOrder?: DataField[];
+
+  // if set, fields will be shown in this order
+  sortedFields?: DataField[];
+
+  // defaults to 'list'
   layout?: FieldLayout;
 
   entity?: TEntity;
+
+  // if set, only these fields will be shown,
+  // if ['key1', 'key2', ...] then these keys will be shown in that order plus the rest of the keys
   visibleFields?: DataField[];
+
   fieldGroups?: FieldGroup[];
   fieldsGroupsMap?: FieldsGroupsMap;
+
+  // if true, groups will be shown in tabs instead of a list
+  showGroupsInTabs?: boolean;
+
+  // fieldsProperties and fieldsStrings, and can be used to modify the field's properties
+  fieldsProperties?: FieldsProperties;
+
+  // keystring/path modifiers for fields, e.g. 'key1 type(string), key2 label(My Label)'
+  fieldsStrings?: string[];
+
+  autoMapValues?: boolean;
+
+  // if true, the value will be clickable and will show the inner object in a modal,
+  // if false, the value will be shown as a string
+  viewInnerObjects?: boolean;
+
+  // if set, this value will be used for undefined values instead of 'undefined' def: '--'
+  undefinedValue?: string;
 
   hiddenFields?: string[];
   showSensitive?: boolean;
   showUndefined?: boolean;
-  fieldsProperties?: FieldsProperties;
-  fieldsStrings?: string[];
-
-  autoMapValues?: boolean;
-  undefinedValue?: string;
-  viewInnerObjects?: boolean;
 
   fieldConfig?: FieldConfig;
   tableConfig?: TableConfig;

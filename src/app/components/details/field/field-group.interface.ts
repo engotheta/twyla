@@ -15,7 +15,11 @@ export interface FieldGroup {
 
   actionButtons?: ActionButton[];
 
+  // a list of keys or fields, if a key is not found in the object, it will be ignored
+  // if at least one key is found, the group will be shown, otherwise it will be hidden
+  // if "..." is found as one of the keys, all fields not existing in any other group will be added to this group
   fields?: DataField[];
+
   fieldsClass?: string;
 
   headerClass?: string;
@@ -25,6 +29,7 @@ export interface FieldGroup {
   labelClass?: string;
   labelsClass?: string;
 
+  showGroupsInTabs?: boolean;
   groups?: FieldGroup[] | FieldsGroupsMap;
   groupsClass?: string;
   groupsContainerClass?: string;
@@ -51,6 +56,7 @@ export interface FieldsParameter {
   visibleFields?: DataField[];
   sortedFields?: DataField[];
 
+  // strickly for getting fieldsProps / fieldsStrings from a detail object
   fieldGroups?: FieldGroup[];
   fieldGroupsMap?: FieldsGroupsMap;
 
@@ -82,6 +88,7 @@ export const GROUP_PROPS = [
   'labelClass',
   'labelsClass',
 
+  'showGroupsInTabs type(boolean)',
   'groupsClass',
   'groupsContainerClass',
 ];

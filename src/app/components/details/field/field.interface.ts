@@ -5,6 +5,18 @@ import {
 } from '../../action-buttons/action-button.interface';
 import { FieldGroupData } from './field-group.interface';
 
+// Each per-layout method (when reachable) reconfigures a consistent set of style properties —
+// `showUnderlines`, `showColon`, `groupsClass`, `groupLabelsClass`, `fieldsClass`,
+// `fieldsInnerClass`, `labelsClass`, `valuesClass` — via `mergeClasses`
+// helpers that combine a new class string with whatever the caller already set, rather than clobbering it outright.
+
+// | Layout        | Underlines | Colon | Visual shape                                       |
+// | ------------- | ---------- | ----- | -------------------------------------------------- |
+// | `table`       | off        | off   | Grid-row style: label col-5, value col-7, bordered |
+// | `palletes`    | off        | off   | Card-like grid row, no borders, subtle label bg    |
+// | `list`        | on         | off   | Stacked label-over-value                           |
+// | `inline-list` | off        | on    | Label + colon inline with value, badge-style label |
+
 export type FieldLayout = 'table' | 'list' | 'inline-list' | 'palletes';
 
 // Primitive JS types
