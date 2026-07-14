@@ -1,0 +1,278 @@
+@if (dialogData) {
+  <h2 mat-dialog-title class="flex items-center gap-2">
+    @if (dialogData.icon) {
+      <mat-icon aria-hidden="true">{{ dialogData.icon }}</mat-icon>
+    }
+    {{ dialogData.title ?? 'Details' }}
+  </h2>
+
+  <mat-dialog-content>
+    <ng-container [ngTemplateOutlet]="body" />
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" cdkFocusInitial (click)="dialogRef?.close()">Close</button>
+  </mat-dialog-actions>
+} @else {
+  <ng-container [ngTemplateOutlet]="body" />
+}
+
+<ng-template #body>
+  @let g = resolvedGroup();
+  @let groupConfig = resolvedGroupConfig();
+  @let arrayConfig = effectiveArrayConfig();
+  @let groupClass = resolvedIsArrayItem() ? arrayConfig?.groupClass : groupConfig?.class;
+
+  <div class="{{ 'relative' | mergeClasses: groupClass | mergeClasses: g.class ?? '' }}">
+    @if (g.icon && resolvedShowBgIconMark()) {
+      <bg-icon-mark [icon]="g.icon" [animation]="resolvedAnimation()" />
+    }
+
+    <!-- GROUP HEADER -->
+    @if (showHeader()) {
+      <div
+        class="{{
+          'relative flex items-center justify-between gap-2 p-[3px]'
+            | mergeClasses: g.headerClass ?? ''
+        }}"
+      >
+        <!-- ARRAY HEADER -->
+        @if (resolvedIsArrayItem()) {
+          <button
+            type="button"
+            class="flex flex-1 items-center gap-2 text-start cursor-pointer"
+            [attr.aria-expanded]="isOpen()"
+            [attr.aria-controls]="bodyId"
+            (click)="isOpen.set(!isOpen())"
+          >
+            <mat-icon
+              class="shrink-0 self-center transition-transform duration-200"
+              [class.rotate-90]="isOpen()"
+              aria-hidden="true"
+              >chevron_right</mat-icon
+            >
+            <span class="self-center inline-flex items-center gap-2">
+              <ng-container [ngTemplateOutlet]="groupTitleTpl" />
+            </span>
+          </button>
+        }
+
+        <!-- NORMAL GROUP HEADER -->
+        @else {
+          <div class="inline-flex items-center gap-2">
+            <ng-container [ngTemplateOutlet]="groupTitleTpl" />
+          </div>
+        }
+
+        @if (g.actionButtons?.length) {
+          <action-buttons
+            [data]="resolvedData()"
+            [buttons]="g.actionButtons"
+            [animation]="resolvedAnimation()"
+          />
+        }
+      </div>
+    }
+
+    @let field = effectiveFieldConfig();
+
+    <!-- ARRAY ITEM BODY -->
+    @if (resolvedIsArrayItem()) {
+      <div
+        class="grid transition-[grid-template-rows] duration-200 ease-in-out"
+        [style.grid-template-rows]="isOpen() ? '1fr' : '0fr'"
+      >
+        <div [id]="bodyId" class="overflow-hidden min-h-0">
+          <ng-container [ngTemplateOutlet]="fieldsBody" />
+        </div>
+      </div>
+    }
+    <!-- NORMAL GROUP BODY -->
+    @else {
+      <div [id]="bodyId">
+        <ng-container [ngTemplateOutlet]="fieldsBody" />
+      </div>
+    }
+
+    <!-- GROUP LABEL | ARRAY LABEL icon + label -->
+    <ng-template #groupTitleTpl>
+      @if (g.icon) {
+        <mat-icon aria-hidden="true">{{ g.icon }}</mat-icon>
+      }
+      @if (g.label) {
+        <span class="font-semibold {{ g.labelsClass ?? '' }}">{{ g.label }}</span>
+      }
+    </ng-template>
+
+    <!-- FIELDS BODY -->
+    <ng-template #fieldsBody>
+      @let ac = arrayConfig?.fieldsContainerClass;
+      @let fc = field?.containerClass;
+      @let fieldsContainerClass = resolvedIsArrayItem() ? (fc | mergeClasses: ac ?? '') : fc;
+
+      <div class="{{ 'relative' | mergeClasses: fieldsContainerClass ?? '' }}">
+        @for (row of rows(); track row.field.path ?? row.field.key) {
+          @let f = row.field;
+          @let vm = row.vm;
+
+          @let isArray = f.type?.toLowerCase()?.includes('array');
+
+          <div
+            [class]="
+              isArray ? (rowClass(row) | mergeClasses: arrayConfig?.class ?? '') : rowClass(row)
+            "
+            [matTooltip]="vm.tooltip ?? ''"
+            [matTooltipDisabled]="!vm.tooltip"
+            [matTooltipPosition]="vm.tooltipPosition"
+            [matTooltipClass]="vm.tooltipClass ?? ''"
+          >
+            <!-- FIELD LABEL -->
+            @if (hasLabel(f)) {
+              <span [class]="labelClass(row)" class="flex items-center justify-between gap-2">
+                <span class="inline-flex items-center gap-1">
+                  @if (vm.icon) {
+                    <mat-icon
+                      [class]="vm.iconClass ?? ''"
+                      class="align-text-bottom"
+                      aria-hidden="true"
+                      >{{ vm.icon }}</mat-icon
+                    >
+                  }
+                  @if (vm.labelIcon) {
+                    <mat-icon class="align-text-bottom" aria-hidden="true">{{
+                      vm.labelIcon
+                    }}</mat-icon>
+                  }
+                  {{ f.label }}{{ showColon(f) ? ':' : '' }}
+                </span>
+
+                <!-- array field actions (e.g. "Add") sit beside the label, not below the list -->
+                @if (isArray && f.buttons?.length) {
+                  <action-buttons
+                    [data]="resolvedData()"
+                    [buttons]="f.buttons"
+                    [animation]="resolvedAnimation()"
+                  />
+                }
+              </span>
+            }
+
+            <!-- FIELD VALUE -->
+            <div [class]="valueClass(row)">
+              <div [class]="vm.innerClass ?? ''">
+                @if (vm.valueIcon) {
+                  <mat-icon class="align-text-bottom me-1" aria-hidden="true">
+                    {{ vm.valueIcon }}
+                  </mat-icon>
+                }
+
+                <!-- object -->
+                @if (f.isObject && f.fields?.length) {
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 text-primary hover:underline"
+                    aria-haspopup="dialog"
+                    (click)="openObjectDialog(row)"
+                  >
+                    <field-value [field]="labelFieldData(f)" />
+                    <mat-icon class="align-text-bottom" aria-hidden="true">open_in_new</mat-icon>
+                  </button>
+                }
+
+                <!-- array  tabublar -->
+                @else if (f.fieldGroups?.length && f.tabular) {
+                  <data-table
+                    [columns]="tableColumns(f)"
+                    [rows]="f.fieldGroups ?? []"
+                    [caption]="f.label"
+                    [showIndex]="arrayConfig?.showHeaders !== false"
+                    [indexClass]="arrayConfig?.indexClass"
+                    [cellTemplate]="cellTpl"
+                    [rowActions]="f.itemButtons"
+                    [rowActionsData]="itemActionsData"
+                    [animation]="resolvedAnimation()"
+                    [pageSize]="pageSizeFor(f)"
+                  />
+
+                  <ng-template #cellTpl let-item let-column="column">
+                    @if (cellField(item, column.key); as cf) {
+                      <field-value [field]="cf" />
+                    }
+                  </ng-template>
+                }
+
+                <!-- // array: list of field groups -->
+                @else if (f.fieldGroups?.length) {
+                  <div class="flex flex-col gap-2">
+                    @for (fg of pagedFieldGroups(f); track $index) {
+                      <field-group
+                        class="block rounded-md border border-black/10 p-2"
+                        [parameter]="{
+                          ...childParameter(),
+                          isArrayItem: true,
+                          expanded: f.expanded ?? arrayConfig?.expanded ?? false,
+                          group: f.itemButtons?.length
+                            ? { ...fg, actionButtons: f.itemButtons }
+                            : fg,
+                          layout: nestedLayout(f),
+                          data: fg.object ?? resolvedData(),
+                        }"
+                      />
+                    }
+                  </div>
+
+                  @if (isArrayPaginated(f)) {
+                    <mat-paginator
+                      [length]="f.fieldGroups?.length ?? 0"
+                      [pageSize]="pageSizeFor(f)"
+                      [pageIndex]="pageIndexFor(f)"
+                      [hidePageSize]="true"
+                      [showFirstLastButtons]="true"
+                      (page)="onArrayPage(f, $event)"
+                    />
+                  }
+                }
+
+                <!-- scalar value | not object , not array -->
+                @else {
+                  <field-value [field]="f" />
+                }
+
+                <!-- field-level actions, e.g. "Edit" on a value; array actions sit by the label instead -->
+                @if (f.buttons?.length && (!isArray || !hasLabel(f))) {
+                  <action-buttons
+                    class="ms-2 inline-flex align-middle"
+                    [data]="resolvedData()"
+                    [buttons]="f.buttons"
+                    [animation]="resolvedAnimation()"
+                  />
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- SUB GROUPS -->
+      @if (subGroups().length) {
+        @if (inTabs()) {
+          <mat-tab-group [animationDuration]="'0ms'" class="{{ g.groupsClass ?? '' }}">
+            @for (sg of subGroups(); track sg.slug ?? sg.label ?? $index) {
+              <mat-tab [label]="sg.label ?? ''">
+                <div class="pt-3 {{ g.groupsContainerClass ?? '' }}">
+                  <field-group [parameter]="{ ...childParameter(), group: sg }" />
+                </div>
+              </mat-tab>
+            }
+          </mat-tab-group>
+        } @else {
+          <div class="flex flex-col gap-4 {{ g.groupsClass ?? '' }}">
+            @for (sg of subGroups(); track sg.slug ?? sg.label ?? $index) {
+              <field-group [parameter]="{ ...childParameter(), group: sg }" />
+            }
+          </div>
+        }
+      }
+    </ng-template>
+  </div>
+</ng-template>

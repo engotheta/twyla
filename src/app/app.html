@@ -1,6 +1,10 @@
-<main class="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-200 p-8">
-  <action-buttons [buttons]="buttons" [data]="data"/>
+<main class="flex min-h-screen flex-col items-center gap-6 bg-gray-200 p-8">
+  <action-buttons [buttons]="buttons" [data]="data" />
   <p class="text-sm text-gray-700">Last action: {{ log() }}</p>
+
+  <div class="w-full max-w-5xl rounded-lg bg-white p-4 shadow">
+    <app-details [parameter]="detailsParameter" />
+  </div>
 </main>
 
 <router-outlet />

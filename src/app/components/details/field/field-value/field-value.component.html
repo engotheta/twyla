@@ -1,0 +1,143 @@
+@let f = field();
+
+@switch (f.type) {
+  <!-- undefined: muted placeholder text -->
+  @case ('undefined') {
+    <span class="text-gray-400 italic">{{ f.value ?? undefinedValue() }}</span>
+  }
+
+  <!-- boolean: yes/no badge -->
+  @case ('boolean') {
+    <span
+      class="px-2 py-0.5 rounded-full text-xs font-medium {{
+        f.value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+      }}"
+    >
+      {{ f.value ? 'Yes' : 'No' }}
+    </span>
+  }
+
+  <!-- date: formatted, falling back to the raw value if it doesn't parse -->
+  @case ('date') {
+    @if (date(); as d) {
+      <time [attr.datetime]="d.toISOString()">{{ d | date: 'medium' }}</time>
+    } @else {
+      <span>{{ f.value }}</span>
+    }
+  }
+
+  <!-- percentage: number + progress bar -->
+  @case ('percentage') {
+    <div class="flex items-center gap-2 min-w-32">
+      <span class="text-sm tabular-nums">{{ percentage() }}%</span>
+      <div class="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+        <div class="h-full bg-primary" [style.width.%]="percentage()"></div>
+      </div>
+    </div>
+  }
+
+  <!-- hex color: swatch + code -->
+  @case ('hexColorCode') {
+    <span class="inline-flex items-center gap-2">
+      <span
+        class="size-5 rounded border border-black/10 inline-block shrink-0"
+        [style.background]="f.value"
+        aria-hidden="true"
+      ></span>
+      <code class="text-sm">{{ f.value }}</code>
+    </span>
+  }
+
+  <!-- comment: best-guess comment text pulled from the object, as a blockquote -->
+  @case ('comment') {
+    <blockquote class="italic text-sm border-s-2 border-gray-300 ps-2 whitespace-pre-wrap">
+      {{ commentText() }}
+    </blockquote>
+  }
+
+  <!-- attachment: icon + filename/link -->
+  @case ('attachment') {
+    @if (f.value) {
+      <a
+        [href]="f.value"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1 text-primary hover:underline"
+      >
+        <mat-icon class="shrink-0" aria-hidden="true">{{ attachmentIcon() }}</mat-icon>
+        <span class="truncate max-w-64">{{ f.value }}</span>
+      </a>
+    }
+  }
+
+  <!-- pdf: base64 pdf, opened in a new tab -->
+  @case ('pdf') {
+    @if (media(); as m) {
+      <a
+        [href]="m.uri"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1 text-primary hover:underline"
+      >
+        <mat-icon class="shrink-0" aria-hidden="true">picture_as_pdf</mat-icon>
+        <span>View PDF</span>
+      </a>
+    }
+  }
+
+  <!-- image: base64 image, rendered inline (NgOptimizedImage doesn't support inline base64) -->
+  @case ('image') {
+    @if (media(); as m) {
+      <img
+        [src]="m.uri"
+        [alt]="f.label ?? ''"
+        class="max-h-32 rounded border border-black/10 object-contain"
+      />
+    }
+  }
+
+  <!-- base64: unrouted blob, tell image vs. downloadable file apart from its file signature -->
+  @case ('base64') {
+    @if (media(); as m) {
+      @if (m.isImage) {
+        <img
+          [src]="m.uri"
+          [alt]="f.label ?? ''"
+          class="max-h-32 rounded border border-black/10 object-contain"
+        />
+      } @else {
+        <a
+          [href]="m.uri"
+          [download]="f.label ?? true"
+          class="inline-flex items-center gap-1 text-primary hover:underline"
+        >
+          <mat-icon class="shrink-0" aria-hidden="true">{{
+            m.isPdf ? 'picture_as_pdf' : 'download'
+          }}</mat-icon>
+          <span>Download</span>
+        </a>
+      }
+    }
+  }
+
+  <!-- string / number: plain text -->
+  @case ('string') {
+    <span class="whitespace-pre-wrap break-words">{{ f.value }}</span>
+  }
+  @case ('number') {
+    <span class="whitespace-pre-wrap break-words">{{ f.value }}</span>
+  }
+
+  <!-- everything else: arrays render as chips; anything unrecognized falls back to raw JSON -->
+  @default {
+    @if (isArray(f.value)) {
+      <div class="flex flex-wrap gap-1">
+        @for (item of f.value; track $index) {
+          <span class="px-2 py-0.5 rounded-full bg-gray-100 text-xs">{{ displayItem(item) }}</span>
+        }
+      </div>
+    } @else {
+      <pre class="whitespace-pre-wrap break-words text-xs m-0">{{ f.value | json }}</pre>
+    }
+  }
+}

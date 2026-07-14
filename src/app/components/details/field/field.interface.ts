@@ -101,6 +101,7 @@ export interface Field {
   tabular?: boolean;
   itemMap?: ItemKeyValueMap;
   itemButtons?: ActionButton[];
+  pageSize?: number; // if set, array will be paginated with this many items per page
 }
 
 //evaluated field

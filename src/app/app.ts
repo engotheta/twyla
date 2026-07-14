@@ -4,10 +4,36 @@ import { ActionButtonsComponent } from './components/action-buttons/action-butto
 import { ActionButton } from './components/action-buttons/action-button.interface';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { getAllFields } from './components/details/field/fields.helper';
+import { DetailsComponent } from './components/details/details.component';
+import { DetailsParameter } from './components/details/detail.interface';
+
+const entity = {
+  id: 'usr_8f3a21',
+  name: 'Jane Doe',
+  active: true,
+  score: 50,
+  themeColor: '#4f46e5',
+  createdAt: '2024-01-15T10:30:00Z',
+  bio: undefined,
+  permissions: ['read', 'write', 'delete'],
+  tags: ['important', 'urgent', 'archived'],
+  reportFile: 'reports/annual-2024.pdf',
+  feedback: { comment: 'Great service, would recommend!', author: 'Alex' },
+  address: { street: '123 Main', city: 'NYC', zip: '10001' },
+  settings: {
+    theme: 'dark',
+    features: { api: { enabled: true, version: 'v2' } },
+  },
+  users: Array.from({ length: 9 }, (_, i) => ({
+    id: i + 1,
+    name: `User ${i + 1}`,
+    role: i === 0 ? 'admin' : 'viewer',
+  })),
+};
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ActionButtonsComponent],
+  imports: [RouterOutlet, ActionButtonsComponent, DetailsComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,6 +44,74 @@ export class App {
   removeFile$ = new Subject<boolean>();
 
   data = true;
+
+  protected readonly detailsParameter: DetailsParameter = {
+    // header: { title: 'Sample Entity' },
+    // animation: '',
+    // autoMapValues: true,
+    // showUndefined: true,
+    // bg-icon-mark renders an SVG watermark icon; this app has no custom SVG icon set
+    // registered yet, so it's left off here to avoid noisy "icon not found" errors.
+    // showBgIconMark: false,
+    // showGroupsInTabs: true,
+
+    layout: 'list',
+
+    fieldsStrings: ['users  icon(group)', 'createdAt type(date)'],
+    fieldsProperties: {
+      id: { label: 'User ID', class: '!text-blue-600' },
+      name: {
+        label: 'Full Name',
+        value: (entity: any) => entity?.name?.toUpperCase(),
+        class: 'text-green-600',
+        buttons: [
+          { label: 'Edit', icon: 'edit', click: (user) => this.log.set(`Edit user ${user.name}`) },
+        ],
+      },
+      users: {
+        label: 'Users Listo',
+        class: 'text-purple-600',
+        tabular: false,
+        pageSize: 10,
+        value: (entity: any) =>
+          [{ id: 0, name: 'Default User', role: 'viewer' }]?.concat(entity?.users),
+        buttons: [
+          {
+            label: 'Add User',
+            icon: 'person_add',
+            click: () => this.log.set('Add user clicked'),
+          },
+        ],
+        itemButtons: [
+          {
+            label: 'View',
+            icon: 'visibility',
+            click: (user) => this.log.set(`View user ${user.name}`),
+          },
+        ],
+      },
+    },
+
+    fieldGroups: [
+      {
+        label: 'Profile',
+        icon: 'person',
+        fields: [
+          'id',
+          { key: 'name', class: (d) => (d.name?.includes('Jane') ? 'bg-gray-100' : '') },
+          'active',
+          'score icon(save) class(bg-green-100)',
+          'themeColor',
+          'createdAt',
+          'bio',
+        ],
+      },
+
+      { label: 'Access', icon: 'lock', fields: ['permissions', 'tags'] },
+      { label: 'Details', icon: 'info', fields: ['...'] },
+    ],
+    entity: entity,
+  };
 
   protected readonly buttons: ActionButton[] = [
     {

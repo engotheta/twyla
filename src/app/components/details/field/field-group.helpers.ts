@@ -1,8 +1,8 @@
-import { expand } from 'rxjs';
+import { ArrayConfig, DetailsParameter } from '../detail.interface';
 import { FieldsGroupsMap, FieldGroup, GROUP_PROPS, FieldGroupData } from './field-group.interface';
 import { camelToSpaced } from './field-labels.helpers';
 import { propsFromString } from './field-string.helpers';
-import { DataField } from './field.interface';
+import { DataField, FieldData } from './field.interface';
 import { expandDataFields } from './fields.helper';
 
 export function getGroupsFromMap(fieldsGroupsMap: FieldsGroupsMap): FieldGroupData[] {
@@ -85,4 +85,75 @@ export function dataFieldsFromDetail(groups: FieldGroup[]): DataField[][] {
   }
 
   return result;
+}
+
+// Simplest fallback: one group of all non-array fields, one group of arrays
+// (the array group is only added if an array is present and passes `arrayConfig` visibility).
+export function defaultGroups(fields: FieldData[], arrayConfig?: ArrayConfig): FieldGroupData[] {
+  const isArrayField = (f: FieldData) => !!f.type?.includes('Array');
+
+  const mainFields = fields.filter((f) => !isArrayField(f));
+  const arrayFields = fields.filter(isArrayField);
+
+  const groups: FieldGroupData[] = [];
+  if (mainFields.length) groups.push({ fields: mainFields });
+
+  const arraysVisible = arrayConfig?.visible !== false;
+  const hasValues = arrayFields.some((f) => Array.isArray(f.value) && f.value.length);
+
+  if (arraysVisible && arrayFields.length && (hasValues || arrayConfig?.showEmpty)) {
+    groups.push({ fields: arrayFields });
+  }
+
+  return groups;
+}
+
+// Matches evaluated FieldData onto explicit group definitions (from getGroupsFromMap /
+// getGroupsFromDetailsGroups) by key/path. A "..." key catches whatever no other group claimed.
+// Groups left with no fields and no subgroups are dropped.
+export function attachFieldsToGroups(
+  groups: FieldGroupData[],
+  fields: FieldData[],
+  used: Set<string> = new Set(),
+): FieldGroupData[] {
+  const fieldId = (f: FieldData) => f.path ?? f.key;
+
+  const resolved = groups.map((group) => {
+    const keys = group.keys?.filter((k) => k !== '...') ?? [];
+    const matched = keys.length ? fields.filter((f) => keys.includes(f.key) || keys.includes(f.path ?? '')) : [];
+
+    matched.forEach((f) => used.add(fieldId(f)));
+
+    const groups_ = group.groups?.length ? attachFieldsToGroups(group.groups, fields, used) : group.groups;
+
+    return { ...group, fields: matched, groups: groups_ };
+  });
+
+  const restIndex = groups.findIndex((g) => g.keys?.includes('...'));
+  if (restIndex > -1) {
+    const remaining = fields.filter((f) => !used.has(fieldId(f)));
+    resolved[restIndex] = {
+      ...resolved[restIndex],
+      fields: [...(resolved[restIndex].fields ?? []), ...remaining],
+    };
+  }
+
+  return resolved.filter((g) => (g.fields?.length ?? 0) > 0 || (g.groups?.length ?? 0) > 0);
+}
+
+// Three mutually-exclusive strategies, in priority order (see file header table):
+// fieldsGroupsMap > fieldGroups > defaultGroups.
+export function resolveFieldGroups(
+  fields: FieldData[],
+  parameter: Pick<DetailsParameter, 'fieldsGroupsMap' | 'fieldGroups' | 'arrayConfig'>,
+): FieldGroupData[] {
+  if (parameter.fieldsGroupsMap && Object.keys(parameter.fieldsGroupsMap).length) {
+    return attachFieldsToGroups(getGroupsFromMap(parameter.fieldsGroupsMap), fields);
+  }
+
+  if (parameter.fieldGroups?.length) {
+    return attachFieldsToGroups(getGroupsFromDetailsGroups(parameter.fieldGroups), fields);
+  }
+
+  return defaultGroups(fields, parameter.arrayConfig);
 }

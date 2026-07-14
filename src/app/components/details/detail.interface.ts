@@ -94,6 +94,9 @@ export interface ArrayConfig {
   showHeaders?: boolean;
   indexClass?: string;
   useTableThres?: number;
+  class?: string;
+  groupClass?: string; // group container class // item class
+  fieldsContainerClass?: string; // fields container class
 }
 
 export interface FieldGroupConfig {
@@ -112,4 +115,5 @@ export interface FieldConfig {
   showColon?: boolean;
   showUnderlines?: boolean;
   dividerClass?: string;
+  containerClass?: string;
 }

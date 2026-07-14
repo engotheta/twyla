@@ -34,7 +34,27 @@
       "Bash(tail -30 \"$\\(npm config get cache\\)/_logs/2026-07-13T14_08_39_752Z-debug-0.log\")",
       "PowerShell(Get-MpThreatDetection -ErrorAction SilentlyContinue)",
       "Bash(tasklist)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(xargs ls -la --time-style=full-iso)",
+      "Bash(sort -k6,7)",
+      "Bash(npx --no-install playwright --version)",
+      "Bash(npm ls *)",
+      "Read(//c/Users/abrah/AppData/Local/npm-cache/_npx/**)",
+      "Bash(./node_modules/.bin/playwright --version)",
+      "Bash(node -e \"console.log\\(require.resolve\\('playwright'\\)\\)\")",
+      "Bash(node -e \"const {chromium} = require\\('playwright'\\); chromium.launch\\(\\).then\\(b=>{console.log\\('launched ok'\\); return b.close\\(\\);}\\).catch\\(e=>{console.error\\('LAUNCH ERR', e.message\\); process.exit\\(1\\);}\\)\")",
+      "Bash(node \"C:\\\\Users\\\\abrah\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\x--Work-WorkY-Apps-STUDIO-studio\\\\3e1f2438-6b74-4dff-8833-5eb74a67768f\\\\scratchpad\\\\verify-details.js\")",
+      "Bash(node verify-details.tmp.js)",
+      "Bash(powershell -Command \"Stop-Process -Id 38960 -Force\")",
+      "Bash(curl -sf -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:4300)",
+      "Bash(rm -f verify-details.tmp.js details-dynamic-class.png)",
+      "Bash(powershell -Command \"Stop-Process -Id 31812 -Force\")",
+      "Bash(rm -f verify-modal.tmp.js modal-before.png modal-open.png)",
+      "Bash(powershell -Command \"Stop-Process -Id 24664 -Force\")",
+      "Bash(node verify-dual-mode.tmp.js)",
+      "Bash(rm -f verify-dual-mode.tmp.js dual-mode-dialog.png dual-mode-inline.png)",
+      "Bash(powershell -Command \"Stop-Process -Id 23228 -Force\")",
+      "Bash(node verify-buttons.tmp.js)"
     ]
   }
 }

@@ -154,7 +154,18 @@ export function getAllFields(obj: any, fp: FieldsParameter = {}, path: string = 
 
   while (paths.length) {
     const keyPath: string = <any>paths.shift();
-    const value = getPathValue(obj, keyPath);
+    const fullPath = path ? `${path}.${keyPath}` : keyPath;
+
+    // `value` is a DynamicValue like every other Field prop: a plain override, or a function
+    // computing the value from the object this field belongs to (only a fn is meaningful here —
+    // an Observable wouldn't fit getAllFields' synchronous evaluation, so it isn't supported).
+    const valueOverride = fp.fieldsProperties?.[fullPath]?.value;
+    const value =
+      typeof valueOverride === 'function'
+        ? valueOverride(obj)
+        : valueOverride !== undefined
+          ? valueOverride
+          : getPathValue(obj, keyPath);
 
     let type: FieldType = <any>undefined;
 
@@ -166,7 +177,6 @@ export function getAllFields(obj: any, fp: FieldsParameter = {}, path: string = 
 
     if (!type) type = getFieldType({ key: keyPath, value });
 
-    const fullPath = path ? `${path}.${keyPath}` : keyPath;
     const endsWithSensitive = SENSITIVE_KEYS.map((k) => capFirstChar(k));
     const fieldsStrings = fp.fieldsStrings ?? [];
     let value_ = fp.undefinedValue && !isValue(value) ? fp.undefinedValue : value;
@@ -176,7 +186,7 @@ export function getAllFields(obj: any, fp: FieldsParameter = {}, path: string = 
     // set auto icon on attachment fields
     if (['attachment'].includes(type)) baseField.labelIcon = getAttachmentIcon(value);
 
-    const undefinedHide = fp.hideUndefined && !isValue(value);
+    const undefinedHide = !fp.showUndefined && !isValue(value);
     const hiddenHide = !!fp?.hiddenFields?.length && isEither(fullPath, fp.hiddenFields);
 
     let p = fullPath;
@@ -199,6 +209,9 @@ export function getAllFields(obj: any, fp: FieldsParameter = {}, path: string = 
       ...baseField,
       ...propsFromString(fieldString, FIELD_PROPS, fp?.defaults),
       ...fp.fieldsProperties?.[fullPath],
+      // fieldsProperties may itself carry the (unevaluated) `value` fn we already resolved
+      // above into `value_` — reassert it last so the resolved value always wins.
+      value: value_,
     };
 
     let hasObjectItem = () => typeof value?.[0] === 'object';
@@ -243,17 +256,20 @@ export function attachNestedFields(field: FieldData, specs: FieldsParameter): Fi
 
   // object array value // items list are fieldgroups
   else if (field.type?.includes('Array') && hasObjectItem()) {
+    // an explicit `tabular` (from fieldsProperties/field string) always wins over the
+    // length-vs-threshold default
+    const tabular = field.tabular ?? value?.length >= (specs?.useTableThres ?? USE_TABLE_THRES);
     const fieldGroups: FieldGroupData[] = [];
 
     for (let index = 0; index < field.value.length; index++) {
       let labelField = getLabelField(field.value[index]);
       let fields = getAllFields(field.value[index], fieldSpecs, `${field.path}[${index}]`);
-      // remove labelField from fields
-      fields = fields.filter((f) => f.key !== labelField.key);
-      fieldGroups.push({ label: labelField?.value, fields });
+      // in card view the label is shown as the card's title, so drop it from the fields
+      // list to avoid repeating it; in table view every item needs its own column
+      if (!tabular) fields = fields.filter((f) => f.key !== labelField.key);
+      fieldGroups.push({ label: labelField?.value, object: field.value[index], fields });
     }
 
-    let tabular = value?.length >= (specs?.useTableThres ?? USE_TABLE_THRES);
     field = { ...field, tabular, fieldGroups };
   }
 

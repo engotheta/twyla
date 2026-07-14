@@ -33,6 +33,7 @@ export interface FieldGroup {
   fields?: DataField[];
 
   fieldsClass?: string;
+  fieldsContainerClass?: string;
 
   headerClass?: string;
   showHeader?: boolean;
@@ -81,7 +82,7 @@ export interface FieldsParameter {
   fieldsProperties?: FieldsProperties;
 
   autoMapValues?: boolean;
-  hideUndefined?: boolean;
+  showUndefined?: boolean;
   undefinedValue?: string;
   useTableThres?: number;
 
@@ -95,6 +96,7 @@ export const GROUP_PROPS = [
   'icon',
 
   'fields type(stringArray)',
+  'fieldsContainerClass',
   'fieldsClass',
 
   'headerClass',

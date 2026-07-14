@@ -1,0 +1,73 @@
+<div class="overflow-x-auto">
+  <table class="w-full text-sm border-collapse">
+    @if (caption()) {
+      <caption class="sr-only">{{ caption() }}</caption>
+    }
+
+    <thead>
+      <tr>
+        @if (showIndex()) {
+          <th scope="col" class="text-left font-medium opacity-70 pe-3 py-1">#</th>
+        }
+        @for (col of columns(); track col.key) {
+          <th scope="col" class="text-left font-medium opacity-70 pe-3 py-1">{{ col.label }}</th>
+        }
+        @if (hasActionsColumn()) {
+          <th scope="col" class="text-left font-medium opacity-70 pe-3 py-1">
+            {{ actionsLabel() }}
+          </th>
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      @for (row of pagedRows(); track $index) {
+        <tr class="border-t border-black/10">
+          @if (showIndex()) {
+            <td class="{{ indexClass() ?? 'pe-3 py-1 opacity-60' }}">
+              {{ indexOffset() + $index + 1 }}
+            </td>
+          }
+
+          @for (col of columns(); track col.key) {
+            <td class="pe-3 py-1 align-top">
+              @if (cellTemplate(); as tpl) {
+                <ng-container
+                  [ngTemplateOutlet]="tpl"
+                  [ngTemplateOutletContext]="{ $implicit: row, column: col }"
+                />
+              } @else {
+                {{ cellValue(row, col.key) }}
+              }
+            </td>
+          }
+
+          @if (rowTemplate(); as tpl) {
+            <td class="pe-3 py-1 align-top">
+              <ng-container [ngTemplateOutlet]="tpl" [ngTemplateOutletContext]="{ $implicit: row }" />
+            </td>
+          } @else if (rowActions()?.length) {
+            <td class="pe-3 py-1 align-top">
+              <action-buttons
+                [data]="rowActionsData()(row)"
+                [buttons]="rowActions()"
+                [animation]="animation()"
+              />
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (isPaginated()) {
+  <mat-paginator
+    [length]="rows().length"
+    [pageSize]="pageSize()!"
+    [pageIndex]="pageIndex()"
+    [hidePageSize]="true"
+    [showFirstLastButtons]="true"
+    (page)="onPage($event)"
+  />
+}
