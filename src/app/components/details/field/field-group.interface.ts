@@ -2,6 +2,18 @@ import { ActionButton } from '../../action-buttons/action-button.interface';
 import { FieldsProperties } from '../detail.interface';
 import { DataField } from './field.interface';
 
+// Three mutually-exclusive strategies, chosen by what inputs are provided, in this priority order:
+
+// | Priority | Trigger               | Method                     | Behavior                        |
+// | -------- | --------------------- | -------------------------- | ------------------------------- |
+// | 1        | `fieldsGroupsMap` set | `getGroupsFromMap`         | Explicit key→group mapping      |
+// | 1 (alt)  | `fieldGroups` set     | `getGroupsFromFieldGroups` | Explicit group definitions      |
+// | 2        | neither               | `defaultGroups`         | Two buckets: non-arrays, arrays |
+
+// After group assignment, empty groups are dropped unless `showEmptyGroups` is true.
+// note: **`defaultGroups`** is the simplest fallback: one group of all non-array fields,
+// one group of arrays (only added if any array is present and passes the `showEmptyArrays` visibility check).
+
 export interface FieldsSort {
   sortby: 'key' | 'label' | 'value';
   direction?: 'ASC' | 'DESC';
@@ -30,6 +42,10 @@ export interface FieldGroup {
   labelsClass?: string;
 
   showGroupsInTabs?: boolean;
+
+  // - Optional icon watermark (`bg-icon-mark`) if `group.icon && showBgIconMark`.
+  showBgIconMark?: boolean;
+
   groups?: FieldGroup[] | FieldsGroupsMap;
   groupsClass?: string;
   groupsContainerClass?: string;

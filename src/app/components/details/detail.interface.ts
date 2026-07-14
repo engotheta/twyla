@@ -31,6 +31,10 @@ export interface DetailsParameter<TEntity = Record<string, unknown>> {
   fieldGroups?: FieldGroup[];
   fieldsGroupsMap?: FieldsGroupsMap;
 
+  // if true, the background icon will be shown in eachGroup if has icon,
+  // from comp 'BgIconMarkComponent'
+  showBgIconMark?: boolean;
+
   // if true, groups will be shown in tabs instead of a list
   showGroupsInTabs?: boolean;
 
@@ -52,6 +56,9 @@ export interface DetailsParameter<TEntity = Record<string, unknown>> {
   hiddenFields?: string[];
   showSensitive?: boolean;
   showUndefined?: boolean;
+
+  // default: false
+  showEmptyArrays?: boolean;
 
   fieldConfig?: FieldConfig;
   tableConfig?: TableConfig;
