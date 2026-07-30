@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { JsonPipe } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { ActionButtonsComponent } from './components/action-buttons/action-buttons.component';
 import { ActionButton } from './components/action-buttons/action-button.interface';
@@ -6,6 +7,8 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { getAllFields } from './components/details/field/fields.helper';
 import { DetailsComponent } from './components/details/details.component';
 import { DetailsParameter } from './components/details/detail.interface';
+import { GenericFormComponent } from './components/generic-form';
+import { createSpeakerFormParams } from './conference-speaker-form.params';
 
 const entity = {
   id: 'usr_8f3a21',
@@ -33,7 +36,7 @@ const entity = {
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ActionButtonsComponent, DetailsComponent],
+  imports: [RouterOutlet, ActionButtonsComponent, DetailsComponent, GenericFormComponent, JsonPipe],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,6 +47,13 @@ export class App {
   removeFile$ = new Subject<boolean>();
 
   data = true;
+
+  protected readonly formResult = signal<{ mode: 'preview' | 'submitted'; value: unknown } | null>(null);
+
+  protected readonly speakerFormParams = createSpeakerFormParams(
+    (value) => this.formResult.set({ mode: 'submitted', value }),
+    (value) => this.formResult.set({ mode: 'preview', value }),
+  );
 
   protected readonly detailsParameter: DetailsParameter = {
     // header: { title: 'Sample Entity' },

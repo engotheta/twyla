@@ -1,0 +1,89 @@
+@let f = field();
+@let resolved = state();
+
+<div [class]="wrapperClass()">
+  @if (showHeader()) {
+    <div class="flex items-center justify-between gap-2 p-1">
+      @if (f.collapsible) {
+        <button
+          type="button"
+          class="flex flex-1 cursor-pointer items-center gap-2 text-start"
+          [attr.aria-expanded]="isOpen()"
+          [attr.aria-controls]="bodyId"
+          (click)="toggle()"
+        >
+          <mat-icon
+            class="shrink-0 transition-transform duration-200"
+            [class.rotate-90]="isOpen()"
+            aria-hidden="true"
+            >chevron_right</mat-icon
+          >
+          <ng-container [ngTemplateOutlet]="titleTpl" />
+        </button>
+      } @else {
+        <div class="flex items-center gap-2">
+          <ng-container [ngTemplateOutlet]="titleTpl" />
+        </div>
+      }
+    </div>
+  }
+
+  <div [id]="bodyId" [hidden]="!isOpen()">
+    @if (f.isList) {
+      @for (item of items(); track item.index) {
+        <div class="mb-2 rounded border border-black/10 p-2 {{ f.itemClass ?? '' }}">
+          <div class="mb-1 flex items-center justify-between gap-2">
+            <span class="text-sm font-medium">
+              @if (f.showIndex !== false) {
+                {{ item.index + 1 }}.
+              }
+              {{ item.label }}
+            </span>
+            @if (canRemove()) {
+              <button type="button" mat-icon-button aria-label="Remove item" (click)="removeItem(item.index)">
+                <mat-icon aria-hidden="true">delete</mat-icon>
+              </button>
+            }
+          </div>
+          <div [class]="f.fieldsContainerClass ?? ''">
+            @for (child of item.fields; track child) {
+              <ng-container
+                [ngTemplateOutlet]="fieldTemplate()"
+                [ngTemplateOutletContext]="{ $implicit: child, fieldsClass: f.fieldsClass }"
+              />
+            }
+          </div>
+        </div>
+      }
+      @if (canAdd()) {
+        <button
+          type="button"
+          mat-stroked-button
+          [attr.aria-label]="'Add ' + (f.label ?? 'item')"
+          (click)="addItem()"
+        >
+          <mat-icon aria-hidden="true">add</mat-icon>
+          Add
+        </button>
+      }
+    } @else {
+      <div [class]="f.fieldsContainerClass ?? ''">
+        @for (child of f.fields; track child) {
+          <ng-container
+            [ngTemplateOutlet]="fieldTemplate()"
+            [ngTemplateOutletContext]="{ $implicit: child, fieldsClass: f.fieldsClass }"
+          />
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<ng-template #titleTpl>
+  @if (resolved.icon) {
+    <mat-icon aria-hidden="true">{{ resolved.icon }}</mat-icon>
+  }
+  @if (resolved.label) {
+    <span class="font-semibold {{ f.labelsClass ?? '' }}">{{ resolved.label }}</span>
+  }
+</ng-template>

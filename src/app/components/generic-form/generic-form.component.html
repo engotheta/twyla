@@ -1,0 +1,123 @@
+@let p = params();
+
+<div [class]="p.outerClass ?? ''">
+  @if (dialogRef && p.title) {
+    <h2 mat-dialog-title class="flex items-center gap-2">
+      @if (p.icon) {
+        <mat-icon aria-hidden="true">{{ p.icon }}</mat-icon>
+      }
+      {{ p.title }}
+    </h2>
+  }
+
+  @if (dialogRef) {
+    <mat-dialog-content>
+      <ng-container [ngTemplateOutlet]="fieldsBodyTpl" />
+    </mat-dialog-content>
+  } @else {
+    <ng-container [ngTemplateOutlet]="fieldsBodyTpl" />
+  }
+
+  @if (!hasSteps && p.showFooter !== false) {
+    @if (dialogRef) {
+      <mat-dialog-actions [class]="p.footerClass ?? ''" align="end">
+        <ng-container [ngTemplateOutlet]="actionsTpl" />
+      </mat-dialog-actions>
+    } @else {
+      <div class="mt-4 flex items-center justify-end gap-2 {{ p.footerClass ?? '' }}">
+        <ng-container [ngTemplateOutlet]="actionsTpl" />
+      </div>
+    }
+  }
+</div>
+
+<ng-template #fieldsBodyTpl>
+  @if (hasSteps) {
+    <!-- stepperAppearance has no matching Material input on mat-stepper; exposed as a class
+         hook only, for apps that want to style it themselves -->
+    <mat-stepper
+      class="app-form-stepper-{{ p.stepperAppearance ?? 'default' }}"
+      [linear]="p.linearSteppers ?? false"
+      [orientation]="p.stepperOrientation ?? 'horizontal'"
+      [labelPosition]="p.stepperLabelPosition ?? 'end'"
+      [selectedIndex]="currentIndex()"
+      (selectedIndexChange)="currentIndex.set($event)"
+    >
+      @for (entry of steps; track $index) {
+        <mat-step [label]="entry.label()" [optional]="entry.optional" [completed]="entry.valid()">
+          <div [class]="p.fieldsContainerClass ?? ''">
+            @for (child of entry.fields; track child) {
+              <app-field [field]="child" [instance]="instance" [fieldsClass]="p.fieldsClass" />
+            }
+          </div>
+
+          @if (steps.length > 1) {
+            <div class="mt-4 flex items-center justify-between gap-2">
+              @if ($index === 0) {
+                @if (dialogRef) {
+                  <button mat-button type="button" (click)="cancel()">
+                    {{ p.cancelButtonLabel ?? 'Cancel' }}
+                  </button>
+                } @else {
+                  <span></span>
+                }
+              } @else {
+                <button mat-button type="button" (click)="back(entry)">
+                  @if (entry.step?.previousIcon) {
+                    <mat-icon aria-hidden="true">{{ entry.step?.previousIcon }}</mat-icon>
+                  }
+                  {{ entry.step?.previousLabel ?? 'Previous' }}
+                </button>
+              }
+
+              @if ($index === steps.length - 1) {
+                <button mat-flat-button color="primary" type="button" (click)="submitForm()">
+                  @if (p.submitButtonIcon) {
+                    <mat-icon aria-hidden="true">{{ p.submitButtonIcon }}</mat-icon>
+                  }
+                  {{ p.submitButtonLabel ?? 'Submit' }}
+                </button>
+              } @else {
+                <button
+                  mat-flat-button
+                  color="primary"
+                  type="button"
+                  [disabled]="(p.linearSteppers ?? false) && !entry.valid()"
+                  (click)="next(entry)"
+                >
+                  {{ entry.step?.nextLabel ?? 'Next' }}
+                  @if (entry.step?.nextIcon) {
+                    <mat-icon aria-hidden="true">{{ entry.step?.nextIcon }}</mat-icon>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </mat-step>
+      }
+    </mat-stepper>
+  } @else {
+    <div [class]="p.fieldsContainerClass ?? ''">
+      @for (child of topFields(); track child) {
+        <app-field [field]="child" [instance]="instance" [fieldsClass]="p.fieldsClass" />
+      }
+    </div>
+  }
+</ng-template>
+
+<ng-template #actionsTpl>
+  @if (banner(); as bannerMessage) {
+    <div class="me-auto text-sm text-red-600" role="alert">{{ bannerMessage }}</div>
+  }
+  @if (dialogRef) {
+    <button mat-button type="button" (click)="cancel()">{{ p.cancelButtonLabel ?? 'Cancel' }}</button>
+  }
+  @if (p.addSubmitButton !== false) {
+    <button mat-flat-button color="primary" type="button" (click)="submitForm()">
+      @if (p.submitButtonIcon) {
+        <mat-icon aria-hidden="true">{{ p.submitButtonIcon }}</mat-icon>
+      }
+      {{ p.submitButtonLabel ?? 'Submit' }}
+    </button>
+  }
+</ng-template>
