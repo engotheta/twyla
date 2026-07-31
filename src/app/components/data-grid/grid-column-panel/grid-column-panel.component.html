@@ -1,0 +1,81 @@
+<div class="w-72 max-h-96 overflow-y-auto p-2 bg-white" role="group" aria-label="Column visibility, order, and pinning">
+  <div
+    cdkDropList
+    [cdkDropListData]="entries()"
+    (cdkDropListDropped)="drop($event)"
+    class="flex flex-col gap-0.5"
+  >
+    @for (entry of entries(); track trackByKey($index, entry); let i = $index) {
+      <div
+        cdkDrag
+        [cdkDragData]="entry"
+        class="flex items-center gap-1 rounded px-1 py-1 hover:bg-black/5"
+      >
+        <div *cdkDragPlaceholder class="h-9 rounded border-2 border-dashed border-black/20 bg-black/5"></div>
+        <div
+          *cdkDragPreview
+          class="flex items-center gap-2 rounded border border-black/10 bg-white px-2 py-1 text-sm shadow-lg"
+        >
+          <mat-icon class="!text-base opacity-60">drag_indicator</mat-icon>
+          <span>{{ columnLabel(entry) }}</span>
+        </div>
+        <button
+          type="button"
+          cdkDragHandle
+          mat-icon-button
+          class="!w-7 !h-7 cursor-grab"
+          aria-label="Drag to reorder {{ columnLabel(entry) }}"
+        >
+          <mat-icon class="!text-base opacity-60">drag_indicator</mat-icon>
+        </button>
+
+        <mat-checkbox
+          [checked]="entry.visible"
+          (change)="toggleVisible(entry)"
+          class="flex-1 min-w-0"
+        >
+          <span class="truncate">{{ columnLabel(entry) }}</span>
+        </mat-checkbox>
+
+        <button
+          type="button"
+          mat-icon-button
+          class="!w-7 !h-7"
+          [class]="pinClass(entry)"
+          [matTooltip]="pinLabel(entry)"
+          [attr.aria-label]="pinLabel(entry)"
+          (click)="togglePin(entry)"
+        >
+          <mat-icon class="!text-base">push_pin</mat-icon>
+        </button>
+
+        <button
+          type="button"
+          mat-icon-button
+          class="!w-7 !h-7"
+          [disabled]="i === 0"
+          aria-label="Move {{ columnLabel(entry) }} up"
+          (click)="moveUp(i)"
+        >
+          <mat-icon class="!text-base">arrow_upward</mat-icon>
+        </button>
+
+        <button
+          type="button"
+          mat-icon-button
+          class="!w-7 !h-7"
+          [disabled]="i === entries().length - 1"
+          aria-label="Move {{ columnLabel(entry) }} down"
+          (click)="moveDown(i)"
+        >
+          <mat-icon class="!text-base">arrow_downward</mat-icon>
+        </button>
+      </div>
+    }
+  </div>
+
+  <button type="button" mat-button class="mt-2 w-full" (click)="reset()">
+    <mat-icon>restart_alt</mat-icon>
+    Reset columns
+  </button>
+</div>

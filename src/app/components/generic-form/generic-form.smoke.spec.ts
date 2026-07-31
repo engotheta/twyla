@@ -134,6 +134,65 @@ describe('FormEngineService (logic)', () => {
     });
   });
 
+  describe('isList: Dynamic<boolean> canAddItem + relative (./) observer paths', () => {
+    it("canAddItem reacts to the list's own current value (not just a static flag)", async () => {
+      const params: FormParameters<Record<string, unknown>> = {
+        fields: [
+          {
+            type: FieldType.object,
+            key: 'rows',
+            isList: true,
+            minItems: 1,
+            value: [{ name: '' }] as unknown as Record<string, unknown>,
+            canAddItem: observe('rows', (rows: { name: string }[]) => !!rows.at(-1)?.name),
+            fields: [{ type: FieldType.input, key: 'name' }],
+          },
+        ],
+      };
+      const instance = engine.build(params);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const rowsField = instance.fields.find((f) => f.key === 'rows')!;
+      const canAddItem = () => (instance.fieldState(rowsField)() as { canAddItem?: boolean }).canAddItem;
+      expect(canAddItem()).toBe(false);
+
+      const item0Fields = instance.listItemFields(rowsField, 0);
+      instance.control(item0Fields.find((f) => f.key === 'name')!)?.setValue('first');
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(canAddItem()).toBe(true);
+    });
+
+    it("'./sibling' resolves against the OBSERVING field's own isList item, independently per item", async () => {
+      const params: FormParameters<Record<string, unknown>> = {
+        fields: [
+          {
+            type: FieldType.object,
+            key: 'rows',
+            isList: true,
+            value: [{ key: 'age' }, { key: 'name' }] as unknown as Record<string, unknown>,
+            fields: [
+              { type: FieldType.input, key: 'key' },
+              { type: FieldType.input, key: 'label', value: observe('./key', (key: string) => `label-for-${key}`) },
+            ],
+          },
+        ],
+      };
+      const instance = engine.build(params);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(instance.form.getRawValue()).toEqual({
+        rows: [
+          { key: 'age', label: 'label-for-age' },
+          { key: 'name', label: 'label-for-name' },
+        ],
+      });
+    });
+  });
+
   it('required marker check: sync validators run and block submit', async () => {
     const params: FormParameters<Record<string, unknown>> = {
       fields: [

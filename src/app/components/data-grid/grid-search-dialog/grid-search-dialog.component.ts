@@ -1,0 +1,32 @@
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { FormInstance } from '../../generic-form';
+import { GridInstance } from '../grid-engine.service';
+import { GridSearchFieldsComponent } from '../grid-search-fields/grid-search-fields.component';
+
+export interface GridSearchDialogData<RowType = any> {
+  instance: GridInstance<RowType>;
+  /** the toolbar mount's own FormInstance — reused here (not rebuilt) so the dialog and the
+   *  toolbar's first-instance view never diverge into two separate forms */
+  formInstance: FormInstance<any>;
+}
+
+/**
+ * `searchFieldsMode: 'modal'` destination for search instances beyond the first — mirrors
+ * grid-details-dialog.component.ts's thin `MAT_DIALOG_DATA` host pattern. Opened by
+ * grid-toolbar.component.ts on `grid-search-fields`'s `(openDialogRequested)`.
+ */
+@Component({
+  selector: 'grid-search-dialog',
+  imports: [GridSearchFieldsComponent, MatDialogModule],
+  template: `
+    <h2 mat-dialog-title>Search</h2>
+    <div mat-dialog-content class="pt-2">
+      <grid-search-fields [instance]="data.instance" [existingInstance]="data.formInstance" />
+    </div>
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class GridSearchDialogComponent<RowType = any> {
+  protected readonly data = inject<GridSearchDialogData<RowType>>(MAT_DIALOG_DATA);
+}

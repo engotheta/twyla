@@ -6,6 +6,15 @@
  * Observes one or more control paths (top-most form scope, dot-notation for
  * nesting: 'address.street'). The callback receives the observed values in
  * path order and RETURNS the new prop value. Also invoked once at init.
+ *
+ * For a field that lives inside an `isList` item (e.g. one row of an
+ * `ObjectField` with `isList: true`), a path starting with `'./'` resolves
+ * against that item's OWN group instead of the top form — e.g. `'./key'` from
+ * a field at `searchFields.2.value` resolves to `searchFields.2.key`, its
+ * sibling within the same item. Every clone of the template field resolves
+ * `'./...'` relative to its OWN index, so one field definition works for every
+ * item. Not applicable outside an isList item (there's no item group to
+ * resolve against) — use an absolute path there.
  */
 export interface ObserverParameter<T = unknown> {
   paths: string | string[];

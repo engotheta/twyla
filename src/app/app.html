@@ -10,6 +10,10 @@
     <app-generic-form [params]="speakerFormParams" />
   </div>
 
+  <div class="w-full max-w-5xl rounded-lg bg-white p-4 shadow">
+    <data-grid [parameter]="gridParameter" />
+  </div>
+
   @if (formResult(); as result) {
     <div class="w-full max-w-4xl rounded-lg bg-gray-900 p-4 text-xs text-green-400 shadow">
       <p class="mb-2 font-semibold text-white">

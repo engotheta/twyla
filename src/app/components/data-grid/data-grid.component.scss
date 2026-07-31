@@ -1,0 +1,27 @@
+:host {
+  display: block;
+}
+
+th[style*='sticky'],
+td[style*='sticky'] {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+tbody tr:focus-within {
+  outline: 2px solid var(--mat-sys-primary, #1976d2);
+  outline-offset: -2px;
+}
+
+// Row drag placeholder (table mode): CDK's default placeholder strategy clones the dragged <tr>
+// itself (the only way to keep a valid <tr> inside <tbody> — a custom `*cdkDragPlaceholder`
+// template can't put a literal <tr> there, Angular's parser rejects a <tr> nested inside another
+// <tr>). Style the clone into an empty dashed gap instead of a ghost duplicate of the row's data.
+tbody tr.cdk-drag-placeholder {
+  background: rgba(0, 0, 0, 0.04);
+  outline: 2px dashed rgba(0, 0, 0, 0.2);
+  outline-offset: -2px;
+
+  > * {
+    visibility: hidden;
+  }
+}

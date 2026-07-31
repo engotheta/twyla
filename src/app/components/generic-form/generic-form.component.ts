@@ -7,6 +7,7 @@ import {
   OnInit,
   inject,
   input,
+  output,
   runInInjectionContext,
   Signal,
   signal,
@@ -55,6 +56,9 @@ interface DisplayStep {
 })
 export class GenericFormComponent implements OnInit, OnDestroy {
   readonly params = input.required<FormParameters>();
+  /** emits the built FormInstance once, at the end of ngOnInit (SPEC §15) — lets a parent
+   *  embedding <app-generic-form> call instance.form.reset()/.submit()/.formState() directly */
+  readonly instanceChange = output<FormInstance>();
 
   private readonly engine = inject(FormEngineService);
   // picks up the ref of whichever ancestor was opened via MatDialog.open() — works whether the
@@ -75,6 +79,7 @@ export class GenericFormComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.instance = this.engine.build(this.params());
+    this.instanceChange.emit(this.instance);
     runInInjectionContext(this.injector, () => {
       this.buildSteps();
       this.banner = this.makeBannerSignal();

@@ -113,6 +113,10 @@ export function createSpeakerFormParams(
         fields: [
           {
             type: FieldType.content,
+            contentParameter: {
+              content:
+                '<em>Tell us who you are.</em> Fields marked required must be filled in before you can continue.',
+            },
             value:
               '<em>Tell us who you are.</em> Fields marked required must be filled in before you can continue.',
           },

@@ -29,7 +29,8 @@ export interface FieldGroup {
 
   // a list of keys or fields, if a key is not found in the object, it will be ignored
   // if at least one key is found, the group will be shown, otherwise it will be hidden
-  // if "..." is found as one of the keys, all fields not existing in any other group will be added to this group
+  // if "..." is found as one of the keys, all fields not existing in
+  //  any other group will be added to this group
   fields?: DataField[];
 
   fieldsClass?: string;

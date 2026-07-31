@@ -100,7 +100,10 @@ export interface FormParameters<T = Record<string, unknown>> {
 
   // ── callbacks ──
   onSubmit?: (formValue: T, formState?: FormState<T>) => unknown;
+  /** fires on every user-driven form value change (SPEC §15) — NOT on init, unlike per-field Dynamic observers (§1) */
   onChange?: (formValue: T, formState: FormState<T>) => unknown;
+  /** debounce (ms) applied to `onChange` emissions off `form.valueChanges`; undefined = no debounce */
+  changeDebounce?: number;
 
   // ── modal integration ──
   /** emissions close the dialog when the form is rendered in a modal */

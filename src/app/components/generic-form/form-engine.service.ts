@@ -100,6 +100,8 @@ export class FormEngineService {
     const cascade = new Set<string>();
     /** isList ObjectField ⇒ item FormGroup ⇒ that item's own cloned FormField instances */
     const itemFieldsByGroup = new WeakMap<AbstractControl, ListItemFields>();
+    /** form-level subscriptions (currently just `params.onChange`, SPEC §15), torn down in `destroy()` */
+    const formSubs: Subscription[] = [];
 
     const fields = params.fields ?? [];
     if (params.model) this.seedModel(fields, params.model as Record<string, unknown>);
@@ -131,7 +133,10 @@ export class FormEngineService {
         this.addListItem(path, form, flat, runtimes, params, cascade, itemFieldsByGroup),
       removeListItem: (path, index) =>
         this.removeListItem(path, index, form, flat, runtimes, itemFieldsByGroup),
-      destroy: () => runtimes.forEach((rt) => rt.subs.forEach((s) => s.unsubscribe())),
+      destroy: () => {
+        runtimes.forEach((rt) => rt.subs.forEach((s) => s.unsubscribe()));
+        formSubs.forEach((s) => s.unsubscribe());
+      },
     };
 
     if (params.crossValidators?.length) {
@@ -140,6 +145,16 @@ export class FormEngineService {
 
     // SPEC §1: initial observer pass, declaration order (walk order == declaration order)
     for (const f of flat) this.wireField(f, form, flat, runtimes, cascade);
+
+    // SPEC §15: onChange fires on user-driven changes only — wired after the initial observer
+    // pass above so synchronous value writes during resolution don't count as a "change"
+    if (params.onChange) {
+      let changes: Observable<T> = form.valueChanges as Observable<T>;
+      if (params.changeDebounce) changes = changes.pipe(debounceTime(params.changeDebounce));
+      formSubs.push(
+        changes.subscribe((value) => params.onChange!(value, this.makeFormState<T>(form, flat))),
+      );
+    }
 
     return instance;
   }
@@ -332,7 +347,7 @@ export class FormEngineService {
       const def = raw as ObserverParameter<unknown>;
       rt.observers.push({ prop, def });
       rt.subs.push(
-        this.observePaths(def, topForm, flat, runtimes).subscribe((resolved) =>
+        this.observePaths(def, topForm, flat, runtimes, field.path).subscribe((resolved) =>
           this.applyProp(field, prop, resolved, rt, cascade),
         ),
       );
@@ -351,7 +366,7 @@ export class FormEngineService {
     if (field.field) {
       const def = field.field;
       rt.subs.push(
-        this.observePaths(def, topForm, flat, runtimes).subscribe((patch) => {
+        this.observePaths(def, topForm, flat, runtimes, field.path).subscribe((patch) => {
           for (const [prop, value] of Object.entries(patch ?? {})) {
             this.applyProp(field, prop, value, rt, cascade);
           }
@@ -386,15 +401,21 @@ export class FormEngineService {
     }
   }
 
-  /** combineLatest over the observed paths → switchMap(callback) (SPEC §2 latest-wins) */
+  /**
+   * combineLatest over the observed paths → switchMap(callback) (SPEC §2 latest-wins).
+   * `ownPath` is the OBSERVING field's own `.path` — needed to resolve a `'./sibling'` path
+   * (see dynamic.interface.ts) against that field's own isList item group, when present.
+   */
   private observePaths(
     def: ObserverParameter<unknown>,
     topForm: FormGroup,
     flat: FormField[],
     runtimes: Map<FormField, FieldRuntime>,
+    ownPath?: string,
   ): Observable<unknown> {
     const paths = Array.isArray(def.paths) ? def.paths : [def.paths];
-    const sources = paths.map((p) => {
+    const sources = paths.map((raw) => {
+      const p = this.resolveObservedPath(raw, ownPath);
       const control = topForm.get(p);
       if (!control) {
         console.warn(`[FormEngine] observe: no control at path '${p}'`);
@@ -410,6 +431,18 @@ export class FormEngineService {
     return combineLatestValues(sources).pipe(
       switchMap((values) => from(Promise.resolve(def.callback(...values)))),
     );
+  }
+
+  /** `'./sibling'` ⇒ resolved against `ownPath`'s OWN isList item group (its path minus its own
+   *  last segment); any other path is already absolute (top-form scope) and passes through as-is. */
+  private resolveObservedPath(path: string, ownPath?: string): string {
+    if (!path.startsWith('./')) return path;
+    const itemGroupPath = ownPath?.split('.').slice(0, -1).join('.');
+    if (!itemGroupPath) {
+      console.warn(`[FormEngine] observe: relative path '${path}' used outside an isList item`);
+      return path.slice(2);
+    }
+    return `${itemGroupPath}.${path.slice(2)}`;
   }
 
   /** route a resolved prop value to config / control (SPEC §1 cycle guard on value writes) */

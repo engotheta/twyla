@@ -65,13 +65,13 @@ export class ObjectFieldComponent implements OnInit {
 
   protected readonly canAdd = computed(() => {
     const f = this.field();
-    if (f.canAddItem === false) return false;
+    if (this.state().canAddItem === false) return false;
     return f.maxItems === undefined || this.items().length < f.maxItems;
   });
 
   protected readonly canRemove = computed(() => {
     const f = this.field();
-    if (f.canAddItem === false) return false;
+    if (this.state().canAddItem === false) return false;
     return this.items().length > (f.minItems ?? 0);
   });
 

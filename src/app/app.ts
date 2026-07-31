@@ -7,8 +7,9 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { getAllFields } from './components/details/field/fields.helper';
 import { DetailsComponent } from './components/details/details.component';
 import { DetailsParameter } from './components/details/detail.interface';
-import { GenericFormComponent } from './components/generic-form';
+import { FieldType, GenericFormComponent, obs } from './components/generic-form';
 import { createSpeakerFormParams } from './conference-speaker-form.params';
+import { DataGridComponent, GridParameter } from './components/data-grid';
 
 const entity = {
   id: 'usr_8f3a21',
@@ -34,9 +35,32 @@ const entity = {
   })),
 };
 
+const employees = Array.from({ length: 37 }, (_, i) => ({
+  id: i + 1,
+  name: `Employee ${i + 1}`,
+  address: {
+    street: `${100 + i} Elm St`,
+    city: ['NYC', 'LA', 'Chicago', 'Houston'][i % 4],
+    zip: `${10000 + i}`,
+  },
+  department: ['Engineering', 'Sales', 'Support'][i % 3],
+  region: ['North', 'South', 'East', 'West'][i % 4],
+  salary: 40000 + (i % 10) * 5000,
+  active: i % 5 !== 0,
+  joinedAt: new Date(2024, i % 12, (i % 27) + 1).toISOString(),
+}));
+type Employee = (typeof employees)[number];
+
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ActionButtonsComponent, DetailsComponent, GenericFormComponent, JsonPipe],
+  imports: [
+    RouterOutlet,
+    ActionButtonsComponent,
+    DetailsComponent,
+    GenericFormComponent,
+    DataGridComponent,
+    JsonPipe,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,7 +72,97 @@ export class App {
 
   data = true;
 
-  protected readonly formResult = signal<{ mode: 'preview' | 'submitted'; value: unknown } | null>(null);
+  protected readonly formResult = signal<{ mode: 'preview' | 'submitted'; value: unknown } | null>(
+    null,
+  );
+
+  protected readonly gridParameter: GridParameter<Employee> = {
+    label: 'Employees',
+    icon: 'groups',
+    identifierKey: ['id'],
+    gridData: employees,
+    size: 10,
+
+    columns: [
+      'id label(ID) sortable(true) width(70px)',
+      'name label(Name) sortable(true) searchable(true)',
+      'address.city label(City)',
+      {
+        key: 'employment',
+        label: 'Employment',
+        columns: [
+          { key: 'department', label: 'Department', sortable: true },
+          { key: 'region', label: 'Region', sortable: true },
+        ],
+      },
+      {
+        key: 'salary',
+        label: 'Salary',
+        type: 'currency',
+        sortable: true,
+        // align: 'right',
+        editField: { type: FieldType.input, key: 'salary', inputType: 'decimal' },
+      },
+      { key: 'active', label: 'Active', type: 'boolean', align: 'center', searchable: true },
+      { key: 'joinedAt', label: 'Joined', type: 'date', sortable: true },
+    ],
+
+    gridFilters: [
+      {
+        type: FieldType.select,
+        key: 'department',
+        hasNoneOption: true,
+        options: [
+          { value: 'Engineering', label: 'Engineering' },
+          { value: 'Sales', label: 'Sales' },
+          { value: 'Support', label: 'Support' },
+        ],
+      },
+      {
+        type: FieldType.toggle,
+        visible: obs('department', (d) => !!d),
+        key: 'active',
+      },
+    ],
+    searchConfig: {
+      allowSearchTypeOverride: true,
+      searchFieldsMode: 'modal',
+    },
+
+    // addIndexColumn: false,
+
+    selectionMode: 'multiple',
+    onRowSelection: (rows) => this.log.set(`Selected ${rows?.length ?? 0} employee(s)`),
+
+    conditionalRowFormat: { '!bg-red-50': (row) => !row.active },
+
+    rowsDraggable: true,
+    onRowDrag: (rowsInNewOrder, draggedRow) =>
+      this.log.set(
+        `Dragged ${draggedRow?.name} — new page order: ${rowsInNewOrder.map((r) => r.name).join(', ')}`,
+      ),
+
+    rowButtons: [
+      {
+        type: 'icon',
+        icon: 'visibility',
+        tooltip: 'View',
+        click: (row) => this.log.set(`View ${row?.name}`),
+      },
+    ],
+
+    editing: {
+      editable: true,
+      trigger: 'dblclick',
+      onCellEdit: (row, key, value) => {
+        this.log.set(`Edited ${row?.name}.${key} to ${value}`);
+        return true;
+      },
+    },
+
+    renderMode: { modes: ['table', 'list', 'cards'] },
+    export: { formats: ['csv', 'excel', 'pdf'], matchGridStyle: true },
+  };
 
   protected readonly speakerFormParams = createSpeakerFormParams(
     (value) => this.formResult.set({ mode: 'submitted', value }),

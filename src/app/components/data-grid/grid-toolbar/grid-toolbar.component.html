@@ -1,0 +1,109 @@
+<div class="flex flex-wrap items-center gap-2 py-2">
+  @if (instance().params.label; as label) {
+    <h2 class="text-base font-medium flex items-center gap-1 mr-2">
+      @if (instance().params.icon; as icon) {
+        <mat-icon>{{ icon }}</mat-icon>
+      }
+      {{ label }}
+    </h2>
+  }
+
+  @if (instance().gridOptions().length) {
+    <mat-button-toggle-group [value]="instance().selectedOptionSlug()" aria-label="Grid view options">
+      @for (option of instance().gridOptions(); track option.slug) {
+        <mat-button-toggle [value]="option.slug" (click)="selectOption(option.slug!)">
+          {{ option.label }}
+        </mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  }
+
+  @if (showSearch()) {
+    <grid-search-fields
+      [instance]="instance()"
+      (instanceChange)="onSearchFormInstance($event)"
+      (openDialogRequested)="openSearchDialog()"
+    />
+  }
+
+  <span class="flex-1"></span>
+
+  @if (instance().params.gridFilters?.length) {
+    <button
+      #filtersOrigin="cdkOverlayOrigin"
+      cdkOverlayOrigin
+      type="button"
+      mat-icon-button
+      [attr.aria-expanded]="filtersOpen()"
+      aria-label="Filters"
+      (click)="filtersOpen.set(!filtersOpen())"
+    >
+      <mat-icon>filter_list</mat-icon>
+    </button>
+    <ng-template
+      cdkConnectedOverlay
+      [cdkConnectedOverlayOrigin]="filtersOrigin"
+      [cdkConnectedOverlayOpen]="filtersOpen()"
+      cdkConnectedOverlayHasBackdrop
+      cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+      (backdropClick)="filtersOpen.set(false)"
+      (detach)="filtersOpen.set(false)"
+    >
+      <div class="bg-white dark:bg-neutral-900 rounded shadow-lg border border-black/10">
+        <grid-filter-panel [instance]="instance()" />
+      </div>
+    </ng-template>
+  }
+
+  @if (renderModes().length > 1) {
+    <mat-button-toggle-group [value]="instance().renderMode()" aria-label="Display mode">
+      @for (mode of renderModes(); track mode) {
+        <mat-button-toggle [value]="mode" (click)="setRenderMode(mode)" [aria-label]="mode">
+          <mat-icon>{{ renderModeIcons[mode] }}</mat-icon>
+        </mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  }
+
+  @if (exportFormats().length) {
+    <button type="button" mat-icon-button [matMenuTriggerFor]="exportMenu" aria-label="Export">
+      <mat-icon>download</mat-icon>
+    </button>
+    <mat-menu #exportMenu="matMenu">
+      @for (format of exportFormats(); track format) {
+        <button type="button" mat-menu-item (click)="export(format)">{{ format.toUpperCase() }}</button>
+      }
+    </mat-menu>
+  }
+
+  @if (instance().params.showTableControlsToggle !== false) {
+    <button
+      #columnsOrigin="cdkOverlayOrigin"
+      cdkOverlayOrigin
+      type="button"
+      mat-icon-button
+      [attr.aria-expanded]="columnsOpen()"
+      aria-label="Column settings"
+      (click)="columnsOpen.set(!columnsOpen())"
+    >
+      <mat-icon>view_column</mat-icon>
+    </button>
+    <ng-template
+      cdkConnectedOverlay
+      [cdkConnectedOverlayOrigin]="columnsOrigin"
+      [cdkConnectedOverlayOpen]="columnsOpen()"
+      cdkConnectedOverlayHasBackdrop
+      cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+      (backdropClick)="columnsOpen.set(false)"
+      (detach)="columnsOpen.set(false)"
+    >
+      <div class="bg-white dark:bg-neutral-900 rounded shadow-lg border border-black/10">
+        <grid-column-panel [instance]="instance()" />
+      </div>
+    </ng-template>
+  }
+
+  @if (instance().params.buttons?.length) {
+    <action-buttons [data]="instance().state()" [buttons]="instance().params.buttons" [animation]="instance().params.animation" />
+  }
+</div>

@@ -1,0 +1,42 @@
+<div class="flex flex-wrap items-start gap-1">
+  @for (item of items(); track item.index) {
+    <div class="relative flex items-end gap-1 pt-2">
+      @if (canRemove(item.index)) {
+        <button
+          type="button"
+          mat-icon-button
+          class="!absolute !-top-1 !-right-1 !z-10 !w-5 !h-5 !min-h-0"
+          aria-label="Remove search field"
+          (click)="removeItem(item.index)"
+        >
+          <mat-icon class="!text-sm !w-4 !h-4">close</mat-icon>
+        </button>
+      }
+      @for (field of item.fields; track field.key) {
+        @if (showTypeField(field)) {
+          <app-field [field]="field" [instance]="formInstance" class="!w-32" />
+        }
+      }
+    </div>
+  }
+
+  @if (showTypeToggleButton()) {
+    <button
+      type="button"
+      mat-icon-button
+      class="!w-8 !h-8 shrink-0"
+      [attr.aria-pressed]="typeOverrideOn()"
+      aria-label="Fine-tune search operator"
+      matTooltip="Fine-tune search operator"
+      (click)="toggleTypeOverride()"
+    >
+      <mat-icon class="!text-base" [class.opacity-100]="typeOverrideOn()" [class.opacity-50]="!typeOverrideOn()">tune</mat-icon>
+    </button>
+  }
+
+  @if (canAdd()) {
+    <button type="button" mat-icon-button class="!w-8 !h-8 shrink-0" aria-label="Add search field" (click)="addItem()">
+      <mat-icon class="!text-base">add</mat-icon>
+    </button>
+  }
+</div>

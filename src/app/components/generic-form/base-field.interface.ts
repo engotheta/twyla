@@ -79,7 +79,11 @@ export interface ValueField<V = unknown> extends CoreField {
 
   // list mode
   isList?: boolean;
-  canAddItem?: boolean; // implies can remove
+  /** implies can remove. `false` disables both; a `Dynamic<boolean>` observer can react to the
+   *  list's own current value — e.g. only allow adding once the last item has a value (paths
+   *  resolve against the top form same as any other Dynamic prop; a `'./sibling'` path resolves
+   *  against the CURRENT item's own group instead, for per-item fields — see dynamic.interface.ts) */
+  canAddItem?: Dynamic<boolean>;
   minItems?: number;
   maxItems?: number;
   /** validators applied to the FormArray itself (per-item ones go in `validations`). SPEC §4 */

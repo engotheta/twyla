@@ -64,6 +64,20 @@ Vocabulary: "the engine" = `FormEngineService` + `FormInstance`. "config" = a
   already define one (including per-row values for `isList` object fields,
   applied via `patchValue` on each seeded item). An explicit `field.value`
   (static or `Dynamic`) always wins over `model`.
+- `canAddItem` is `Dynamic<boolean>` — an `observe(...)` targeting the list's
+  own path (e.g. `'items'`) receives the whole current array value, so the
+  add button can react to it (e.g. "only once the last item has a value").
+  Components must read the RESOLVED value off `fieldState`, never the raw
+  config prop (§13) — `ObjectFieldComponent.canAdd`/`canRemove` do this.
+- A path starting with `'./'` (e.g. `'./key'`) resolves against the
+  OBSERVING field's own `isList` item group instead of the top form — the
+  narrow, scoped answer to the "wildcards aren't supported" note above:
+  it doesn't let one observer watch *every* item, but it does let a
+  per-item field reference a *sibling* within its own item, independently
+  per clone (`searchFields.2.value` observing `'./key'` resolves to
+  `searchFields.2.key`). Not meaningful outside an isList item — use an
+  absolute path there. See `dynamic.interface.ts` and
+  `FormEngineService.resolveObservedPath`.
 
 ## 5. Steps flatten
 
@@ -230,3 +244,29 @@ assembled value without triggering `onSubmit`/modal-close side effects.
   what step-validity gating does, per field). The fix: treat `status().disabled`
   as passing, same as skipping non-value fields — `s().disabled || s().valid
   !== false`, not just `s().valid !== false`.
+
+## 15. Live `onChange` + external instance access
+
+Added so a parent embedding `<app-generic-form>` (e.g. a data-grid's advanced
+filter panel) can react to changes live and drive the form programmatically,
+without subscribing to internals it isn't supposed to touch.
+
+- `FormParameters.onChange`, when set, subscribes to `form.valueChanges` —
+  plain `valueChanges`, no `startWith`, so (unlike §1's Dynamic-prop
+  observers, which also fire once at init) it does **not** fire on init, only
+  on subsequent user-driven changes. It's wired *after* the initial observer
+  pass (§1) completes inside `build()`, specifically so synchronous value
+  writes during that initial resolution don't themselves count as a "change."
+- Debounced via `FormParameters.changeDebounce` (ms) when set — same pattern
+  as the existing per-field `debounce` (§8).
+- Its subscription lives in a form-level bag (separate from the per-field
+  `rt.subs` bags), torn down in `instance.destroy()` (§10) alongside them.
+- `GenericFormComponent.instanceChange` (`output<FormInstance>()`) emits
+  once, at the end of `ngOnInit()`, immediately after `engine.build()`
+  returns — i.e. after the full initial observer pass has already run
+  synchronously inside `build()`. A parent therefore always receives a
+  fully-resolved instance, and can safely call `instance.form.reset()`,
+  `instance.submit()`, `instance.formState()`, etc. right away.
+- Neither addition changes any existing behavior when unused: `onChange`
+  only subscribes when set, and `instanceChange` is a new emitter with no
+  effect unless a parent listens to it.

@@ -1,0 +1,222 @@
+# Data Grid — Runtime Specification
+
+Types define **what** a config is; this document defines **how** the engine
+behaves. Scoped to the areas covered by the header/body-span, export,
+search, drag-feedback, and span-border work — it does not re-document every
+`GridParameter`/`GridColumn_` prop (see each interface file's own JSDoc for
+that), and it isn't a from-scratch spec of the whole grid. Extend it
+incrementally, the same way `generic-form/SPEC.md` grew a section at a time.
+
+Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
+= one built `GridInstance<RowType>`.
+
+---
+
+## 1. Header & body cell spans
+
+- The header matrix (`GridInstance.headerRows`) is computed by
+  `buildHeaderRows` (`grid-column.helpers.ts`) from the nested
+  `GridColumn_.columns` tree: leaf columns get `rowspan` stretching down to
+  the deepest header row; group/parent columns get `colspan` equal to their
+  visible leaf-descendant count. A header row's `cells` array is **sparse**
+  — a cell reached via a previous row's `rowspan` is never repeated — the
+  same convention an HTML `<tr>` uses natively.
+- Body cell spans (`GridInstance.cellSpan(rowIndex, columnKey)`) come from
+  `buildCellSpanPlan` (`grid-engine.service.ts`, exported): auto vertical-merge
+  (`GridParameter.mergeCells`, equal adjacent values in the same column)
+  folded with manual per-cell overrides (`GridRow._cellsProps[key].rowspan`/
+  `colspan`) — **manual always wins** over auto-merge for any cell it covers.
+- The plan is keyed by column **key**, not position, and computed over
+  columns in their CURRENT display order — so it survives column drag
+  reorder. The header matrix does too: `headerRows` reorders the nested
+  `columns` tree to match `columnState`'s order (`orderColumnsForHeader`,
+  `grid-column.helpers.ts`) BEFORE computing spans, at every tree level (a
+  group's own children reorder among themselves; the group itself is
+  positioned by its minimum child order) — so a flat (non-nested) column
+  set (the common case) always renders its headers in the exact order
+  `visibleColumns()` renders its body cells in. The one case that still
+  falls back to declaration order: a leaf dragged to interleave with a
+  DIFFERENT group's leaves (crossing a group boundary) — a group's header
+  cell must span a contiguous leaf range, so that specific reorder has no
+  sane single rendering. Every other reorder, including moving a whole
+  group, composes correctly.
+- Spans exist only in **table** render mode — list/cards never render a
+  `<table>`, so span geometry is meaningless there.
+
+## 2. Column reordering & structural (synthetic) columns
+
+- `GridColumnState.order` only ever governs REAL columns' relative order.
+  Synthetic (non-data) leaf columns — `DRAG_COLUMN_KEY`/`INDEX_COLUMN_KEY`/
+  `SELECT_COLUMN_KEY`/`EXPAND_COLUMN_KEY` (leading) and `ACTIONS_COLUMN_KEY`
+  (trailing), collectively `SYNTHETIC_COLUMN_KEYS` — are structural: their
+  position is always fixed (leading in that relative order, or trailing)
+  regardless of what their own `order` value happens to be. `visibleColumns`
+  composes `[...leadingSyntheticColumns(), ...orderedRealLeafColumns(), ...trailingSyntheticColumns()]`
+  explicitly, rather than sorting one flat list that mixes both kinds —
+  `headerRows`'s synthetic cells were already spliced in at fixed edges this
+  way; `visibleColumns` didn't used to be, which was the bug this fixes:
+  the grid panel never lists synthetic columns (they're not real,
+  user-facing config — their presence is controlled by grid params like
+  `rowsDraggable`/`selectionMode`/`addIndexColumn`, not a per-column
+  toggle), so a shared flat order-sort let a synthetic column's `order`
+  drift into the middle of the real columns whenever the two disagreed
+  about index space (see `moveColumn` below) — header stayed put (fixed
+  edges) while the body cell moved, a visible header/body mismatch
+  specifically for whichever synthetic column got shuffled.
+- `orderedRealLeafColumns` (flattened from `orderedColumnsTree`, §1) is the
+  ONE source of truth for real-column order — both `headerRows` (as a
+  tree) and `visibleColumns` (flattened) render from it, so they can't
+  disagree.
+- `GridInstance.moveColumn(fromIndex, toIndex)` takes indices into the REAL
+  columns only — exactly what `grid-column-panel` lists and drags (it
+  filters `columnState()` down to non-synthetic keys before rendering,
+  same filter as here). This used to take indices into the FULL
+  `columnState()` array (real + synthetic mixed), which silently
+  mismatched whenever any leading synthetic column was present (drag
+  handle / index / select — all rendered before the first real column),
+  since the panel always passed indices relative to its own real-only
+  list: dragging the panel's first entry to its third position, with two
+  leading synthetic columns active, actually spliced `columnState()[0]`
+  (the drag-handle column) to position 2 instead of the intended real
+  column. Fixed by reordering a real-keys-only array and reassigning
+  `order` only to those keys — synthetic columns' `order` is never
+  written by `moveColumn`, and is never read for positioning either.
+
+## 3. Span-aware borders
+
+- `GridInstance.hasSpannedCells` is a single grid-wide boolean: true when
+  ANY header or body cell currently spans more than one row/column. When
+  true, a `border` utility is added to every header and body cell
+  uniformly (`data-grid.component.ts` `headerCellClass`/`bodyCellClass`) —
+  not just the merged region's own edges. A per-region-only border was
+  considered and rejected: next to non-bordered cells it reads as
+  accidentally-missing borders rather than a deliberate visual grouping.
+- Table mode only, same reasoning as §1.
+
+## 4. Export fidelity
+
+- `GridExportService` builds the header matrix and body span plan **fresh**
+  for each export (`orderColumnsForHeader` + `buildHeaderRows(instance.columns(), visibleKeys)`
+  / `buildCellSpanPlan(rows, columns, mergeCells)`), rather than reading
+  `instance.headerRows()` / `instance.cellSpan()` off the live instance.
+  Three reasons: (a) `instance.cellSpan()` is only ever populated for the
+  CURRENT PAGE's rows, but `exportAllData: true` exports every matching
+  row — recomputing against the actual exported row set keeps merges
+  correct in both cases; (b) `instance.headerRows()` always includes
+  synthetic columns (drag/index/select/expand/actions) spliced in, which
+  export explicitly excludes, and never reflects `cfg.allFields` (all leaf
+  columns, not just visible ones) — recomputing directly against export's
+  own resolved column set avoids silently mismatching either config; (c) it
+  still needs `columnState`'s order applied explicitly (same as §1) so a
+  drag-reordered grid exports in the order it's actually displayed in.
+- Excel: nested/grouped headers and merged body cells become real
+  `Worksheet.mergeCells(...)` ranges. Because `exceljs` has no browser-table
+  layout algorithm, the header writer keeps an "occupied until row N" map
+  per column position to convert the header matrix's sparse per-row cells
+  into absolute (row, col) coordinates — the same bookkeeping a browser does
+  for free when the live grid renders `<th rowspan>`. Every written cell
+  (header and body) gets an explicit thin border (`EXCEL_CELL_BORDER`) —
+  `exceljs` never adds cell borders on its own, unlike a `<table>`'s default
+  browser styling or jspdf-autotable's own default theme, so without this
+  the sheet would render with no gridlines at all.
+- PDF: nested headers and merged body cells become `jspdf-autotable`
+  `CellDef[]` rows with `rowSpan`/`colSpan` — the library resolves absolute
+  column positions from sparse per-row arrays itself, so (unlike Excel) no
+  manual position bookkeeping is needed; a covered cell is simply omitted
+  from that row's array, exactly like the header matrix already omits it.
+  `theme: 'grid'` is set explicitly — the library's default theme
+  (`'striped'`) only borders the header row, not every cell.
+- CSV stays flat by construction — no format-native concept of merged
+  cells or multi-row headers.
+- Row-detail content (`GridRowDetailConfig`) is never exported in any
+  format — it's arbitrary component/template content with no structured
+  data mapping. This is a permanent, deliberate exclusion, not a gap.
+- Synthetic columns (drag/index/select/expand/actions) are always excluded,
+  same as before this work.
+
+## 5. Search: `searchFields`
+
+- `GridState.searchFields` / `PageDetails.searchFields` fully replaced the
+  old single-string `searchTerm` — there is no grid mode that still uses a
+  flat string. When zero columns are marked `GridColumn_.searchable`, the
+  array holds exactly one entry with `key: undefined`, which searches
+  across every leaf column (the same substring match `searchTerm` used to
+  do) — `matchesSearchFields` special-cases this via `matchesSearchTerm`.
+- Combination across `fields` entries is **OR** ("does this row match ANY
+  active search instance") — the opposite default of `filters`'s **AND**
+  (`matchesFilters`, `grid-filter.interface.ts`/`GridFilterConfig`). These
+  are two separate, coexisting features; don't conflate them.
+- `showSearch` (`data-grid.component.ts`) is never hidden purely because
+  the result set narrowed below one page — it's the paginator-driven
+  default OR'd with "any searchFields entry currently has a value". Root
+  cause of the old bug: `showPaginator` (and therefore the old
+  `showSearch` default) was derived from `totalLength()`, which in client
+  mode is the ALREADY-search-filtered count — so narrowing a result set
+  down to a page's worth flipped the search box's own visibility off
+  mid-typing.
+- `searchType` resolution order for a raw text value, when not explicitly
+  overridden by the user: the selected column's own `GridColumn_.searchType`
+  → `GridSearchConfig.defaultSearchType` → `'like'`.
+- `matchesOperator`'s `equals`/`notEquals`/`greaterThan*`/`lessThan*` cases
+  do strict/raw comparisons. A search instance's value is always a raw
+  string (a plain text input), so it's coerced (`coerceSearchValue`,
+  `grid-row.helpers.ts`) toward the target column's `type` before those
+  operators run — except `'like'`, which always compares raw strings (
+  coercing to a `Date`/`number` first would change its fuzzy-substring
+  semantics, e.g. a partial `"2024-01"` match against a date value).
+- Add/remove: a "+" only appears once the last visible instance has a
+  value AND at least one `searchable` column remains unused by another
+  instance (`ObjectField.canAddItem`, a `Dynamic<boolean>` observer — see
+  generic-form/SPEC.md §4). The remove icon appears on every instance
+  except the first, unconditionally — not gated by count, unlike the
+  stock `isList` "remove" button (`object-field.component.ts`), which is
+  why `grid-search-fields` renders its own per-item list chrome via
+  `FormEngineService` + `<app-field>` directly instead of
+  `<app-generic-form>`/`ObjectFieldComponent`'s built-in list template.
+- Each instance's own "column" dropdown excludes columns already picked by
+  OTHER instances (never itself) — the `'./key'` relative-observer-path
+  extension (generic-form/SPEC.md §4) is what makes this expressible per
+  clone without hand-rolling index bookkeeping.
+- `searchFieldsMode: 'inline'` (default): every instance renders directly
+  in the toolbar row, one `FormInstance` shared by nothing else.
+  `'modal'`: the toolbar mount shows ONLY the first instance; clicking "+"
+  adds the new item to the SAME `FormInstance` and opens
+  `grid-search-dialog`, which reuses that exact instance (passed via
+  `MAT_DIALOG_DATA`, not rebuilt) to render every instance including the
+  first — so the toolbar and the dialog can never diverge into two forms
+  describing the same search state.
+- Server mode: `searchFields` is always forwarded via `PageDetails`,
+  exactly like `filters` already was — `gridDataFn` implements whichever
+  fields it cares about; the grid does no server-side filtering itself.
+
+## 6. Drag-and-drop visual feedback
+
+- Row dragging (`GridParameter.rowsDraggable`) and column-panel dragging
+  both use `@angular/cdk/drag-drop`'s `cdkDropList`/`cdkDrag`, which
+  already animates sibling reflow ("making way for the dropped item") for
+  free — that part needs no custom code. The gap this work closes is
+  purely placeholder/preview STYLING, which CDK leaves unstyled by
+  default.
+- Row placeholder (table mode) is deliberately CDK's DEFAULT
+  placeholder — an automatic clone of the dragged `<tr>` — not a custom
+  `*cdkDragPlaceholder` template. A custom template can't place a literal
+  `<tr>` there (Angular's template parser rejects a `<tr>` nested inside
+  another `<tr>`, which is exactly how `*cdkDragPlaceholder` would have to
+  be authored on a `<tr cdkDrag>`), and CDK's default clone is already
+  `<tr>`-shaped and correctly sized since it's a real clone of the source
+  row. It's styled into an empty dashed gap via `tr.cdk-drag-placeholder`
+  in `data-grid.component.scss` (dim background, dashed outline, hidden
+  cell content) rather than templated. List mode has no such constraint
+  (its container is a `<div>`) and uses a real `*cdkDragPlaceholder`,
+  sized from the dragged row's own captured height
+  (`onRowDragStarted`/`draggedRowHeightPx`) since an empty `<div>` has no
+  natural height to collapse to.
+- The row drag preview is a true clone of the row's real columns — a
+  fixed-width flex container of `<grid-cell>` (the SAME component real
+  body cells render through) at each column's real width, with
+  `pointer-events-none` so the throwaway clone never triggers inline-edit
+  or cell click handlers while dragging.
+- Column-panel drag preview/placeholder are both plain `<div>`s (its
+  drop list is a `<div>`, not a table) — no structural constraint there,
+  just a stylistic upgrade from CDK's stock clone for visual consistency
+  with the row treatment.
