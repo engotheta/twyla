@@ -1,8 +1,8 @@
 import { BehaviorSubject } from 'rxjs';
-import { CoreField } from '../base-field.interface';
-import { Dynamic } from '../dynamic.interface';
-import { FieldType } from '../field-type.interface';
-import { FormState } from '../form-state.interface';
+import { CoreField } from '../interfaces/base-field.interface';
+import { Dynamic } from '../interfaces/dynamic.interface';
+import { FieldType } from '../interfaces/field-type.interface';
+import { FormState } from '../interfaces/form-state.interface';
 
 // ─────────────────────────────────────────────
 // Action controls & display-only fields

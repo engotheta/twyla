@@ -1,5 +1,5 @@
 import { from, isObservable, Observable } from 'rxjs';
-import { Option, OptionsParameter } from '../../../form-state.interface';
+import { Option, OptionsParameter } from '../../../interfaces/form-state.interface';
 
 /** normalizes an `optionsFunction` result (sync/Promise/Observable) into an Observable */
 export function resolveOptionsSource<T>(

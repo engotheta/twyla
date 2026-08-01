@@ -13,7 +13,7 @@ import {
   isObjectField,
   isSelectField,
   isTextareaField,
-} from '../../../form-field.interface';
+} from '../../../interfaces/form-field.interface';
 import { joinClasses } from '../class.util';
 import { AttachmentFieldComponent } from '../attachment-field/attachment-field.component';
 import { BooleanFieldComponent } from '../boolean-field/boolean-field.component';
@@ -67,7 +67,11 @@ export interface FieldChildContext {
     @let f = field();
     @let resolved = state();
 
-    <div [hidden]="resolved.visible === false" [class]="wrapperClass()" [style.opacity]="resolved.opacity ?? null">
+    <div
+      [hidden]="resolved.visible === false"
+      [class]="wrapperClass()"
+      [style.opacity]="resolved.opacity ?? null"
+    >
       @if (isObjectField(f)) {
         <app-object-field [field]="f" [instance]="instance()" [fieldTemplate]="childTpl" />
       } @else if (isSelectField(f)) {
@@ -106,7 +110,10 @@ export class FieldComponent {
   readonly fieldsClass = input<string>();
 
   protected readonly state = computed(() => this.instance().fieldState(this.field())());
-  protected readonly wrapperClass = computed(() => joinClasses(this.fieldsClass(), this.state().class));
+
+  protected readonly wrapperClass = computed(() =>
+    joinClasses(this.fieldsClass(), this.state().class),
+  );
 
   protected readonly isObjectField = isObjectField;
   protected readonly isSelectField = isSelectField;

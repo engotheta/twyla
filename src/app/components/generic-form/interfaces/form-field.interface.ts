@@ -1,5 +1,5 @@
 import { FieldType } from './field-type.interface';
-import { ObjectField, StepField } from './fields/container.fields';
+import { ObjectField, StepField } from '../fields/container.fields';
 import {
   AttachmentField,
   BooleanField,
@@ -8,8 +8,8 @@ import {
   InputField,
   SelectField,
   TextareaField,
-} from './fields/control.fields';
-import { ButtonField, ContentField, LabelField } from './fields/static.fields';
+} from '../fields/control.fields';
+import { ButtonField, ContentField, LabelField } from '../fields/static.fields';
 
 // ─────────────────────────────────────────────
 // The union + runtime guards for the renderer

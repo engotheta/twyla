@@ -22,9 +22,9 @@ import { controlStatus } from './fields/components/control-status.util';
 import { FieldComponent } from './fields/components/field/field.component';
 import { StepField } from './fields/container.fields';
 import { FormEngineService, FormInstance } from './form-engine.service';
-import { FormField, isStepField, isValueField } from './form-field.interface';
-import { FormParameters } from './form-parameters.interface';
-import { StepState } from './form-state.interface';
+import { FormField, isStepField, isValueField } from './interfaces/form-field.interface';
+import { FormParameters } from './interfaces/form-parameters.interface';
+import { StepState } from './interfaces/form-state.interface';
 
 /** one rendered step: either a real StepField, or the synthetic step collecting non-step outer
  *  fields when the form mixes steps and plain fields (SPEC §5) */

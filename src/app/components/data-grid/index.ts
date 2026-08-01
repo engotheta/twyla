@@ -30,7 +30,6 @@ export * from './grid-cell/grid-cell.component';
 export * from './grid-column-panel/grid-column-panel.component';
 export * from './grid-filter-panel/grid-filter-panel.component';
 export * from './grid-row-detail/grid-row-detail.component';
-export * from './grid-details-dialog/grid-details-dialog.component';
 export * from './grid-export-panel/grid-export-panel.component';
 export * from './grid-search-fields/grid-search-fields.component';
 export * from './grid-search-dialog/grid-search-dialog.component';

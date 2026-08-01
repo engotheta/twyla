@@ -1,5 +1,5 @@
 import { ValidationErrors } from '@angular/forms';
-import { Validator } from '../../form-state.interface';
+import { Validator } from '../../interfaces/form-state.interface';
 
 /**
  * Resolves the first active control error into a display message. Field-level validators

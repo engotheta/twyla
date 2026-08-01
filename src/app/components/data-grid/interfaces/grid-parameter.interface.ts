@@ -182,7 +182,8 @@ export interface GridParameter<RowType = any> {
   /** CSV/Excel/PDF export */
   export?: GridExportConfig<RowType>;
 
-  // number of clicks to trigger the display details model via our details comp,
-  // passing the row data to the model, default is 7
+  // number of clicks on a row to open an all-details modal for that row (DetailsComponent's own
+  // dual-mode dialog support, opened directly), showing every field of the row with no extra
+  // config needed. Default is 7; set to 0 to disable.
   viewDetailsClicks?: number;
 }

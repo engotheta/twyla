@@ -1,15 +1,15 @@
 import { DateFilterFn } from '@angular/material/datepicker';
 import { Observable } from 'rxjs';
-import { ValueField } from '../base-field.interface';
-import { Dynamic } from '../dynamic.interface';
+import { ValueField } from '../interfaces/base-field.interface';
+import { Dynamic } from '../interfaces/dynamic.interface';
 import {
   AttachmentType,
   DateType,
   FieldType,
   InputType,
   SelectType,
-} from '../field-type.interface';
-import { FormState, Option, OptionsParameter } from '../form-state.interface';
+} from '../interfaces/field-type.interface';
+import { FormState, Option, OptionsParameter } from '../interfaces/form-state.interface';
 
 // ─────────────────────────────────────────────
 // Value controls: input, boolean, select, text, date, color, attachment

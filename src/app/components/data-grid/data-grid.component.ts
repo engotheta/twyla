@@ -44,7 +44,8 @@ import {
   INDEX_COLUMN_KEY,
   SELECT_COLUMN_KEY,
 } from './grid-engine.service';
-import { GridDetailsDialogComponent } from './grid-details-dialog/grid-details-dialog.component';
+import { DetailsComponent } from '../details/details.component';
+import { DetailsDialogData } from '../details/detail.interface';
 import { formatCellValue, resolveClassMap } from './helpers/grid-format.helpers';
 import { GridHeaderCell } from './interfaces/grid-header.interface';
 import { GridParameter } from './interfaces/grid-parameter.interface';
@@ -54,6 +55,7 @@ import { GridToolbarComponent } from './grid-toolbar/grid-toolbar.component';
 
 const DEFAULT_SIZE_OPTIONS = [10, 25, 50, 100, 200, 500, 1000];
 const DEFAULT_PINNED_WIDTH = 120;
+const DEFAULT_VIEW_DETAILS_CLICKS = 7;
 
 /** Highly dynamic, config-driven data grid — see `grid-parameter.interface.ts` for the full contract. */
 @Component({
@@ -265,16 +267,22 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
 
   protected onRowClick(row: RowType): void {
     this.instance.params.rowClick?.(row);
-    const threshold = this.instance.params.viewDetailsClicks;
-    if (!threshold) return;
+    const configured = this.instance.params.viewDetailsClicks;
+    if (configured === 0) return; // explicit opt-out
 
+    const threshold = configured ?? DEFAULT_VIEW_DETAILS_CLICKS;
     const id = this.instance.rowId(row);
     const count = (this.clickCounts.get(id) ?? 0) + 1;
     this.clickCounts.set(id, count);
-    if (count >= threshold) {
-      this.clickCounts.set(id, 0);
-      this.dialog.open(GridDetailsDialogComponent, { data: { entity: row }, width: '640px' });
-    }
+
+    if (!(count >= threshold)) return;
+
+    this.clickCounts.set(id, 0);
+
+    this.dialog.open<DetailsComponent<RowType>, DetailsDialogData<RowType>>(DetailsComponent, {
+      data: { entity: row } satisfies DetailsDialogData<RowType>,
+      width: '640px',
+    });
   }
 
   protected onRowDblClick(row: RowType): void {

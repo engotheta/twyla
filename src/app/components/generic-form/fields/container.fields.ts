@@ -1,9 +1,9 @@
 import { Observable } from 'rxjs';
-import { CoreField, ValueField } from '../base-field.interface';
-import { Dynamic } from '../dynamic.interface';
-import { FieldType } from '../field-type.interface';
-import { FormState, StepState } from '../form-state.interface';
-import type { FormField } from '../form-field.interface';
+import { CoreField, ValueField } from '../interfaces/base-field.interface';
+import { Dynamic } from '../interfaces/dynamic.interface';
+import { FieldType } from '../interfaces/field-type.interface';
+import { FormState, StepState } from '../interfaces/form-state.interface';
+import type { FormField } from '../interfaces/form-field.interface';
 
 // ─────────────────────────────────────────────
 // Containers: object (nested form) & step (wizard step)

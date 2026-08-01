@@ -1,9 +1,9 @@
-@if (dialogData) {
+@if (dialogData(); as dd) {
   <h2 mat-dialog-title class="flex items-center gap-2">
-    @if (dialogData.icon) {
-      <mat-icon aria-hidden="true">{{ dialogData.icon }}</mat-icon>
+    @if (dd.icon) {
+      <mat-icon aria-hidden="true">{{ dd.icon }}</mat-icon>
     }
-    {{ dialogData.title ?? 'Details' }}
+    {{ dd.title ?? 'Details' }}
   </h2>
 
   <mat-dialog-content>

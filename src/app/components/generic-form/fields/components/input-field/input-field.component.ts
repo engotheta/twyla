@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormInstance } from '../../../form-engine.service';
-import { InputType } from '../../../field-type.interface';
+import { InputType } from '../../../interfaces/field-type.interface';
 import { InputField } from '../../control.fields';
 import { controlStatus } from '../control-status.util';
 import { firstErrorMessage } from '../field-errors.util';
@@ -35,7 +35,11 @@ const HTML_TYPE: Record<InputType, string> = {
   template: `
     @let f = state();
 
-    <mat-form-field [appearance]="appearance()" class="w-full" [class.hide-subscript]="!showSubscript()">
+    <mat-form-field
+      [appearance]="appearance()"
+      class="w-full"
+      [class.hide-subscript]="!showSubscript()"
+    >
       @if (f.showLabel !== false && f.label) {
         <mat-label>{{ f.label }}</mat-label>
       }
@@ -116,7 +120,9 @@ export class InputFieldComponent {
   );
 
   protected readonly errorMessage = computed(() =>
-    this.status().touched ? firstErrorMessage(this.status().errors, this.state().validations) : null,
+    this.status().touched
+      ? firstErrorMessage(this.status().errors, this.state().validations)
+      : null,
   );
 
   protected clear(): void {

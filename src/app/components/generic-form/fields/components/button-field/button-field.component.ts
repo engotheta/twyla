@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { of, switchMap } from 'rxjs';
-import { FieldType } from '../../../field-type.interface';
+import { FieldType } from '../../../interfaces/field-type.interface';
 import { FormInstance } from '../../../form-engine.service';
 import { ButtonField } from '../../static.fields';
 

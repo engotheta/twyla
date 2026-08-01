@@ -10,9 +10,9 @@ import {
 } from '@angular/forms';
 import { Subscription, from, isObservable, lastValueFrom, Observable } from 'rxjs';
 import { debounceTime, startWith, switchMap } from 'rxjs/operators';
-import { Dynamic, ObserverParameter, Resolved, isObserver } from './dynamic.interface';
-import { FieldType } from './field-type.interface';
-import { FieldChange, FormState, Validator } from './form-state.interface';
+import { Dynamic, ObserverParameter, Resolved, isObserver } from './interfaces/dynamic.interface';
+import { FieldType } from './interfaces/field-type.interface';
+import { FieldChange, FormState, Validator } from './interfaces/form-state.interface';
 import {
   FormField,
   ValueFormField,
@@ -20,9 +20,9 @@ import {
   isStaticField,
   isStepField,
   isValueField,
-} from './form-field.interface';
+} from './interfaces/form-field.interface';
 import { AttachmentField, AttachmentMeta } from './fields/control.fields';
-import { CrossValidator, FormParameters } from './form-parameters.interface';
+import { CrossValidator, FormParameters } from './interfaces/form-parameters.interface';
 
 /** internal alias: engine internals don't care about the payload generic */
 type AnyParams = FormParameters<any>;
@@ -225,7 +225,15 @@ export class FormEngineService {
         vf.label = this.labelFromKey(vf.key);
       }
 
-      const control = this.createControl(vf, path, topForm, flat, runtimes, params, itemFieldsByGroup);
+      const control = this.createControl(
+        vf,
+        path,
+        topForm,
+        flat,
+        runtimes,
+        params,
+        itemFieldsByGroup,
+      );
       localForm.addControl(vf.key, control);
 
       flat.push(vf);
@@ -247,7 +255,17 @@ export class FormEngineService {
     if (!field.isList) {
       if (isObjectField(field)) {
         const group = new FormGroup({});
-        this.walk(field.fields, path, topForm, group, field.fields, flat, runtimes, params, itemFieldsByGroup);
+        this.walk(
+          field.fields,
+          path,
+          topForm,
+          group,
+          field.fields,
+          flat,
+          runtimes,
+          params,
+          itemFieldsByGroup,
+        );
         return group;
       }
       const initial = isObserver(field.value) ? null : (field.value ?? field.defaultValue ?? null);
@@ -313,7 +331,17 @@ export class FormEngineService {
       const itemPath = `${path}.${index}`;
       const itemFields: FormField[] = [];
       const cloned = field.fields.map((f) => ({ ...f }) as FormField);
-      this.walk(cloned, itemPath, topForm, group, cloned, itemFields, runtimes, params, itemFieldsByGroup);
+      this.walk(
+        cloned,
+        itemPath,
+        topForm,
+        group,
+        cloned,
+        itemFields,
+        runtimes,
+        params,
+        itemFieldsByGroup,
+      );
       itemFieldsByGroup.set(group, { top: cloned, flat: itemFields });
       flat.push(...itemFields);
       if (rowValue && typeof rowValue === 'object') {
@@ -358,7 +386,9 @@ export class FormEngineService {
     //    props resolve; `isObserver` above only catches ObserverParameter, not raw Observables.
     if (field.type === FieldType.select && isObservable(field.options)) {
       rt.subs.push(
-        field.options.subscribe((options) => this.applyProp(field, 'options', options, rt, cascade)),
+        field.options.subscribe((options) =>
+          this.applyProp(field, 'options', options, rt, cascade),
+        ),
       );
     }
 
@@ -394,7 +424,10 @@ export class FormEngineService {
               applyingValueFn = false;
             }
           }
-          field.onChange?.(next as never, this.makeFieldChange(next, previous, field, topForm, flat, rt) as never);
+          field.onChange?.(
+            next as never,
+            this.makeFieldChange(next, previous, field, topForm, flat, rt) as never,
+          );
           previous = next;
         }),
       );
@@ -673,7 +706,8 @@ export class FormEngineService {
     const tasks: Promise<void>[] = [];
 
     for (const field of flat) {
-      if (field.type !== FieldType.attachment || (field.uploadOn ?? 'select') !== 'submit') continue;
+      if (field.type !== FieldType.attachment || (field.uploadOn ?? 'select') !== 'submit')
+        continue;
       const rt = runtimes.get(field);
       if (!rt?.control) continue;
       const control = rt.control;
@@ -737,7 +771,8 @@ export class FormEngineService {
     arr.push(control);
 
     if (isObjectField(field)) {
-      for (const f of itemFieldsByGroup.get(control)?.flat ?? []) this.wireField(f, form, flat, runtimes, cascade);
+      for (const f of itemFieldsByGroup.get(control)?.flat ?? [])
+        this.wireField(f, form, flat, runtimes, cascade);
     }
   }
 
@@ -790,24 +825,24 @@ export class FormEngineService {
       if (!itemFields?.length || !first?.path) continue;
 
       const rest = first.path.slice(arrayPath.length + 1);
-      const oldIndexSegment = rest.slice(0, rest.indexOf('.') === -1 ? undefined : rest.indexOf('.'));
+      const oldIndexSegment = rest.slice(
+        0,
+        rest.indexOf('.') === -1 ? undefined : rest.indexOf('.'),
+      );
       const oldItemPath = `${arrayPath}.${oldIndexSegment}`;
       const newItemPath = `${arrayPath}.${i}`;
       if (oldItemPath === newItemPath) continue;
 
       for (const f of itemFields) {
-        if (f.path?.startsWith(oldItemPath)) f.path = newItemPath + f.path.slice(oldItemPath.length);
+        if (f.path?.startsWith(oldItemPath))
+          f.path = newItemPath + f.path.slice(oldItemPath.length);
       }
     }
   }
 
   // ── cross validators (SPEC §9) ────────────
 
-  private attachCrossValidators(
-    form: FormGroup,
-    flat: FormField[],
-    rules: CrossValidator[],
-  ): void {
+  private attachCrossValidators(form: FormGroup, flat: FormField[], rules: CrossValidator[]): void {
     const sync: ValidatorFn[] = [];
     for (const rule of rules) {
       if (rule.type === 'match') {
@@ -855,11 +890,18 @@ export class FormEngineService {
 
   // ── helpers ───────────────────────────────
 
-  private newRuntime(field: FormField, localForm: FormGroup, localFields: FormField[]): FieldRuntime {
+  private newRuntime(
+    field: FormField,
+    localForm: FormGroup,
+    localFields: FormField[],
+  ): FieldRuntime {
     return { field, localForm, localFields, observers: [], subs: [], state: signal(field) };
   }
 
-  private makeFormState<T = Record<string, unknown>>(form: FormGroup, fields: FormField[]): FormState<T> {
+  private makeFormState<T = Record<string, unknown>>(
+    form: FormGroup,
+    fields: FormField[],
+  ): FormState<T> {
     return {
       value: form.getRawValue() as T,
       form,

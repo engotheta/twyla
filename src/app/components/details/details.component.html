@@ -1,52 +1,73 @@
-@let p = parameter();
-
-<div class="flex flex-col gap-4">
-  @if (showHeader()) {
-    <details-header
-      [title]="p.header?.title"
-      [titleClass]="p.header?.titleClass"
-      [containerClass]="p.header?.class"
-      [animation]="p.animation"
-    />
-  }
-
-  @if (fieldGroups().length) {
-    @if (p.showGroupsInTabs) {
-      <mat-tab-group [animationDuration]="'0ms'" class="{{ p.groupConfig?.containerClass ?? '' }}">
-        @for (fg of fieldGroups(); track fg.slug ?? fg.label ?? $index) {
-          <mat-tab [label]="fg.label ?? ''">
-            <div class="pt-3">
-              <field-group
-                [group]="fg"
-                [layout]="p.layout ?? 'list'"
-                [fieldConfig]="p.fieldConfig"
-                [groupConfig]="p.groupConfig"
-                [arrayConfig]="p.arrayConfig"
-                [showBgIconMark]="p.showBgIconMark ?? false"
-                [showGroupsInTabs]="p.showGroupsInTabs"
-                [data]="p.entity"
-                [animation]="p.animation"
-              />
-            </div>
-          </mat-tab>
-        }
-      </mat-tab-group>
-    } @else {
-      <div class=" {{ 'flex flex-col gap-4' | mergeClasses: p.groupConfig?.containerClass ?? '' }}">
-        @for (fg of fieldGroups(); track fg.slug ?? fg.label ?? $index) {
-          <field-group
-            [group]="fg"
-            [layout]="p.layout ?? 'list'"
-            [fieldConfig]="p.fieldConfig"
-            [groupConfig]="p.groupConfig"
-            [arrayConfig]="p.arrayConfig"
-            [showBgIconMark]="p.showBgIconMark ?? false"
-            [showGroupsInTabs]="p.showGroupsInTabs ?? false"
-            [data]="p.entity"
-            [animation]="p.animation"
-          />
-        }
-      </div>
+@if (dialogData) {
+  <h2 mat-dialog-title class="flex items-center gap-2">
+    @if (dialogData.icon) {
+      <mat-icon aria-hidden="true">{{ dialogData.icon }}</mat-icon>
     }
-  }
-</div>
+    {{ dialogData.title ?? 'Details' }}
+  </h2>
+
+  <mat-dialog-content>
+    <ng-container [ngTemplateOutlet]="body" />
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" cdkFocusInitial (click)="dialogRef?.close()">Close</button>
+  </mat-dialog-actions>
+} @else {
+  <ng-container [ngTemplateOutlet]="body" />
+}
+
+<ng-template #body>
+  @let p = resolvedParameter();
+
+  <div class="flex flex-col gap-4">
+    @if (showHeader()) {
+      <details-header
+        [title]="p.header?.title"
+        [titleClass]="p.header?.titleClass"
+        [containerClass]="p.header?.class"
+        [animation]="p.animation"
+      />
+    }
+
+    @if (fieldGroups().length) {
+      @if (p.showGroupsInTabs) {
+        <mat-tab-group [animationDuration]="'0ms'" class="{{ p.groupConfig?.containerClass ?? '' }}">
+          @for (fg of fieldGroups(); track fg.slug ?? fg.label ?? $index) {
+            <mat-tab [label]="fg.label ?? ''">
+              <div class="pt-3">
+                <field-group
+                  [group]="fg"
+                  [layout]="p.layout ?? 'list'"
+                  [fieldConfig]="p.fieldConfig"
+                  [groupConfig]="p.groupConfig"
+                  [arrayConfig]="p.arrayConfig"
+                  [showBgIconMark]="p.showBgIconMark ?? false"
+                  [showGroupsInTabs]="p.showGroupsInTabs"
+                  [data]="p.entity"
+                  [animation]="p.animation"
+                />
+              </div>
+            </mat-tab>
+          }
+        </mat-tab-group>
+      } @else {
+        <div class=" {{ 'flex flex-col gap-4' | mergeClasses: p.groupConfig?.containerClass ?? '' }}">
+          @for (fg of fieldGroups(); track fg.slug ?? fg.label ?? $index) {
+            <field-group
+              [group]="fg"
+              [layout]="p.layout ?? 'list'"
+              [fieldConfig]="p.fieldConfig"
+              [groupConfig]="p.groupConfig"
+              [arrayConfig]="p.arrayConfig"
+              [showBgIconMark]="p.showBgIconMark ?? false"
+              [showGroupsInTabs]="p.showGroupsInTabs ?? false"
+              [data]="p.entity"
+              [animation]="p.animation"
+            />
+          }
+        </div>
+      }
+    }
+  </div>
+</ng-template>

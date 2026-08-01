@@ -1,10 +1,18 @@
-import { ChangeDetectionStrategy, Component, computed, input, OnInit, signal, TemplateRef } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  OnInit,
+  signal,
+  TemplateRef,
+} from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormInstance } from '../../../form-engine.service';
-import { FormField } from '../../../form-field.interface';
+import { FormField } from '../../../interfaces/form-field.interface';
 import { ObjectField } from '../../container.fields';
 import { joinClasses } from '../class.util';
 import { controlStatus } from '../control-status.util';
@@ -48,14 +56,15 @@ export class ObjectFieldComponent implements OnInit {
   }
 
   protected readonly wrapperClass = computed(() => joinClasses('relative', this.state().class));
-
   protected readonly arrayControl = computed(() => this.instance().control(this.field()));
   protected readonly arrayStatus = controlStatus(this.arrayControl);
 
   protected readonly items = computed<ListItemView[]>(() => {
     const f = this.field();
     if (!f.isList) return [];
+
     const rawValues = (this.arrayStatus().value as Record<string, unknown>[] | null) ?? [];
+
     return rawValues.map((rowValue, index) => ({
       index,
       fields: this.instance().listItemFields(f, index),

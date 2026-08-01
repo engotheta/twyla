@@ -66,6 +66,13 @@ export interface DetailsParameter<TEntity = Record<string, unknown>> {
   groupConfig?: FieldGroupConfig;
 }
 
+/** Data shape for opening a `DetailsComponent` directly via `MatDialog.open(DetailsComponent, { data })`. */
+export interface DetailsDialogData<TEntity = Record<string, unknown>>
+  extends DetailsParameter<TEntity> {
+  title?: string;
+  icon?: string;
+}
+
 export interface ModifierProps {
   childrenKey?: string;
   inherit?: boolean;

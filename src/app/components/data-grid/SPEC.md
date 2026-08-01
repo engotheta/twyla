@@ -344,3 +344,32 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
   that revealed the mismatch runs twice (once client-mode, once more
   immediately after upgrading) — a one-time startup cost, not a
   per-page-change one.
+
+## 10. Click-to-view-details (`viewDetailsClicks`)
+
+- `DataGridComponent.onRowClick` counts clicks per row (keyed by
+  `instance.rowId(row)`, accumulated for the life of the grid instance —
+  not reset by a timeout) and, once the count reaches
+  `GridParameter.viewDetailsClicks`, opens `DetailsComponent` directly —
+  `dialog.open(DetailsComponent, { data: { entity: row } })` — then resets
+  that row's count to 0. No separate wrapper component is needed:
+  `DetailsComponent` is dual-mode (mirrors `FieldGroupComponent`'s own
+  dual-mode pattern), detecting `MAT_DIALOG_DATA` via an optional inject
+  and adding its own dialog chrome (a "Details" title — or `dialogData.title`
+  if the caller set one — plus a Close button) only when opened that way;
+  used as a plain embeddable child (`[parameter]`) elsewhere, it renders
+  with no chrome, unchanged. With no `visibleFields`/`fieldGroups` passed,
+  `resolveDetailGroups`/`getAllFields` derive fields directly from the row
+  object itself: every own field is shown, with no per-grid setup required.
+- Default is 7 when `viewDetailsClicks` is left unset — a deliberate,
+  rarely-accidental gesture (rapid repeat clicks on the same row), not a
+  primary interaction; set an explicit lower number for an easier-to
+  reach "view details" affordance, or `0` to disable the behavior
+  entirely. `rowClick` (if provided) always fires on every click
+  regardless of this feature or its threshold.
+- Table/list/cards render modes all wire the same `onRowClick`, but
+  clicks that land on an interactive control inside the row (checkbox,
+  radio, drag handle, expand toggle, row action buttons — the latter via
+  `ActionButtonComponent.handleClick`'s own unconditional
+  `stopPropagation()`) never reach it — only clicks on otherwise-inert
+  parts of the row count.

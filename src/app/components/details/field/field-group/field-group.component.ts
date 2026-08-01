@@ -90,33 +90,43 @@ export class FieldGroupComponent<D = unknown> {
 
   private readonly dialog = inject(MatDialog);
 
-  // Set only when this instance was created via `dialog.open(FieldGroupComponent, { data })`
-  // instead of being used as a normal embedded component.
-  protected dialogData = inject<FieldGroupDialogData<D>>(MAT_DIALOG_DATA, { optional: true });
+  private readonly injectedDialogData = inject<FieldGroupDialogData<D>>(MAT_DIALOG_DATA, {
+    optional: true,
+  });
   protected readonly dialogRef = inject(MatDialogRef<FieldGroupComponent<D>>, { optional: true });
 
+  // `MAT_DIALOG_DATA`/`MatDialogRef` are ambient DI tokens: every descendant rendered inside a
+  // dialog inherits them too (e.g. the recursive `<field-group>` children below), not just the
+  // component `MatDialog.open()` actually instantiated. Comparing `componentInstance` — only
+  // populated once Angular Material finishes creating the dialog's root component — tells apart
+  // "I am that root component" from "I merely live inside one", so nested field-groups don't
+  // also render dialog chrome on top of their ancestor's.
+  protected readonly dialogData = computed(() =>
+    this.dialogRef?.componentInstance === this ? this.injectedDialogData : undefined,
+  );
+
   protected readonly resolvedGroup = computed(
-    () => this.dialogData?.group ?? this.parameter()?.group ?? this.group() ?? {},
+    () => this.dialogData()?.group ?? this.parameter()?.group ?? this.group() ?? {},
   );
 
   protected readonly resolvedLayout = computed(
-    () => this.dialogData?.layout ?? this.parameter()?.layout ?? this.layout(),
+    () => this.dialogData()?.layout ?? this.parameter()?.layout ?? this.layout(),
   );
 
   protected readonly resolvedData = computed(
-    () => this.dialogData?.data ?? this.parameter()?.data ?? this.data(),
+    () => this.dialogData()?.data ?? this.parameter()?.data ?? this.data(),
   );
 
   protected readonly resolvedAnimation = computed(
-    () => this.dialogData?.animation ?? this.parameter()?.animation ?? this.animation(),
+    () => this.dialogData()?.animation ?? this.parameter()?.animation ?? this.animation(),
   );
 
   protected readonly resolvedIsArrayItem = computed(
-    () => this.dialogData?.isArrayItem ?? this.parameter()?.isArrayItem ?? this.isArrayItem(),
+    () => this.dialogData()?.isArrayItem ?? this.parameter()?.isArrayItem ?? this.isArrayItem(),
   );
 
   private readonly resolvedExpanded = computed(
-    () => this.dialogData?.expanded ?? this.parameter()?.expanded ?? this.expanded(),
+    () => this.dialogData()?.expanded ?? this.parameter()?.expanded ?? this.expanded(),
   );
 
   // Only the *initial* state comes from `resolvedExpanded` — once open, a manual toggle
@@ -129,15 +139,15 @@ export class FieldGroupComponent<D = unknown> {
   // may resolve a different layout and must apply its own preset fresh. See `effectiveFieldConfig`
   // for the version actually used to render this instance.
   protected readonly resolvedFieldConfig = computed(
-    () => this.dialogData?.fieldConfig ?? this.parameter()?.fieldConfig ?? this.fieldConfig(),
+    () => this.dialogData()?.fieldConfig ?? this.parameter()?.fieldConfig ?? this.fieldConfig(),
   );
 
   protected readonly resolvedGroupConfig = computed(
-    () => this.dialogData?.groupConfig ?? this.parameter()?.groupConfig ?? this.groupConfig(),
+    () => this.dialogData()?.groupConfig ?? this.parameter()?.groupConfig ?? this.groupConfig(),
   );
 
   protected readonly resolvedArrayConfig = computed(
-    () => this.dialogData?.arrayConfig ?? this.parameter()?.arrayConfig ?? this.arrayConfig(),
+    () => this.dialogData()?.arrayConfig ?? this.parameter()?.arrayConfig ?? this.arrayConfig(),
   );
 
   // This instance's resolved layout's preset, merged with the caller's raw override — what
@@ -160,12 +170,12 @@ export class FieldGroupComponent<D = unknown> {
 
   protected readonly resolvedShowBgIconMark = computed(
     () =>
-      this.dialogData?.showBgIconMark ?? this.parameter()?.showBgIconMark ?? this.showBgIconMark(),
+      this.dialogData()?.showBgIconMark ?? this.parameter()?.showBgIconMark ?? this.showBgIconMark(),
   );
 
   protected readonly resolvedShowGroupsInTabs = computed(
     () =>
-      this.dialogData?.showGroupsInTabs ??
+      this.dialogData()?.showGroupsInTabs ??
       this.parameter()?.showGroupsInTabs ??
       this.showGroupsInTabs(),
   );

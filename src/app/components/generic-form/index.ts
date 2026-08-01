@@ -2,15 +2,15 @@
 // form-config barrel — import everything from '.../form-config'
 // ─────────────────────────────────────────────
 
-export * from './field-type.interface';
-export * from './dynamic.interface';
-export * from './form-state.interface';
-export * from './base-field.interface';
+export * from './interfaces/field-type.interface';
+export * from './interfaces/dynamic.interface';
+export * from './interfaces/form-state.interface';
+export * from './interfaces/base-field.interface';
 export * from './fields/container.fields';
 export * from './fields/control.fields';
 export * from './fields/static.fields';
-export * from './form-field.interface';
-export * from './form-parameters.interface';
+export * from './interfaces/form-field.interface';
+export * from './interfaces/form-parameters.interface';
 export * from './form-engine.service';
 export * from './generic-form.component';
 

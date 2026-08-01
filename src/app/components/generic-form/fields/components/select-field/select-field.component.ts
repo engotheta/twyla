@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, ElementRef, input, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ScrollingModule } from '@angular/cdk/scrolling';
@@ -10,7 +18,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { map, of, switchMap } from 'rxjs';
 import { FormInstance } from '../../../form-engine.service';
-import { Option } from '../../../form-state.interface';
+import { Option } from '../../../interfaces/form-state.interface';
 import { SelectField } from '../../control.fields';
 import { controlStatus } from '../control-status.util';
 import { firstErrorMessage } from '../field-errors.util';
@@ -39,7 +47,11 @@ function defaultCompare(a: unknown, b: unknown): boolean {
 
     @switch (f.variant ?? 'dropdown') {
       @case ('dropdown') {
-        <mat-form-field [appearance]="appearance()" class="w-full" [class.hide-subscript]="!showSubscript()">
+        <mat-form-field
+          [appearance]="appearance()"
+          class="w-full"
+          [class.hide-subscript]="!showSubscript()"
+        >
           @if (f.showLabel !== false && f.label) {
             <mat-label>{{ f.label }}</mat-label>
           }
@@ -65,13 +77,19 @@ function defaultCompare(a: unknown, b: unknown): boolean {
             }
             @if (f.virtualScroll) {
               <cdk-virtual-scroll-viewport [itemSize]="42" [style.height.px]="viewportHeight()">
-                <mat-option *cdkVirtualFor="let opt of filteredOptions()" [value]="opt.value" [disabled]="opt.disabled">
+                <mat-option
+                  *cdkVirtualFor="let opt of filteredOptions()"
+                  [value]="opt.value"
+                  [disabled]="opt.disabled"
+                >
                   {{ opt.label }}
                 </mat-option>
               </cdk-virtual-scroll-viewport>
             } @else {
               @for (opt of filteredOptions(); track opt.value) {
-                <mat-option [value]="opt.value" [disabled]="opt.disabled">{{ opt.label }}</mat-option>
+                <mat-option [value]="opt.value" [disabled]="opt.disabled">{{
+                  opt.label
+                }}</mat-option>
               }
             }
           </mat-select>
@@ -84,13 +102,19 @@ function defaultCompare(a: unknown, b: unknown): boolean {
         </mat-form-field>
       }
       @case ('radio') {
-        <div class="flex flex-col gap-1" [matTooltip]="f.tooltip ?? ''" [matTooltipDisabled]="!f.tooltip">
+        <div
+          class="flex flex-col gap-1"
+          [matTooltip]="f.tooltip ?? ''"
+          [matTooltipDisabled]="!f.tooltip"
+        >
           @if (f.showLabel !== false && f.label) {
             <span class="text-sm font-medium">{{ f.label }}</span>
           }
           <mat-radio-group [formControl]="control()">
             @for (opt of opts; track opt.value) {
-              <mat-radio-button [value]="opt.value" [disabled]="opt.disabled">{{ opt.label }}</mat-radio-button>
+              <mat-radio-button [value]="opt.value" [disabled]="opt.disabled">{{
+                opt.label
+              }}</mat-radio-button>
             }
           </mat-radio-group>
           @if (errorMessage(); as message) {
@@ -99,7 +123,11 @@ function defaultCompare(a: unknown, b: unknown): boolean {
         </div>
       }
       @case ('checkbox') {
-        <div class="flex flex-col gap-1" [matTooltip]="f.tooltip ?? ''" [matTooltipDisabled]="!f.tooltip">
+        <div
+          class="flex flex-col gap-1"
+          [matTooltip]="f.tooltip ?? ''"
+          [matTooltipDisabled]="!f.tooltip"
+        >
           @if (f.showLabel !== false && f.label) {
             <span class="text-sm font-medium">{{ f.label }}</span>
           }
@@ -119,13 +147,19 @@ function defaultCompare(a: unknown, b: unknown): boolean {
       }
       @default {
         <!-- 'toggle' | 'button' -->
-        <div class="flex flex-col gap-1" [matTooltip]="f.tooltip ?? ''" [matTooltipDisabled]="!f.tooltip">
+        <div
+          class="flex flex-col gap-1"
+          [matTooltip]="f.tooltip ?? ''"
+          [matTooltipDisabled]="!f.tooltip"
+        >
           @if (f.showLabel !== false && f.label) {
             <span class="text-sm font-medium">{{ f.label }}</span>
           }
           <mat-button-toggle-group [formControl]="control()" [multiple]="f.multiple === true">
             @for (opt of opts; track opt.value) {
-              <mat-button-toggle [value]="opt.value" [disabled]="opt.disabled">{{ opt.label }}</mat-button-toggle>
+              <mat-button-toggle [value]="opt.value" [disabled]="opt.disabled">{{
+                opt.label
+              }}</mat-button-toggle>
             }
           </mat-button-toggle-group>
           @if (errorMessage(); as message) {
@@ -160,7 +194,9 @@ export class SelectFieldComponent {
   );
 
   protected readonly errorMessage = computed(() =>
-    this.status().touched ? firstErrorMessage(this.status().errors, this.state().validations) : null,
+    this.status().touched
+      ? firstErrorMessage(this.status().errors, this.state().validations)
+      : null,
   );
 
   // `optionsParameter.optionsFunction`: an async raw-data source, mapped via labelKey/valueKey/
@@ -197,7 +233,9 @@ export class SelectFieldComponent {
     return query ? opts.filter((o) => o.label.toLowerCase().includes(query)) : opts;
   });
 
-  protected readonly viewportHeight = computed(() => Math.min(this.filteredOptions().length * 42, 256));
+  protected readonly viewportHeight = computed(() =>
+    Math.min(this.filteredOptions().length * 42, 256),
+  );
 
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -221,7 +259,9 @@ export class SelectFieldComponent {
 
   protected toggleValue(value: unknown): void {
     const eq = this.state().compareWith ?? defaultCompare;
-    const current = Array.isArray(this.status().value) ? [...(this.status().value as unknown[])] : [];
+    const current = Array.isArray(this.status().value)
+      ? [...(this.status().value as unknown[])]
+      : [];
     const index = current.findIndex((v) => eq(v, value));
     if (index === -1) current.push(value);
     else current.splice(index, 1);
