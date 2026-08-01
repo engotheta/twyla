@@ -1,20 +1,27 @@
 // pure functions: row identity, cell value extraction, and LOCAL (non-serverPaginated) search/filter/sort
 
-import { getPathValue } from '../details/util/util.helpers';
-import { GridFilterOperator } from './grid-filter.interface';
-import { GridColumn_ } from './grid-column.interface';
-import { SearchField } from './grid-search.interface';
-import { GridSort } from './grid-state.interface';
+import { getPathValue } from '../../details/util/util.helpers';
+import { GridFilterOperator } from '../interfaces/grid-filter.interface';
+import { GridColumn_ } from '../interfaces/grid-column.interface';
+import { SearchField } from '../interfaces/grid-search.interface';
+import { GridSort } from '../interfaces/grid-state.interface';
 
 const DEFAULT_IDENTIFIER_KEY = ['id'];
 
 /** Stable identity string for a row, built from `identifierKey` paths (default `['id']`). */
-export function getRowId<RowType = any>(row: RowType, identifierKey: string[] = DEFAULT_IDENTIFIER_KEY): unknown {
+export function getRowId<RowType = any>(
+  row: RowType,
+  identifierKey: string[] = DEFAULT_IDENTIFIER_KEY,
+): unknown {
   const values = identifierKey.map((path) => getPathValue(row, path));
   return values.length === 1 ? values[0] : JSON.stringify(values);
 }
 
-export function rowsEqual<RowType = any>(a: RowType, b: RowType, identifierKey?: string[]): boolean {
+export function rowsEqual<RowType = any>(
+  a: RowType,
+  b: RowType,
+  identifierKey?: string[],
+): boolean {
   if (a === b) return true;
   const idA = getRowId(a, identifierKey);
   const idB = getRowId(b, identifierKey);
@@ -39,7 +46,10 @@ export function matchesSearchTerm<RowType = any>(
 ): boolean {
   const needle = term.trim().toLowerCase();
   if (!needle) return true;
-  return columns.some((col) => toSearchableText(getCellValue(row, col)).toLowerCase().includes(needle));
+
+  return columns.some((col) =>
+    toSearchableText(getCellValue(row, col)).toLowerCase().includes(needle),
+  );
 }
 
 function matchesOperator(value: unknown, operator: GridFilterOperator, target: unknown): boolean {
@@ -85,21 +95,28 @@ function matchesOperator(value: unknown, operator: GridFilterOperator, target: u
 function coerceSearchValue(raw: string, columnType?: GridColumn_['type']): unknown {
   switch (columnType) {
     case 'number':
+
     case 'currency':
+
     case 'percent': {
       const n = Number(raw);
       return Number.isNaN(n) ? raw : n;
     }
+
     case 'boolean':
       if (raw.toLowerCase() === 'true') return true;
       if (raw.toLowerCase() === 'false') return false;
       return raw;
+
     case 'date':
+
     case 'datetime':
+
     case 'time': {
       const d = new Date(raw);
       return Number.isNaN(d.getTime()) ? raw : d;
     }
+
     default:
       return raw;
   }
@@ -166,5 +183,8 @@ function compareValues(a: unknown, b: unknown): number {
 export function sortRows<RowType = any>(rows: RowType[], sort: GridSort | undefined): RowType[] {
   if (!sort?.key) return rows;
   const factor = sort.direction === 'desc' ? -1 : 1;
-  return [...rows].sort((a, b) => factor * compareValues(getPathValue(a, sort.key), getPathValue(b, sort.key)));
+
+  return [...rows].sort(
+    (a, b) => factor * compareValues(getPathValue(a, sort.key), getPathValue(b, sort.key)),
+  );
 }

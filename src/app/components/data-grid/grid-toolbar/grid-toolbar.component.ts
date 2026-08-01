@@ -10,12 +10,19 @@ import { ActionButtonsComponent } from '../../action-buttons/action-buttons.comp
 import { GridExportService } from '../grid-export.service';
 import { GridInstance } from '../grid-engine.service';
 import { GridColumnPanelComponent } from '../grid-column-panel/grid-column-panel.component';
+import { GridExportPanelComponent } from '../grid-export-panel/grid-export-panel.component';
 import { GridFilterPanelComponent } from '../grid-filter-panel/grid-filter-panel.component';
-import { GridRenderMode } from '../grid-render-mode.interface';
+import { GridColumn_ } from '../interfaces/grid-column.interface';
+import { GridExportFormat } from '../interfaces/grid-export.interface';
+import { GridRenderMode } from '../interfaces/grid-render-mode.interface';
 import { GridSearchDialogComponent } from '../grid-search-dialog/grid-search-dialog.component';
 import { GridSearchFieldsComponent } from '../grid-search-fields/grid-search-fields.component';
 
-const RENDER_MODE_ICONS: Record<GridRenderMode, string> = { table: 'table_rows', list: 'view_list', cards: 'grid_view' };
+const RENDER_MODE_ICONS: Record<GridRenderMode, string> = {
+  table: 'table_rows',
+  list: 'view_list',
+  cards: 'grid_view',
+};
 
 @Component({
   selector: 'grid-toolbar',
@@ -60,6 +67,10 @@ export class GridToolbarComponent<RowType = any> {
     });
   }
 
+  protected readonly filtersInline = computed(
+    () => this.instance().params.filterConfig?.filtersMode === 'inline',
+  );
+
   protected readonly renderModes = computed(() => this.instance().params.renderMode?.modes ?? []);
   protected readonly exportFormats = computed(() => this.instance().params.export?.formats ?? []);
 
@@ -71,7 +82,15 @@ export class GridToolbarComponent<RowType = any> {
     this.instance().setRenderMode(mode);
   }
 
-  protected export(format: 'csv' | 'excel' | 'pdf'): void {
-    void this.exportService.export(format, this.instance());
+  /** every export (any format) opens the column picker first — the picker's result is the
+   *  exact, ordered column set to export; cancelling (undefined) exports nothing */
+  protected export(format: GridExportFormat): void {
+    const ref = this.dialog.open(GridExportPanelComponent, {
+      data: { instance: this.instance(), format },
+      width: '460px',
+    });
+    ref.afterClosed().subscribe((columns: GridColumn_[] | undefined) => {
+      if (columns) void this.exportService.export(format, this.instance(), columns);
+    });
   }
 }

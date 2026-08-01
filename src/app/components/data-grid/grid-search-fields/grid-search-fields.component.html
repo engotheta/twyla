@@ -1,6 +1,6 @@
-<div class="flex flex-wrap items-start gap-1">
+<div class="flex flex-wrap items-center gap-1">
   @for (item of items(); track item.index) {
-    <div class="relative flex items-end gap-1 pt-2">
+    <div class="relative flex items-center gap-1">
       @if (canRemove(item.index)) {
         <button
           type="button"
@@ -30,13 +30,50 @@
       matTooltip="Fine-tune search operator"
       (click)="toggleTypeOverride()"
     >
-      <mat-icon class="!text-base" [class.opacity-100]="typeOverrideOn()" [class.opacity-50]="!typeOverrideOn()">tune</mat-icon>
+      <mat-icon
+        class="!text-base"
+        [class.opacity-100]="typeOverrideOn()"
+        [class.opacity-50]="!typeOverrideOn()"
+        >tune</mat-icon
+      >
     </button>
   }
 
-  @if (canAdd()) {
-    <button type="button" mat-icon-button class="!w-8 !h-8 shrink-0" aria-label="Add search field" (click)="addItem()">
+  @if (onlyFirstVisible() && itemCount() > 1) {
+    <button
+      type="button"
+      mat-icon-button
+      class="!w-8 !h-8 shrink-0"
+      [matBadge]="itemCount()"
+      matBadgeSize="small"
+      aria-label="View all search fields"
+      matTooltip="View all search fields"
+      (click)="openDialogRequested.emit()"
+    >
+      <mat-icon class="!text-base">more_horiz</mat-icon>
+    </button>
+  } @else if (canAdd()) {
+    <button
+      type="button"
+      mat-icon-button
+      class="!w-8 !h-8 shrink-0"
+      aria-label="Add search field"
+      (click)="addItem()"
+    >
       <mat-icon class="!text-base">add</mat-icon>
+    </button>
+  }
+
+  @if (canClear()) {
+    <button
+      type="button"
+      mat-icon-button
+      class="!w-8 !h-8 shrink-0"
+      aria-label="Clear search"
+      matTooltip="Clear search"
+      (click)="clearAll()"
+    >
+      <mat-icon class="!text-base opacity-60">backspace</mat-icon>
     </button>
   }
 </div>

@@ -28,7 +28,7 @@ generic-form/
 ```
 
 `fields/components/` — every selector starts with `app-`, straight to the
-name (`app-object-field`, not `app-generic-form-object-field`):
+name (`app-object-field`, not `generic-form-object-field`):
 
 ```
 fields/components/
@@ -73,15 +73,13 @@ const params: FormParameters<{ name: string; country: string; city: string }> = 
       visible: observe('country', (country) => !!country),
     },
   ],
-  crossValidators: [
-    { type: 'requiredIf', field: 'city', when: 'country', showOn: 'city' },
-  ],
+  crossValidators: [{ type: 'requiredIf', field: 'city', when: 'country', showOn: 'city' }],
   onSubmit: (value) => api.save(value),
 };
 ```
 
 ```html
-<app-generic-form [params]="params" />
+<generic-form [params]="params" />
 ```
 
 ## `fieldsClass` vs `fieldsContainerClass`
@@ -90,11 +88,11 @@ Every container that has a `fields` list (`ObjectField`, `StepField`,
 top-level `FormParameters`) has both:
 
 - **`fieldsClass`** — applied to **each** direct child field's own wrapper.
-  It's a *descendant* class: `fieldsClass: 'mb-4'` puts `mb-4` on every field
+  It's a _descendant_ class: `fieldsClass: 'mb-4'` puts `mb-4` on every field
   in that list, individually.
 - **`fieldsContainerClass`** — applied **once**, to the element that wraps
-  the whole `fields` list. It's a *container* class: `fieldsContainerClass:
-  'grid grid-cols-2 gap-4'` lays the list of fields out as a grid.
+  the whole `fields` list. It's a _container_ class: `fieldsContainerClass:
+'grid grid-cols-2 gap-4'` lays the list of fields out as a grid.
 
 They compose: a 2-column grid of fields, each with its own bottom margin, is
 `fieldsContainerClass: 'grid grid-cols-2 gap-4', fieldsClass: 'mb-2'`.

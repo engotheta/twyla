@@ -331,6 +331,11 @@
     <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 py-2">
       @for (row of instance.rows(); track instance.rowId(row); let ri = $index) {
         <div [class]="rowClass(row)" class="rounded border border-black/10 p-3" (click)="onRowClick(row)" (dblclick)="onRowDblClick(row)">
+          @if (instance.params.rowButtons?.length) {
+            <div class="flex justify-end mb-1" (click)="$event.stopPropagation()">
+              <action-buttons [data]="row" [buttons]="instance.params.rowButtons" [animation]="instance.params.animation" />
+            </div>
+          }
           @if (instance.params.renderMode?.cardTemplate; as tpl) {
             <ng-container [ngTemplateOutlet]="tpl" [ngTemplateOutletContext]="{ $implicit: row, row, index: ri }" />
           } @else {

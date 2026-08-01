@@ -7,7 +7,7 @@ import { resolveDetailGroups } from './detail.helpers';
 import { MergeClassesPipe } from './util/class-name/merge-classes.pipe';
 
 @Component({
-  selector: 'app-details',
+  selector: 'all-details',
   templateUrl: './details.component.html',
   styleUrl: './details.component.scss',
   imports: [MatTabsModule, DetailsHeaderComponent, FieldGroupComponent, MergeClassesPipe],

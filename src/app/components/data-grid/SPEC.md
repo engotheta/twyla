@@ -22,10 +22,30 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
   — a cell reached via a previous row's `rowspan` is never repeated — the
   same convention an HTML `<tr>` uses natively.
 - Body cell spans (`GridInstance.cellSpan(rowIndex, columnKey)`) come from
-  `buildCellSpanPlan` (`grid-engine.service.ts`, exported): auto vertical-merge
-  (`GridParameter.mergeCells`, equal adjacent values in the same column)
-  folded with manual per-cell overrides (`GridRow._cellsProps[key].rowspan`/
-  `colspan`) — **manual always wins** over auto-merge for any cell it covers.
+  `buildCellSpanPlan` (`grid-engine.service.ts`, exported), precedence high
+  to low: (1) manual per-cell overrides (`GridRow._cellsProps[key].rowspan`/
+  `colspan`) — wins over both auto mechanisms below, for any cell it covers;
+  (2) horizontal auto-merge, opted into per ROW via `_rowProps.mergeConsecutive`
+  — a streak of consecutive REAL columns (current display order) with equal
+  resolved values, first cell spans them via `colspan`; (3) vertical
+  auto-merge, opted into per COLUMN via `GridColumn_.mergeConsecutive`
+  (falls back to the grid-wide `GridParameter.mergeCells` default when a
+  column doesn't set its own) — a streak of consecutive ROWS with equal
+  resolved values in that column, first cell spans them via `rowspan`. (2)
+  only short-circuits a cell when it's an ACTUAL streak member — `colspan > 1`
+  (streak start) or `hidden` (streak continuation); a column with no
+  horizontal match at all (the common case for most cells on a row that
+  merely opted into `_rowProps.mergeConsecutive`) still falls through to
+  (3) — opting a ROW into horizontal merge must not silently block EVERY
+  one of its cells from ever being considered for vertical merge, even the
+  ones with nothing to merge horizontally (this was a real bug: the
+  row-merge lookup always returns an entry per column, including trivial
+  "streak of 1" ones, so checking only "does an entry exist" rather than
+  "is it an actual span" always won, starving vertical merge entirely
+  wherever row-merge was active). A cell already covered by an EARLIER
+  cell's span on either axis is skipped before any of these checks run,
+  same "first cell in a streak wins" rule both axes — a covered cell's
+  OWN manual override, if it has one, is never independently consulted.
 - The plan is keyed by column **key**, not position, and computed over
   columns in their CURRENT display order — so it survives column drag
   reorder. The header matrix does too: `headerRows` reorders the nested
@@ -42,6 +62,16 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
   group, composes correctly.
 - Spans exist only in **table** render mode — list/cards never render a
   `<table>`, so span geometry is meaningless there.
+- A cell with BOTH `rowspan > 1` AND `colspan > 1` covers a 2D rectangle:
+  `buildCellSpanPlan` (`grid-engine.service.ts`) marks EVERY column the
+  colspan reaches as covered for the full rowspan duration, not just the
+  cell's own starting column — marking only the starting column (the
+  original bug) left the OTHER spanned columns unmarked from the second
+  covered row onward, so they rendered their own independent (unhidden)
+  cells there, shifting everything after them rightward and overflowing
+  the table's edge. The cell's own first row always rendered correctly
+  (colspan is applied within that row regardless); only rows below it
+  were affected.
 
 ## 2. Column reordering & structural (synthetic) columns
 
@@ -172,7 +202,7 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
   stock `isList` "remove" button (`object-field.component.ts`), which is
   why `grid-search-fields` renders its own per-item list chrome via
   `FormEngineService` + `<app-field>` directly instead of
-  `<app-generic-form>`/`ObjectFieldComponent`'s built-in list template.
+  `<generic-form>`/`ObjectFieldComponent`'s built-in list template.
 - Each instance's own "column" dropdown excludes columns already picked by
   OTHER instances (never itself) — the `'./key'` relative-observer-path
   extension (generic-form/SPEC.md §4) is what makes this expressible per
@@ -188,6 +218,19 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
 - Server mode: `searchFields` is always forwarded via `PageDetails`,
   exactly like `filters` already was — `gridDataFn` implements whichever
   fields it cares about; the grid does no server-side filtering itself.
+- In `'modal'` mode, once a 2nd+ instance exists, the toolbar mount always
+  shows a "view all" button (badged with the total count) instead of the
+  first-instance-only view's own "+" — independent of whether adding
+  another instance is currently allowed (`canAdd()`), since without this
+  there was no way back into the dialog once its own "+"/"add" affordance
+  became unavailable (e.g. the last item added was left empty) — a
+  dead-end the count badge always escapes. `grid-search-dialog` itself is
+  draggable by its title bar (`cdkDrag`/`cdkDragHandle`, CDK's
+  `cdkDragRootElement: '.cdk-overlay-pane'` pattern for moving the actual
+  positioned overlay, not just an inner wrapper) so it can be pulled aside
+  if it's covering the toolbar's own search trigger. A "Clear" button
+  (`grid-search-fields`) resets back to the single default empty
+  instance, mirroring `grid-filter-panel`'s own Clear button.
 
 ## 6. Drag-and-drop visual feedback
 
@@ -220,3 +263,84 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
   drop list is a `<div>`, not a table) — no structural constraint there,
   just a stylistic upgrade from CDK's stock clone for visual consistency
   with the row treatment.
+
+## 7. Export: column picker
+
+- Every export (any format, triggered from the toolbar's export menu)
+  opens `grid-export-panel` first — there is no direct-download path
+  anymore. Cancelling exports nothing.
+- The picker's candidate set is wider than declared columns: every
+  `instance.leafColumns()` entry PLUS every top-level key actually present
+  on the current page's rows that isn't a declared column at all
+  (`discoverExtraKeys`) — covers e.g. an auto-generated grid capped at
+  `maxAutoColumns`, or fields a consumer never bothered declaring. Initial
+  selection/order = `GridExportConfig.initialKeys` when set, else the
+  grid's own current `visibleColumns()`, in their current order; everything
+  else is appended after, unselected — dragging (mirrors
+  `grid-column-panel`) can freely reorder and mix all groups before
+  confirming.
+- On confirm, `GridExportService.export()` receives the chosen, ordered
+  `GridColumn_[]` directly (`overrideColumns`) — declared keys reuse their
+  real `GridColumn_` (keeps type/formatting), undeclared keys get a
+  minimal synthesized `{ key, label }`. This bypasses `resolveColumns()`'s
+  own visible/`allFields`/`hiddenKeys` logic entirely; those `GridExportConfig`
+  options only matter for the (no longer reachable) direct-export path,
+  effectively superseded by the picker's own selection.
+- `resolveHeaderRows` still computes a real nested/grouped header for every
+  picker-selected key that IS in the declared `columns` tree — the common
+  case (picker's default, unmodified selection) renders identically to the
+  non-picker path, nested headers included. Only keys that AREN'T in the
+  tree at all (raw fields with no group membership) fall back to flat,
+  ungrouped leaf cells, appended after the tree-based header cells in
+  their own relative order — NOT the whole header, just the ungroupable
+  portion of it. (An earlier version of this fell back to a fully flat
+  header the moment `overrideColumns` was involved at all, which silently
+  lost nested/grouped headers even for the common case where nothing about
+  the declared columns' own structure had changed — fixed.)
+- `exportAllData` now **defaults to `true`** (fetch and export every
+  matching row) — set it to `false` explicitly to export only the current
+  page, the old default.
+
+## 8. Filters: display mode
+
+- `GridFilterConfig.filtersMode` (`'modal'` default, `'inline'`) controls
+  WHERE `gridFilters` renders — a toggle button opening a
+  `cdkConnectedOverlay` panel, or directly in the toolbar row with no
+  toggle — independent of `filtersTrigger` (`'manual'`/`'live'`), which
+  controls WHEN filters apply. `grid-filter-panel`'s `inline` input swaps
+  its own box chrome (width cap, scroll, border/shadow) for a plain flex
+  row and lays `gridFilters` out horizontally
+  (`fieldsContainerClass`) — mirrors `GridSearchConfig.searchFieldsMode`'s
+  inline/modal split, and reuses the same generic-form field-layout
+  mechanism `grid-search-fields` would if it needed to.
+
+## 9. Server vs. client pagination: auto-upgrade
+
+- `GridParameter.serverPaginated` decides which of two RxJS pipelines
+  feeds the grid: `serverContent$` (reacts to `pageDetails` — page, sort,
+  search, filters — and refetches on every change) or `clientSource$`
+  (reacts only to `refetchTrigger`; assumes `gridDataFn`/`gridData`
+  already returns the full row set and pages/sorts/filters it locally).
+  Forgetting `serverPaginated: true` on a `gridDataFn` that's actually
+  written for server paging (takes `page`/`size`, returns a real
+  `totalLength`) used to mean page changes silently never reached it.
+- The engine now self-corrects: if a client-mode fetch resolves to a
+  `GridData` (not a plain array) with a numeric `totalLength` while
+  `serverPaginated` is still falsy, an internal `autoServerMode` signal
+  flips true and `serverMode` (`grid-engine.service.ts`) becomes true
+  from then on, same as if `serverPaginated` had been set from the
+  start.
+- **One-way and one-time**: `autoServerMode` never resets, and the check
+  only runs while it's still unset — an explicit `serverPaginated: true`
+  is never overridden, and the grid never auto-*downgrades* back to
+  client mode.
+- `rawData` is fed via `toObservable(serverMode).pipe(switchMap(...))`
+  rather than a one-time ternary, specifically so this upgrade can take
+  effect mid-session: flipping `autoServerMode` tears down
+  `clientSource$`'s subscription and subscribes `serverContent$` fresh,
+  which immediately fetches against the current page/sort/search/filters
+  — so the very next (and all subsequent) page changes reach
+  `gridDataFn` correctly. The practical cost is that the initial fetch
+  that revealed the mismatch runs twice (once client-mode, once more
+  immediately after upgrading) — a one-time startup cost, not a
+  per-page-change one.

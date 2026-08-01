@@ -1,11 +1,11 @@
 // pure functions: normalize GridColumn (string | GridColumn_) into GridColumn_, auto-generate
 // columns from data, flatten a nested column tree into leaf columns, and compute the header matrix
 
-import { propsFromString } from '../details/field/field-string.helpers';
-import { keyFromFieldString } from '../details/field/field-keys.helpers';
-import { labelFromFieldString } from '../details/field/field-labels.helpers';
-import { GRID_COLUMN_PROPS, GridColumn, GridColumn_ } from './grid-column.interface';
-import { GridHeaderCell, GridHeaderRow } from './grid-header.interface';
+import { propsFromString } from '../../details/field/field-string.helpers';
+import { keyFromFieldString } from '../../details/field/field-keys.helpers';
+import { labelFromFieldString } from '../../details/field/field-labels.helpers';
+import { GRID_COLUMN_PROPS, GridColumn, GridColumn_ } from '../interfaces/grid-column.interface';
+import { GridHeaderCell, GridHeaderRow } from '../interfaces/grid-header.interface';
 
 /** Normalizes one `GridColumn` (string shorthand or object) into a `GridColumn_`, recursing into nested `columns`. */
 export function normalizeColumn<RowType = any>(
@@ -15,10 +15,23 @@ export function normalizeColumn<RowType = any>(
   if (typeof column === 'string') {
     const props = propsFromString(column, GRID_COLUMN_PROPS, { key: 'key', lastDotAsName });
     const key = keyFromFieldString(column);
+    // `'columns(...)'` (type(stringArray)) parses into a flat string[] of child keys/DSL
+    // strings — e.g. 'address columns(address.city, address.zip)' — normalize each into a real
+    // child GridColumn_ (recursing lets a child use its own shorthand too, e.g. 'as' aliases)
+    if (Array.isArray(props?.['columns'])) {
+      props['columns'] = (props['columns'] as string[])
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .map((c) => normalizeColumn<RowType>(c, lastDotAsName));
+    }
     // reuses the Details component's field-string DSL label rule (field-labels.helpers.ts), so
     // `'department as Department Name'` works here exactly like it does for Details field strings
     // — everything after ` as ` becomes the label, taking priority over lastDotAsName
-    return { key, label: labelFromFieldString(column, lastDotAsName), ...props } as GridColumn_<RowType>;
+    return {
+      key,
+      label: labelFromFieldString(column, lastDotAsName),
+      ...props,
+    } as GridColumn_<RowType>;
   }
 
   const normalized: GridColumn_<RowType> = {
@@ -69,7 +82,9 @@ export function autoGenerateColumns<RowType = any>(
 }
 
 /** Leaf columns (no nested `columns`), in declaration order — what body rows actually render. */
-export function flattenLeafColumns<RowType = any>(columns: GridColumn_<RowType>[]): GridColumn_<RowType>[] {
+export function flattenLeafColumns<RowType = any>(
+  columns: GridColumn_<RowType>[],
+): GridColumn_<RowType>[] {
   return columns.flatMap((col) => (col.columns?.length ? flattenLeafColumns(col.columns) : [col]));
 }
 
@@ -88,7 +103,10 @@ function countLeaves(column: GridColumn_, visibleKeys?: Set<string>): number {
 function maxDepth(columns: GridColumn_[], visibleKeys?: Set<string>): number {
   const visible = columns.filter((c) => isVisible(c, visibleKeys));
   if (!visible.length) return 0;
-  return 1 + Math.max(0, ...visible.map((c) => (c.columns?.length ? maxDepth(c.columns, visibleKeys) : 0)));
+  return (
+    1 +
+    Math.max(0, ...visible.map((c) => (c.columns?.length ? maxDepth(c.columns, visibleKeys) : 0)))
+  );
 }
 
 function minLeafOrder(column: GridColumn_, orderByKey: Map<string, number>): number {
@@ -113,7 +131,9 @@ export function orderColumnsForHeader<RowType = any>(
 ): GridColumn_<RowType>[] {
   return columns
     .map((col, i) => ({
-      col: col.columns?.length ? { ...col, columns: orderColumnsForHeader(col.columns, orderByKey) } : col,
+      col: col.columns?.length
+        ? { ...col, columns: orderColumnsForHeader(col.columns, orderByKey) }
+        : col,
       order: minLeafOrder(col, orderByKey),
       i,
     }))

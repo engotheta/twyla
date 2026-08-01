@@ -1,5 +1,16 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { FormArray } from '@angular/forms';
+import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -16,7 +27,11 @@ import {
   SelectField,
 } from '../../generic-form';
 import { GridInstance } from '../grid-engine.service';
-import { DEFAULT_ENABLED_SEARCH_TYPES, SearchField, SearchType } from '../grid-search.interface';
+import {
+  DEFAULT_ENABLED_SEARCH_TYPES,
+  SearchField,
+  SearchType,
+} from '../interfaces/grid-search.interface';
 
 const SEARCH_TYPE_LABELS: Record<SearchType, string> = {
   equals: 'Equals',
@@ -37,14 +52,14 @@ const SEARCH_TYPE_LABELS: Record<SearchType, string> = {
  * The compound multi-field search UI (grid-search.interface.ts): a dropdown of `searchable`
  * columns + a value input per instance, addable/removable, with an optional per-instance
  * searchType override. One `FormInstance` (built via `FormEngineService` directly — not
- * `<app-generic-form>`, since the "remove" button placement rule (every instance except the
+ * `<generic-form>`, since the "remove" button placement rule (every instance except the
  * first) needs bespoke per-item chrome the stock isList rendering doesn't offer) backs BOTH the
  * toolbar's inline mount and, in `searchFieldsMode: 'modal'`, grid-search-dialog's mount — see
  * `existingInstance`, which is how the two stay in sync instead of diverging into two forms.
  */
 @Component({
   selector: 'grid-search-fields',
-  imports: [FieldComponent, MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [FieldComponent, MatBadgeModule, MatButtonModule, MatIconModule, MatTooltipModule],
   templateUrl: './grid-search-fields.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -91,7 +106,9 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
     const existing = this.existingInstance();
     if (existing) {
       this.formInstance = existing;
-      this.objectField = this.formInstance.fields.find((f) => f.key === 'searchFields') as ObjectField;
+      this.objectField = this.formInstance.fields.find(
+        (f) => f.key === 'searchFields',
+      ) as ObjectField;
       this.searchableColumns = this.instance()
         .leafColumns()
         .filter((c) => c.searchable)
@@ -114,7 +131,7 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
       .map((c) => ({ key: c.key, label: c.label, searchType: c.searchType }));
     const hasSearchable = this.searchableColumns.length > 0;
     const enabledTypes = cfg?.enabledSearchTypes ?? DEFAULT_ENABLED_SEARCH_TYPES;
-    const showTypeToggle = hasSearchable && !!cfg?.allowSearchTypeOverride;
+    const showTypeToggle = hasSearchable && !!cfg?.searchTypeChangeable;
 
     const itemFields: FormField[] = [];
     if (hasSearchable) {
@@ -123,8 +140,10 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
         key: 'key',
         showLabel: false,
         placeholder: 'Column',
-        options: observe(['searchFields', './key'], (allItems: SearchField[], ownKey: string | undefined) =>
-          this.columnOptions(allItems, ownKey),
+        options: observe(
+          ['searchFields', './key'],
+          (allItems: SearchField[], ownKey: string | undefined) =>
+            this.columnOptions(allItems, ownKey),
         ),
       } as SelectField);
     }
@@ -165,7 +184,11 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
 
     this.formInstance = this.engine.build({
       fields: [this.objectField],
-      onChange: (value) => this.pushSearchFields((value as { searchFields?: SearchField[] }).searchFields ?? []),
+      // compound search fields sit in the toolbar row (or a compact dialog) — free the vertical
+      // space every mat-form-field otherwise reserves for a hint/error that's never shown here
+      showSubscript: false,
+      onChange: (value) =>
+        this.pushSearchFields((value as { searchFields?: SearchField[] }).searchFields ?? []),
       changeDebounce: cfg?.changeDebounce ?? 300,
     });
   }
@@ -181,7 +204,9 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
     return column?.searchType ?? this.searchConfig?.defaultSearchType ?? 'like';
   }
 
-  private pushSearchFields(rawItems: { key?: string; value: string; searchType?: SearchType }[]): void {
+  private pushSearchFields(
+    rawItems: { key?: string; value: string; searchType?: SearchType }[],
+  ): void {
     const fields: SearchField[] = rawItems.map((item) => ({
       key: item.key,
       value: item.value ?? '',
@@ -192,8 +217,16 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
 
   // ── item list ──
 
+  private readonly rawItems = computed(
+    () => (this.arrayStatus().value as { key?: string; value: string }[] | null) ?? [],
+  );
+
+  /** true count, including items hidden by `onlyFirstVisible` — drives the "N more, reopen"
+   *  affordance (§5) independently of how many items THIS mount actually renders */
+  protected readonly itemCount = computed(() => this.rawItems().length);
+
   protected readonly items = computed(() => {
-    const count = ((this.arrayStatus().value as unknown[] | null) ?? []).length;
+    const count = this.itemCount();
     const visible = this.onlyFirstVisible() ? Math.min(count, 1) : count;
     return Array.from({ length: visible }, (_, i) => ({
       index: i,
@@ -201,12 +234,32 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
     }));
   });
 
+  protected readonly canClear = computed(() => {
+    const items = this.rawItems();
+    return items.length > 1 || !!items[0]?.value;
+  });
+
+  /** resets to a single empty instance — mirrors grid-filter-panel's Clear button */
+  protected clearAll(): void {
+    const arr = this.formInstance.control(this.objectField) as FormArray | undefined;
+    if (!arr) return;
+    while (arr.length > 1) this.formInstance.removeListItem('searchFields', arr.length - 1);
+
+    const firstFields = this.formInstance.listItemFields(this.objectField, 0);
+    const valueField = firstFields.find((f) => f.key === 'value');
+    if (valueField) this.formInstance.control(valueField)?.setValue('');
+    const keyField = firstFields.find((f) => f.key === 'key');
+    if (keyField && this.searchableColumns.length) {
+      this.formInstance.control(keyField)?.setValue(this.searchableColumns[0].key);
+    }
+  }
+
   protected showTypeField(field: FormField): boolean {
     return field.key !== 'searchType' || this.typeOverrideOn();
   }
 
   protected readonly showTypeToggleButton = computed(
-    () => !!this.searchConfig?.allowSearchTypeOverride && this.searchableColumns.length > 0,
+    () => !!this.searchConfig?.searchTypeChangeable && this.searchableColumns.length > 0,
   );
 
   protected toggleTypeOverride(): void {
@@ -238,7 +291,9 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
     this.formInstance.addListItem('searchFields');
     const nextKey = this.nextUnusedKey();
     if (nextKey !== undefined) {
-      const keyField = this.formInstance.listItemFields(this.objectField, newIndex).find((f) => f.key === 'key');
+      const keyField = this.formInstance
+        .listItemFields(this.objectField, newIndex)
+        .find((f) => f.key === 'key');
       if (keyField) this.formInstance.control(keyField)?.setValue(nextKey);
     }
 
@@ -247,7 +302,9 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
 
   private nextUnusedKey(): string | undefined {
     const used = new Set(
-      ((this.formInstance.control(this.objectField) as FormArray)?.value as SearchField[]).map((f) => f.key),
+      ((this.formInstance.control(this.objectField) as FormArray)?.value as SearchField[]).map(
+        (f) => f.key,
+      ),
     );
     return this.searchableColumns.find((c) => !used.has(c.key))?.key;
   }

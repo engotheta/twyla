@@ -35,3 +35,13 @@ body {
   height: 100%;
 }
 /* You can add global styles to this file, and also import other style files */
+
+// generic-form: FormParameters.showSubscript / FormField.showSubscript (default true) — hides
+// a mat-form-field's reserved bottom hint/error strip. There's no Material API to remove this
+// element (only `subscriptSizing`, which just changes whether it reserves fixed vs. dynamic
+// height — it's never removed from the DOM), so this has to be a raw CSS toggle. Global (not
+// component-scoped) because Angular's view encapsulation can't reach into Material's own
+// internal `.mat-mdc-form-field-subscript-wrapper` markup from a consuming component's styles.
+.hide-subscript .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}

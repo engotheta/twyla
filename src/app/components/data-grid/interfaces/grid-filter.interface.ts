@@ -25,21 +25,29 @@ export type GridFilterCombination = 'and' | 'or';
 /** how `GridParameter.gridFilters` (a `FormField[]`) is wired up */
 export interface GridFilterConfig {
   /**
+   * default 'modal' (today's behavior): a toggle button opens the filter panel in a
+   * `cdkConnectedOverlay`. 'inline' renders the filter fields directly in the toolbar row,
+   * with no toggle button — mirrors `GridSearchConfig.searchFieldsMode`. Independent of
+   * `filtersTrigger` below (that's about WHEN filters apply, this is about WHERE they render).
+   */
+  filtersMode?: 'modal' | 'inline';
+
+  /**
    * default 'manual': an Apply `ActionButton` calls the filter form instance's `submit()`.
    * 'live': the filter form's `onChange` (generic-form §15) pushes straight into
    * `GridState.filters` as the user types/selects, debounced via `changeDebounce`.
    */
-  filtersMode?: 'manual' | 'live';
+  filtersTrigger?: 'manual' | 'live';
 
   /** per `gridFilters` field key; unlisted keys default to 'equals' */
   filterOperators?: Record<string, GridFilterOperator>;
   /** default 'and' */
   filterCombination?: GridFilterCombination;
 
-  /** forwarded to `FormParameters.changeDebounce` when `filtersMode` is 'live' */
+  /** forwarded to `FormParameters.changeDebounce` when `filtersTrigger` is 'live' */
   changeDebounce?: number;
 
-  /** default 'Apply'; only rendered when `filtersMode` is 'manual' */
+  /** default 'Apply'; only rendered when `filtersTrigger` is 'manual' */
   applyButtonLabel?: string;
   /** default 'Clear'; calls the filter form instance's `form.reset()` */
   clearButtonLabel?: string;

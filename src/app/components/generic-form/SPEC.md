@@ -72,8 +72,8 @@ Vocabulary: "the engine" = `FormEngineService` + `FormInstance`. "config" = a
 - A path starting with `'./'` (e.g. `'./key'`) resolves against the
   OBSERVING field's own `isList` item group instead of the top form — the
   narrow, scoped answer to the "wildcards aren't supported" note above:
-  it doesn't let one observer watch *every* item, but it does let a
-  per-item field reference a *sibling* within its own item, independently
+  it doesn't let one observer watch _every_ item, but it does let a
+  per-item field reference a _sibling_ within its own item, independently
   per clone (`searchFields.2.value` observing `'./key'` resolves to
   `searchFields.2.key`). Not meaningful outside an isList item — use an
   absolute path there. See `dynamic.interface.ts` and
@@ -156,8 +156,8 @@ assembled value without triggering `onSubmit`/modal-close side effects.
 
 - The engine owns the whole lifecycle (README rule #1: components render, the
   engine wires). A component calls `FormInstance.selectAttachment(field,
-  file, index?)` on file pick/drop and `FormInstance.clearAttachment(field,
-  index?)` to remove one — it never touches `uploadFn`, status, or the
+file, index?)` on file pick/drop and `FormInstance.clearAttachment(field,
+index?)` to remove one — it never touches `uploadFn`, status, or the
   control's value itself. `index` is only for `isList` attachment fields,
   where `field.attachment` is an array kept parallel to the `FormArray`.
 - `uploadOn` (default `'select'`): `selectAttachment` uploads immediately.
@@ -208,7 +208,7 @@ assembled value without triggering `onSubmit`/modal-close side effects.
   `AbstractControl` — components should use it instead of `form.get(path)`
   string lookups (works uniformly for list items, whose paths shift on
   removal — see §4).
-- This also covers plain user-driven interaction on a *distant* ancestor —
+- This also covers plain user-driven interaction on a _distant_ ancestor —
   don't assume it doesn't need one. It's tempting to assume a leaf field's own
   DOM event (e.g. a checkbox toggle inside `app-boolean-field`) automatically
   propagates a re-check up through `app-field` → `app-object-field` →
@@ -216,7 +216,7 @@ assembled value without triggering `onSubmit`/modal-close side effects.
   for Angular's dirty-propagation. Empirically (verified in a real browser,
   not just unit tests) it does **not** reach reliably that many components
   up in this OnPush + zoneless app: `GenericFormComponent`'s own template
-  calling a *plain method* like `stepValid(entry)` went stale and never
+  calling a _plain method_ like `stepValid(entry)` went stale and never
   re-disabled the stepper's Next button after the underlying controls became
   valid. The fix was the same pattern as `fieldState`/`controlStatus`: build
   a real `Signal<boolean>` per step (`DisplayStep.valid`, via `controlStatus`
@@ -238,23 +238,23 @@ assembled value without triggering `onSubmit`/modal-close side effects.
   needing DI in `runInInjectionContext(this.injector, () => …)`.
 - **A disabled control's `.valid` is `false`, not `true`.** Its `status` is
   `'DISABLED'` — neither `VALID` nor `INVALID` — so `control.valid` and
-  `control.invalid` are *both* false. Angular's own `FormGroup`/`FormArray`
+  `control.invalid` are _both_ false. Angular's own `FormGroup`/`FormArray`
   aggregate validity already knows to skip disabled children, so this only
   bites code that reads a disabled leaf control's `.valid` directly (exactly
   what step-validity gating does, per field). The fix: treat `status().disabled`
   as passing, same as skipping non-value fields — `s().disabled || s().valid
-  !== false`, not just `s().valid !== false`.
+!== false`, not just `s().valid !== false`.
 
 ## 15. Live `onChange` + external instance access
 
-Added so a parent embedding `<app-generic-form>` (e.g. a data-grid's advanced
+Added so a parent embedding `<generic-form>` (e.g. a data-grid's advanced
 filter panel) can react to changes live and drive the form programmatically,
 without subscribing to internals it isn't supposed to touch.
 
 - `FormParameters.onChange`, when set, subscribes to `form.valueChanges` —
   plain `valueChanges`, no `startWith`, so (unlike §1's Dynamic-prop
   observers, which also fire once at init) it does **not** fire on init, only
-  on subsequent user-driven changes. It's wired *after* the initial observer
+  on subsequent user-driven changes. It's wired _after_ the initial observer
   pass (§1) completes inside `build()`, specifically so synchronous value
   writes during that initial resolution don't themselves count as a "change."
 - Debounced via `FormParameters.changeDebounce` (ms) when set — same pattern

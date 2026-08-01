@@ -8,16 +8,23 @@ import {
   flattenLeafColumns,
   normalizeColumns,
   orderColumnsForHeader,
-} from './grid-column.helpers';
-import { GridColumn_, GridColumnState } from './grid-column.interface';
-import { GridRow } from './grid-cell.interface';
-import { resolveSyncDynamic } from './grid-dynamic.helpers';
-import { GridHeaderCell, GridHeaderRow } from './grid-header.interface';
-import { GridParameter, GridSelectionMode } from './grid-parameter.interface';
-import { GridRenderMode } from './grid-render-mode.interface';
-import { getCellValue, getRowId, matchesFilters, matchesSearchFields, sortRows } from './grid-row.helpers';
-import { GridSearchConfig, SearchField } from './grid-search.interface';
-import { GridData, GridSort, GridState, PageDetails } from './grid-state.interface';
+} from './helpers/grid-column.helpers';
+
+import { GridColumn_, GridColumnState } from './interfaces/grid-column.interface';
+import { GridRow } from './interfaces/grid-cell.interface';
+import { resolveSyncDynamic } from './helpers/grid-dynamic.helpers';
+import { GridHeaderCell, GridHeaderRow } from './interfaces/grid-header.interface';
+import { GridParameter, GridSelectionMode } from './interfaces/grid-parameter.interface';
+import { GridRenderMode } from './interfaces/grid-render-mode.interface';
+import {
+  getCellValue,
+  getRowId,
+  matchesFilters,
+  matchesSearchFields,
+  sortRows,
+} from './helpers/grid-row.helpers';
+import { GridSearchConfig, SearchField } from './interfaces/grid-search.interface';
+import { GridData, GridSort, GridState, PageDetails } from './interfaces/grid-state.interface';
 
 export const DRAG_COLUMN_KEY = '__grid_drag__';
 export const INDEX_COLUMN_KEY = '__grid_index__';
@@ -150,14 +157,22 @@ function normalizeToPromise<RowType>(
   return isObservable(value) ? firstValueFrom(value) : Promise.resolve(value);
 }
 
+/**
+ * Vertical (rowspan) streaks per column: a column merges when EITHER the grid-wide
+ * `gridMergeCells` default is on OR the column's own `GridColumn_.mergeConsecutive` is set —
+ * an explicit per-column value always wins over the grid-wide default (same "local override
+ * beats global default" convention as manual `_cellsProps` beating auto-merge below).
+ */
 function buildVerticalMergeSpans<RowType>(
   rows: RowType[],
   columns: GridColumn_<RowType>[],
+  gridMergeCells: boolean,
 ): Record<number, Record<string, { rowspan: number; hidden: boolean }>> {
   const result: Record<number, Record<string, { rowspan: number; hidden: boolean }>> = {};
   rows.forEach((_, i) => (result[i] = {}));
 
   for (const col of columns) {
+    if (!(col.mergeConsecutive ?? gridMergeCells)) continue;
     let i = 0;
     while (i < rows.length) {
       const value = getCellValue(rows[i], col);
@@ -172,44 +187,105 @@ function buildVerticalMergeSpans<RowType>(
 }
 
 /**
- * Body cell render plan: auto vertical-merge (`mergeCells`) folded with manual per-cell
- * `_cellsProps[key].rowspan/colspan` overrides (manual wins). Exported so both the live grid
- * (`renderPlan` below, current-page `rows()`) and `GridExportService` (arbitrary row sets, e.g.
- * the full dataset for `exportAllData`) compute spans from one source of truth. `columns` must
- * be the real (non-synthetic) columns in their CURRENT display order — span geometry follows
- * what's actually visible, not declaration order.
+ * Horizontal (colspan) streaks for ONE row: consecutive REAL columns (in current display
+ * order) with equal resolved values — the horizontal analog of `buildVerticalMergeSpans`,
+ * transposed (row-wise instead of column-wise). Only computed for rows that opt in via
+ * `GridRow._rowProps.mergeConsecutive` (grid-cell.interface.ts) — there's no grid-wide default
+ * for this axis, since "merge same-valued columns within a row" is far more row-shape-specific
+ * than the vertical case.
+ */
+function buildRowMergeSpans<RowType>(
+  row: RowType,
+  columns: GridColumn_<RowType>[],
+): Record<string, { colspan: number; hidden: boolean }> {
+  const result: Record<string, { colspan: number; hidden: boolean }> = {};
+  let ci = 0;
+  while (ci < columns.length) {
+    const value = getCellValue(row, columns[ci]);
+    let span = 1;
+    while (ci + span < columns.length && getCellValue(row, columns[ci + span]) === value) span++;
+    result[columns[ci].key] = { colspan: span, hidden: false };
+    for (let k = 1; k < span; k++) result[columns[ci + k].key] = { colspan: 1, hidden: true };
+    ci += span;
+  }
+  return result;
+}
+
+/**
+ * Body cell render plan, precedence high to low: (1) manual per-cell `_cellsProps[key].rowspan`/
+ * `colspan` — wins over BOTH auto mechanisms below, for any cell it covers; (2) per-row
+ * horizontal auto-merge (`_rowProps.mergeConsecutive`) — more specific (opted into per ROW) than
+ * (3) per-column vertical auto-merge (`mergeCells` grid default / `GridColumn_.mergeConsecutive`
+ * override). A cell already covered by an EARLIER cell's span (either axis) is skipped before any
+ * of these checks run — same "first cell in a streak wins" limitation on both axes: a covered
+ * cell's OWN manual override, if it has one, is never independently consulted (SPEC.md §1).
+ * Exported so both the live grid (`renderPlan` below, current-page `rows()`) and
+ * `GridExportService` (arbitrary row sets, e.g. the full dataset for `exportAllData`) compute
+ * spans from one source of truth. `columns` must be the real (non-synthetic) columns in their
+ * CURRENT display order — span geometry follows what's actually visible, not declaration order.
  */
 export function buildCellSpanPlan<RowType>(
   rows: RowType[],
   columns: GridColumn_<RowType>[],
   mergeCells: boolean,
 ): Record<string, CellSpan>[] {
-  const merge = mergeCells ? buildVerticalMergeSpans(rows, columns) : {};
+  const merge = buildVerticalMergeSpans(rows, columns, mergeCells);
   const plan: Record<string, CellSpan>[] = rows.map(() => ({}));
   const coverUntilRow = new Map(columns.map((c) => [c.key, -1]));
 
   rows.forEach((row, ri) => {
     let skipUntilCol = -1;
+    const rowMerge = (row as GridRow<RowType>)?._rowProps?.mergeConsecutive
+      ? buildRowMergeSpans(row, columns)
+      : undefined;
+
     columns.forEach((col, ci) => {
       if (ri <= (coverUntilRow.get(col.key) ?? -1) || ci <= skipUntilCol) {
         plan[ri][col.key] = { rowspan: 1, colspan: 1, hidden: true };
         return;
       }
       const manual = (row as GridRow<RowType>)?._cellsProps?.[col.key];
-      const manualRowspan = manual?.rowspan !== undefined ? resolveSyncDynamic(manual.rowspan, row) : undefined;
-      const manualColspan = manual?.colspan !== undefined ? resolveSyncDynamic(manual.colspan, row) : undefined;
+      const manualRowspan =
+        manual?.rowspan !== undefined ? resolveSyncDynamic(manual.rowspan, row) : undefined;
+      const manualColspan =
+        manual?.colspan !== undefined ? resolveSyncDynamic(manual.colspan, row) : undefined;
 
       if (manualRowspan !== undefined || manualColspan !== undefined) {
         const rowspan = manualRowspan ?? 1;
         const colspan = manualColspan ?? 1;
         plan[ri][col.key] = { rowspan, colspan, hidden: false };
         if (colspan > 1) skipUntilCol = ci + colspan - 1;
-        if (rowspan > 1) coverUntilRow.set(col.key, ri + rowspan - 1);
+        // A cell with BOTH rowspan and colspan > 1 covers a 2D rectangle, not just its own
+        // column — every column the colspan reaches must ALSO be marked covered for the full
+        // rowspan duration, or subsequent rows render their own (unhidden) cells for those
+        // columns, shifting everything after them to the right and overflowing the table.
+        if (rowspan > 1) {
+          for (let cj = ci; cj < ci + colspan && cj < columns.length; cj++) {
+            coverUntilRow.set(columns[cj].key, ri + rowspan - 1);
+          }
+        }
         return;
       }
 
+      if (rowMerge) {
+        const rm = rowMerge[col.key];
+        // `buildRowMergeSpans` returns an entry for EVERY column, even a "streak of 1" (no
+        // actual merge — colspan 1, not hidden) — only a REAL span (colspan > 1) or a cell
+        // truly covered by an earlier one in the same streak (hidden) should short-circuit
+        // here. Without this check, a row opted into horizontal merge would silently block
+        // vertical column merge from ever being considered for ANY of its cells, even the
+        // ones with no horizontal match at all.
+        if (rm && (rm.colspan > 1 || rm.hidden)) {
+          plan[ri][col.key] = { rowspan: 1, colspan: rm.colspan, hidden: rm.hidden };
+          if (rm.colspan > 1) skipUntilCol = ci + rm.colspan - 1;
+          return;
+        }
+      }
+
       const auto = merge[ri]?.[col.key];
-      plan[ri][col.key] = auto ? { rowspan: auto.rowspan, colspan: 1, hidden: auto.hidden } : { ...EMPTY_SPAN };
+      plan[ri][col.key] = auto
+        ? { rowspan: auto.rowspan, colspan: 1, hidden: auto.hidden }
+        : { ...EMPTY_SPAN };
     });
   });
   return plan;
@@ -222,7 +298,13 @@ function seedSearchFields<RowType>(
   cfg: GridSearchConfig | undefined,
 ): SearchField[] {
   const first = configColumns && flattenLeafColumns(configColumns).find((c) => c.searchable);
-  return [{ key: first?.key, value: '', searchType: first?.searchType ?? cfg?.defaultSearchType ?? 'like' }];
+  return [
+    {
+      key: first?.key,
+      value: '',
+      searchType: first?.searchType ?? cfg?.defaultSearchType ?? 'like',
+    },
+  ];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -237,7 +319,9 @@ export class GridEngineService {
     const subs: Subscription[] = [];
 
     // ── grid options: an option's own properties merge over the base params (excludedOptionKeys wins) ──
-    const selectedOptionSlug = signal<string | undefined>(params.slug ?? params.gridOptions?.[0]?.slug);
+    const selectedOptionSlug = signal<string | undefined>(
+      params.slug ?? params.gridOptions?.[0]?.slug,
+    );
     const activeParams = computed<GridParameter<RowType>>(() => {
       const options = params.gridOptions;
       if (!options?.length) return params;
@@ -349,13 +433,21 @@ export class GridEngineService {
       const applyState = (col: GridColumn_<RowType>): GridColumn_<RowType> => {
         const s = stateByKey.get(col.key);
         if (!s) return col;
-        return s.width || s.pinned !== col.pinned ? { ...col, width: s.width ?? col.width, pinned: s.pinned } : col;
+        return s.width || s.pinned !== col.pinned
+          ? { ...col, width: s.width ?? col.width, pinned: s.pinned }
+          : col;
       };
       const isVisible = (key: string) => stateByKey.get(key)?.visible !== false;
 
-      const leading = leadingSyntheticColumns().filter((c) => isVisible(c.key)).map(applyState);
-      const real = orderedRealLeafColumns().filter((c) => isVisible(c.key)).map(applyState);
-      const trailing = trailingSyntheticColumns().filter((c) => isVisible(c.key)).map(applyState);
+      const leading = leadingSyntheticColumns()
+        .filter((c) => isVisible(c.key))
+        .map(applyState);
+      const real = orderedRealLeafColumns()
+        .filter((c) => isVisible(c.key))
+        .map(applyState);
+      const trailing = trailingSyntheticColumns()
+        .filter((c) => isVisible(c.key))
+        .map(applyState);
       return [...leading, ...real, ...trailing];
     });
 
@@ -370,7 +462,11 @@ export class GridEngineService {
     // within the leaf's own group; every other reorder (including moving a whole group) renders
     // correctly. See grid-column.helpers.ts's `orderColumnsForHeader` and SPEC.md §1.
     const headerRows = computed<GridHeaderRow<RowType>[]>(() => {
-      const visibleKeys = new Set(columnState().filter((s) => s.visible).map((s) => s.key));
+      const visibleKeys = new Set(
+        columnState()
+          .filter((s) => s.visible)
+          .map((s) => s.key),
+      );
       const real = buildHeaderRows(orderedColumnsTree(), visibleKeys);
       const depth = real.length || 1;
       const byKey = new Map(allLeafColumns().map((c) => [c.key, c]));
@@ -387,7 +483,9 @@ export class GridEngineService {
         .map(makeSyntheticCell)
         .filter((c): c is GridHeaderCell<RowType> => !!c);
 
-      const rows = real.length ? real.map((r) => ({ cells: [...r.cells] })) : [{ cells: [] as GridHeaderCell<RowType>[] }];
+      const rows = real.length
+        ? real.map((r) => ({ cells: [...r.cells] }))
+        : [{ cells: [] as GridHeaderCell<RowType>[] }];
       rows[0].cells.unshift(...leading);
       rows[0].cells.push(...trailing);
       return rows;
@@ -399,7 +497,9 @@ export class GridEngineService {
     const sortSig = signal<GridSort | undefined>(params.sort);
     // seeded once from configColumns (never from auto-generated columns — those are never
     // `searchable`), so this is correct at signal-creation time with no async re-seed needed
-    const searchFieldsSig = signal<SearchField[]>(seedSearchFields(configColumns, params.searchConfig));
+    const searchFieldsSig = signal<SearchField[]>(
+      seedSearchFields(configColumns, params.searchConfig),
+    );
     const filtersSig = signal<Record<string, any>>({});
     const refetchTrigger = signal(0);
 
@@ -407,7 +507,17 @@ export class GridEngineService {
     const loading = signal(false);
     const error = signal<unknown>(undefined);
 
-    const serverMode = computed(() => !!(activeParams().serverPaginated && activeParams().gridDataFn));
+    // Auto-upgrade: a consumer can forget `serverPaginated: true` on a `gridDataFn` that's
+    // otherwise clearly written for server paging (takes `page`/`size`, returns a real
+    // `totalLength`) — the exact mistake that motivated this. Once the FIRST client-mode fetch
+    // resolves to a genuine `GridData` (not a plain array) with a numeric `totalLength`, that's
+    // a strong enough signal to flip into server mode ourselves, same as if `serverPaginated`
+    // had been true from the start. One-way (never auto-downgrades) and one-time (checked only
+    // while still unset — see the `clientSource$` tap below).
+    const autoServerMode = signal(false);
+    const serverMode = computed(
+      () => !!((activeParams().serverPaginated || autoServerMode()) && activeParams().gridDataFn),
+    );
 
     const pageDetails = computed<PageDetails>(() => ({
       page: page(),
@@ -417,7 +527,10 @@ export class GridEngineService {
       filters: filtersSig(),
     }));
 
-    const serverContent$ = combineLatest([toObservable(pageDetails, { injector }), toObservable(refetchTrigger, { injector })]).pipe(
+    const serverContent$ = combineLatest([
+      toObservable(pageDetails, { injector }),
+      toObservable(refetchTrigger, { injector }),
+    ]).pipe(
       tap(() => {
         loading.set(true);
         error.set(undefined);
@@ -448,15 +561,32 @@ export class GridEngineService {
           }),
         );
       }),
-      tap(() => loading.set(false)),
+      tap((value) => {
+        loading.set(false);
+        if (
+          !activeParams().serverPaginated &&
+          !autoServerMode() &&
+          !Array.isArray(value) &&
+          typeof value.totalLength === 'number'
+        ) {
+          autoServerMode.set(true);
+        }
+      }),
     );
 
-    // NOTE: which observable feeds `rawData` is decided once, here — switching `serverPaginated`
-    // at runtime is not a supported transition; set it once at build time.
-    const rawData = toSignal(serverMode() ? serverContent$ : clientSource$, {
-      injector,
-      initialValue: [] as RowType[] | GridData<RowType>,
-    });
+    // Which observable feeds `rawData` is itself reactive (via `serverMode`, not read once) so
+    // the auto-upgrade above can actually take effect: once `autoServerMode` flips, `switchMap`
+    // tears down `clientSource$`'s subscription and subscribes `serverContent$` fresh, which
+    // immediately fires a (server-style) fetch against the CURRENT page/sort/search/filters —
+    // so page changes from that point on correctly reach `gridDataFn`. This means the very fetch
+    // that revealed the mismatch runs twice (once as the client attempt, once more immediately
+    // after upgrading) — a one-time, initial-load-only cost, not a per-page-change one.
+    const rawData = toSignal(
+      toObservable(serverMode, { injector }).pipe(
+        switchMap((isServer) => (isServer ? serverContent$ : clientSource$)),
+      ),
+      { injector, initialValue: [] as RowType[] | GridData<RowType> },
+    );
 
     const fetchedContent = computed(() => extractContent(rawData()));
 
@@ -468,7 +598,11 @@ export class GridEngineService {
         if (!autoColumnsSeeded && content.length) {
           autoColumnsSeeded = true;
           autoColumnsSig.set(
-            autoGenerateColumns(content[0], activeParams().maxAutoColumns ?? 6, activeParams().lastDotAsName),
+            autoGenerateColumns(
+              content[0],
+              activeParams().maxAutoColumns ?? 6,
+              activeParams().lastDotAsName,
+            ),
           );
         }
       },
@@ -479,11 +613,14 @@ export class GridEngineService {
       if (serverMode()) return fetchedContent();
       let list = fetchedContent();
       const fields = searchFieldsSig();
-      if (fields.some((f) => f.value)) list = list.filter((r) => matchesSearchFields(r, fields, leafColumns()));
+      if (fields.some((f) => f.value))
+        list = list.filter((r) => matchesSearchFields(r, fields, leafColumns()));
       const filters = filtersSig();
       if (Object.keys(filters).length) {
         const cfg = activeParams().filterConfig;
-        list = list.filter((r) => matchesFilters(r, filters, cfg?.filterOperators, cfg?.filterCombination));
+        list = list.filter((r) =>
+          matchesFilters(r, filters, cfg?.filterOperators, cfg?.filterCombination),
+        );
       }
       return sortRows(list, sortSig());
     });
@@ -525,7 +662,9 @@ export class GridEngineService {
     // so a positional plan would apply spans to the wrong cell after a reorder. `cols` here uses
     // the CURRENT display order of real (non-synthetic) columns, since "does a colspan hide the
     // next column" must follow what the user actually sees, not the static declaration order.
-    const realVisibleColumns = computed(() => visibleColumns().filter((c) => !SYNTHETIC_COLUMN_KEYS.has(c.key)));
+    const realVisibleColumns = computed(() =>
+      visibleColumns().filter((c) => !SYNTHETIC_COLUMN_KEYS.has(c.key)),
+    );
     const renderPlan = computed<Record<string, CellSpan>[]>(() =>
       buildCellSpanPlan(rows(), realVisibleColumns(), !!activeParams().mergeCells),
     );
@@ -547,7 +686,12 @@ export class GridEngineService {
     let autoSelectedFirstRow = false;
     effect(
       () => {
-        if (params.autoSelectFirstRow && !autoSelectedFirstRow && rows().length && !selectedSig().length) {
+        if (
+          params.autoSelectFirstRow &&
+          !autoSelectedFirstRow &&
+          rows().length &&
+          !selectedSig().length
+        ) {
           autoSelectedFirstRow = true;
           selectedSig.set([rows()[0]]);
         }
@@ -595,7 +739,10 @@ export class GridEngineService {
     onChangeOnly(selectedSig, params.onRowSelection);
     onChangeOnly(expandedSig, params.rowDetail?.onExpandChange);
     onChangeOnly(renderModeSig, params.renderMode?.onModeChange);
-    onChangeOnly(computed(() => activeParams().gridOptions ?? []), params.optionChange);
+    onChangeOnly(
+      computed(() => activeParams().gridOptions ?? []),
+      params.optionChange,
+    );
 
     const instance: GridInstance<RowType> = {
       params,
@@ -749,7 +896,13 @@ export class GridEngineService {
       dragRow: (fromIndex, toIndex) => {
         if (!activeParams().rowsDraggable) return;
         const current = rows();
-        if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= current.length || toIndex >= current.length) {
+        if (
+          fromIndex === toIndex ||
+          fromIndex < 0 ||
+          toIndex < 0 ||
+          fromIndex >= current.length ||
+          toIndex >= current.length
+        ) {
           return;
         }
         const arr = [...current];

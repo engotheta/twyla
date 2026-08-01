@@ -9,7 +9,8 @@ import { DetailsComponent } from './components/details/details.component';
 import { DetailsParameter } from './components/details/detail.interface';
 import { FieldType, GenericFormComponent, obs } from './components/generic-form';
 import { createSpeakerFormParams } from './conference-speaker-form.params';
-import { DataGridComponent, GridParameter } from './components/data-grid';
+import { DataGridComponent, GridParameter, RowProps } from './components/data-grid';
+import { gridPar } from './data';
 
 const entity = {
   id: 'usr_8f3a21',
@@ -76,19 +77,42 @@ export class App {
     null,
   );
 
+  gridPar = gridPar;
+
   protected readonly gridParameter: GridParameter<Employee> = {
     label: 'Employees',
     icon: 'groups',
     identifierKey: ['id'],
-    gridData: employees,
+    gridData: employees.map((item, index) => ({
+      ...item,
+      _cellsProps:
+        index === 3 ? { name: { rowspan: 3, colspan: 4, class: 'bg-red-300' } } : undefined,
+      _rowProps: <RowProps>{ mergeConsecutive: true, class: index % 2 === 0 ? 'bg-gray-50' : '' },
+    })),
     size: 10,
+
+    sort: { key: 'salary', direction: 'asc' },
 
     columns: [
       'id label(ID) sortable(true) width(70px)',
       'name label(Name) sortable(true) searchable(true)',
-      'address.city label(City)',
+
+      // 'address.city label(City) searchable(true)',
+      // 'address.zip label(Zip) type(number) width(80px) visible(false)',
+
+      // 'address columns(address.city as City, address.zip as Zip, address.street as Street)',
+
+      {
+        key: 'address',
+        columns: [
+          { key: 'address.city', label: 'City', searchable: true, sortable: true },
+          { key: 'address.zip', label: 'Zip', type: 'number', width: '80px', visible: false },
+          { key: 'address.street', label: 'Street' },
+        ],
+      },
       {
         key: 'employment',
+        visible: true,
         label: 'Employment',
         columns: [
           { key: 'department', label: 'Department', sortable: true },
@@ -100,12 +124,15 @@ export class App {
         label: 'Salary',
         type: 'currency',
         sortable: true,
+        mergeConsecutive: true,
         // align: 'right',
         editField: { type: FieldType.input, key: 'salary', inputType: 'decimal' },
       },
       { key: 'active', label: 'Active', type: 'boolean', align: 'center', searchable: true },
       { key: 'joinedAt', label: 'Joined', type: 'date', sortable: true },
     ],
+
+    initialSelected: [employees[0], employees[1]],
 
     gridFilters: [
       {
@@ -124,8 +151,14 @@ export class App {
         key: 'active',
       },
     ],
+
+    filterConfig: {
+      filtersTrigger: 'live',
+      filtersMode: 'inline',
+    },
+
     searchConfig: {
-      allowSearchTypeOverride: true,
+      searchTypeChangeable: true,
       searchFieldsMode: 'modal',
     },
 
@@ -134,9 +167,9 @@ export class App {
     selectionMode: 'multiple',
     onRowSelection: (rows) => this.log.set(`Selected ${rows?.length ?? 0} employee(s)`),
 
-    conditionalRowFormat: { '!bg-red-50': (row) => !row.active },
-
+    rowFormatter: { '!bg-red-50': (row) => !row.active },
     rowsDraggable: true,
+
     onRowDrag: (rowsInNewOrder, draggedRow) =>
       this.log.set(
         `Dragged ${draggedRow?.name} — new page order: ${rowsInNewOrder.map((r) => r.name).join(', ')}`,

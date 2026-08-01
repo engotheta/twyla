@@ -33,7 +33,7 @@ import { firstErrorMessage } from '../field-errors.util';
     @let f = state();
 
     @if (f.type === 'textarea') {
-      <mat-form-field [appearance]="appearance()" class="w-full">
+      <mat-form-field [appearance]="appearance()" class="w-full" [class.hide-subscript]="!showSubscript()">
         @if (f.showLabel !== false && f.label) {
           <mat-label>{{ f.label }}</mat-label>
         }
@@ -140,6 +140,9 @@ export class TextareaFieldComponent {
 
   protected readonly appearance = computed(
     () => this.state().appearance ?? this.instance().params.appearance ?? 'outline',
+  );
+  protected readonly showSubscript = computed(
+    () => this.state().showSubscript ?? this.instance().params.showSubscript ?? true,
   );
 
   protected readonly required = computed(

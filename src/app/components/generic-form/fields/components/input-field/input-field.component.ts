@@ -35,7 +35,7 @@ const HTML_TYPE: Record<InputType, string> = {
   template: `
     @let f = state();
 
-    <mat-form-field [appearance]="appearance()" class="w-full">
+    <mat-form-field [appearance]="appearance()" class="w-full" [class.hide-subscript]="!showSubscript()">
       @if (f.showLabel !== false && f.label) {
         <mat-label>{{ f.label }}</mat-label>
       }
@@ -94,6 +94,9 @@ export class InputFieldComponent {
 
   protected readonly appearance = computed(
     () => this.state().appearance ?? this.instance().params.appearance ?? 'outline',
+  );
+  protected readonly showSubscript = computed(
+    () => this.state().showSubscript ?? this.instance().params.showSubscript ?? true,
   );
 
   protected readonly htmlType = computed(() => HTML_TYPE[this.state().inputType ?? 'text']);

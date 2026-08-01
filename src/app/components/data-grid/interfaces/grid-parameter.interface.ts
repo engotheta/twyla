@@ -1,8 +1,8 @@
 // master grid config bag
 
 import { Observable } from 'rxjs';
-import { ActionButton, DynamicValue } from '../action-buttons/action-button.interface';
-import { FormField } from '../generic-form';
+import { ActionButton, DynamicValue } from '../../action-buttons/action-button.interface';
+import { FormField } from '../../generic-form';
 import { GridClassMap } from './grid-cell.interface';
 import { GridColumn, GridColumnState } from './grid-column.interface';
 import { GridEditingConfig } from './grid-editing.interface';
@@ -171,7 +171,7 @@ export interface GridParameter<RowType = any> {
   mergeCells?: boolean;
 
   /** per-row class predicates applied grid-wide, e.g. highlight failed/critical rows */
-  conditionalRowFormat?: GridClassMap<RowType>;
+  rowFormatter?: GridClassMap<RowType>;
 
   /** row master-detail expansion */
   rowDetail?: GridRowDetailConfig<RowType>;

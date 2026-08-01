@@ -1,6 +1,6 @@
 import { NgComponentOutlet, NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { GridRowDetailConfig } from '../grid-row-detail.interface';
+import { GridRowDetailConfig } from '../interfaces/grid-row-detail.interface';
 
 /** Renders an expanded row's detail content — a dynamic `component`, or a `template`, caller's choice. */
 @Component({
@@ -12,7 +12,12 @@ import { GridRowDetailConfig } from '../grid-row-detail.interface';
     } @else if (config()?.template; as tpl) {
       <ng-container
         [ngTemplateOutlet]="tpl"
-        [ngTemplateOutletContext]="{ $implicit: row(), row: row(), index: index(), gridData: gridData() }"
+        [ngTemplateOutletContext]="{
+          $implicit: row(),
+          row: row(),
+          index: index(),
+          gridData: gridData(),
+        }"
       />
     }
   `,
@@ -28,7 +33,8 @@ export class GridRowDetailComponent<RowType = any> {
     const mapping = this.config()?.inputs ?? {};
     const values: Record<string, unknown> = {};
     for (const [inputName, source] of Object.entries(mapping)) {
-      values[inputName] = source === 'row' ? this.row() : source === 'index' ? this.index() : this.gridData();
+      values[inputName] =
+        source === 'row' ? this.row() : source === 'index' ? this.index() : this.gridData();
     }
     return values;
   });

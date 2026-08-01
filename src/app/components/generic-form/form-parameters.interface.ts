@@ -63,6 +63,14 @@ export interface FormParameters<T = Record<string, unknown>> {
 
   /** controls field renderings */
   appearance?: 'fill' | 'outline';
+  /**
+   * default true. Every `<mat-form-field>`-based control reserves a bottom hint/error strip
+   * (Angular Material's `.mat-mdc-form-field-subscript-wrapper`) whether or not it has a hint or
+   * error to show. Set false to hide that reserved space for every field in this form — useful
+   * for compact/inline layouts (e.g. a toolbar row) where hints/errors aren't shown anyway.
+   * `FormField.showSubscript` overrides this per field.
+   */
+  showSubscript?: boolean;
 
   // ── footer ──
   footerClass?: string;

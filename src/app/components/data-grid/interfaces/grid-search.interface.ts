@@ -26,14 +26,14 @@ export interface GridSearchConfig {
   searchFieldsMode?: 'inline' | 'modal';
   /** default 'like'; a column's own `GridColumn_.searchType` wins over this when set */
   defaultSearchType?: SearchType;
-  /** options offered by the optional per-instance searchType override (see `allowSearchTypeOverride`).
+  /** options offered by the optional per-instance searchType override (see `searchTypeChangeable`).
    *  default: equals, notEquals, like, greaterThan(OrEqual), lessThan(OrEqual) — operators a
    *  single free-text value can express; `in`/`notIn`/`between` need multi-value input and
    *  `isNull`/`isNotNull` need none, so none of those are offered by default. */
   enabledSearchTypes?: SearchType[];
   /** default false: shows a toggle that reveals a per-instance searchType dropdown, letting the
    *  user override the default/column-declared searchType for that one instance */
-  allowSearchTypeOverride?: boolean;
+  searchTypeChangeable?: boolean;
   changeDebounce?: number;
 }
 

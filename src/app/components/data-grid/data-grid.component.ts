@@ -29,13 +29,12 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActionButtonsComponent } from '../action-buttons/action-buttons.component';
-import { DynamicValue } from '../action-buttons/action-button.interface';
 import { mergeClasses } from '../details/util/class-name/class-name.helpers';
 import { ColumnResizeDirective } from './column-resize.directive';
 import { GridCellComponent } from './grid-cell/grid-cell.component';
-import { GridCell, GridRow } from './grid-cell.interface';
-import { GridColumn_ } from './grid-column.interface';
-import { resolveSyncDynamic } from './grid-dynamic.helpers';
+import { GridRow } from './interfaces/grid-cell.interface';
+import { GridColumn_ } from './interfaces/grid-column.interface';
+import { resolveSyncDynamic } from './helpers/grid-dynamic.helpers';
 import {
   ACTIONS_COLUMN_KEY,
   DRAG_COLUMN_KEY,
@@ -46,10 +45,10 @@ import {
   SELECT_COLUMN_KEY,
 } from './grid-engine.service';
 import { GridDetailsDialogComponent } from './grid-details-dialog/grid-details-dialog.component';
-import { formatCellValue, resolveClassMap } from './grid-format.helpers';
-import { GridHeaderCell } from './grid-header.interface';
-import { GridParameter } from './grid-parameter.interface';
-import { getCellValue } from './grid-row.helpers';
+import { formatCellValue, resolveClassMap } from './helpers/grid-format.helpers';
+import { GridHeaderCell } from './interfaces/grid-header.interface';
+import { GridParameter } from './interfaces/grid-parameter.interface';
+import { getCellValue } from './helpers/grid-row.helpers';
 import { GridRowDetailComponent } from './grid-row-detail/grid-row-detail.component';
 import { GridToolbarComponent } from './grid-toolbar/grid-toolbar.component';
 
@@ -85,7 +84,9 @@ const DEFAULT_PINNED_WIDTH = 120;
 })
 export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   readonly parameter = input.required<GridParameter<RowType>>();
-  /** emits the built GridInstance once, at the end of ngOnInit — mirrors GenericFormComponent.instanceChange */
+
+  /** emits the built GridInstance once, at the end of
+   *  ngOnInit — mirrors GenericFormComponent.instanceChange */
   readonly instanceChange = output<GridInstance<RowType>>();
 
   private readonly engine = inject(GridEngineService);
@@ -99,7 +100,10 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   protected readonly SELECT_KEY = SELECT_COLUMN_KEY;
   protected readonly EXPAND_KEY = EXPAND_COLUMN_KEY;
   protected readonly ACTIONS_KEY = ACTIONS_COLUMN_KEY;
-  protected readonly sizeOptions = computed(() => this.parameter().sizeOptions ?? DEFAULT_SIZE_OPTIONS);
+
+  protected readonly sizeOptions = computed(
+    () => this.parameter().sizeOptions ?? DEFAULT_SIZE_OPTIONS,
+  );
 
   private clickCounts = new Map<unknown, number>();
 
@@ -139,9 +143,12 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
     return this.showPaginator() || this.instance.searchFields().some((f) => !!f.value);
   });
 
-  protected readonly noContent = computed(() => !this.instance.loading() && this.instance.rows().length === 0);
+  protected readonly noContent = computed(
+    () => !this.instance.loading() && this.instance.rows().length === 0,
+  );
   protected readonly noContentLabel = computed(
-    () => this.instance.params.noContentLabel ?? `No ${this.instance.params.label ?? 'results'} found`,
+    () =>
+      this.instance.params.noContentLabel ?? `No ${this.instance.params.label ?? 'results'} found`,
   );
 
   protected onNoContentClick(): void {
@@ -165,7 +172,7 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   /** appends a visible border to every body cell once any header/body span is active — keeps
    *  merged regions legible instead of looking like accidentally-missing cells */
   protected bodyCellClass(): string {
-    const base = 'px-2 py-1 align-top';
+    const base = 'px-2 py-1 align-middle';
     return this.instance.hasSpannedCells() ? mergeClasses(base, 'border border-black/10') : base;
   }
 
@@ -236,7 +243,7 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   protected rowClass(row: RowType): string {
     const base = resolveSyncDynamic(this.instance.params.rowClass, row) ?? '';
     const rowProps = (row as GridRow<RowType>)?._rowProps;
-    const conditional = resolveClassMap(this.instance.params.conditionalRowFormat, row);
+    const conditional = resolveClassMap(this.instance.params.rowFormatter, row);
     const propsClass = resolveSyncDynamic(rowProps?.class, row) ?? '';
     return mergeClasses(mergeClasses(base, conditional), propsClass);
   }
@@ -290,7 +297,6 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   }
 
   // ── row dragging (GridParameter.rowsDraggable) ──
-
   protected onRowDrop(event: CdkDragDrop<RowType[]>): void {
     this.instance.dragRow(event.previousIndex, event.currentIndex);
   }
@@ -313,24 +319,30 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   }
 
   protected isSyntheticColumn(key: string): boolean {
-    return key === this.DRAG_KEY || key === this.INDEX_KEY || key === this.SELECT_KEY || key === this.EXPAND_KEY || key === this.ACTIONS_KEY;
+    return (
+      key === this.DRAG_KEY ||
+      key === this.INDEX_KEY ||
+      key === this.SELECT_KEY ||
+      key === this.EXPAND_KEY ||
+      key === this.ACTIONS_KEY
+    );
   }
 
   // ── list mode: expandable cards, styled after the details component's array-item list
-  // (chevron + grid-template-rows collapse) — expanded by default (unlike details' own
-  // collapsed-by-default), since here the row data IS the grid's primary content, not a
-  // secondary nested list; the chevron lets a user collapse individual rows for a denser view. ──
+  // (chevron + grid-template-rows collapse) — collapsed by default, matching the details
+  // component's own array-item list default; the chevron lets a user expand individual rows
+  // to see their full field values. ──
 
-  private readonly collapsedListRows = signal<ReadonlySet<unknown>>(new Set());
+  private readonly expandedListRows = signal<ReadonlySet<unknown>>(new Set());
 
   protected isListRowExpanded(row: RowType): boolean {
-    return !this.collapsedListRows().has(this.instance.rowId(row));
+    return this.expandedListRows().has(this.instance.rowId(row));
   }
 
   protected toggleListRowExpanded(row: RowType, event: Event): void {
     event.stopPropagation();
     const id = this.instance.rowId(row);
-    this.collapsedListRows.update((set) => {
+    this.expandedListRows.update((set) => {
       const next = new Set(set);
       if (next.has(id)) next.delete(id);
       else next.add(id);

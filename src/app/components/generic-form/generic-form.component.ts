@@ -49,15 +49,22 @@ interface DisplayStep {
 // ─────────────────────────────────────────────
 
 @Component({
-  selector: 'app-generic-form',
-  imports: [NgTemplateOutlet, MatButtonModule, MatIconModule, MatDialogModule, MatStepperModule, FieldComponent],
+  selector: 'generic-form',
+  imports: [
+    NgTemplateOutlet,
+    MatButtonModule,
+    MatIconModule,
+    MatDialogModule,
+    MatStepperModule,
+    FieldComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './generic-form.component.html',
 })
 export class GenericFormComponent implements OnInit, OnDestroy {
   readonly params = input.required<FormParameters>();
   /** emits the built FormInstance once, at the end of ngOnInit (SPEC §15) — lets a parent
-   *  embedding <app-generic-form> call instance.form.reset()/.submit()/.formState() directly */
+   *  embedding <generic-form> call instance.form.reset()/.submit()/.formState() directly */
   readonly instanceChange = output<FormInstance>();
 
   private readonly engine = inject(FormEngineService);
@@ -204,7 +211,9 @@ export class GenericFormComponent implements OnInit, OnDestroy {
     };
   }
 
-  private resolveProceed(result: boolean | Promise<boolean> | Observable<boolean>): Promise<boolean> {
+  private resolveProceed(
+    result: boolean | Promise<boolean> | Observable<boolean>,
+  ): Promise<boolean> {
     return isObservable(result) ? firstValueFrom(result) : Promise.resolve(result);
   }
 

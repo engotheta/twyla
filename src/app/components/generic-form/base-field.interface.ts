@@ -105,4 +105,8 @@ export interface ValueField<V = unknown> extends CoreField {
   suffixIcon?: Dynamic<string>;
   /** appends a clear suffix button when the field has a value; default false */
   showClear?: boolean;
+  /** per-field override of `FormParameters.showSubscript` (default true, i.e. follow the
+   *  form-level setting) — hides this field's reserved hint/error strip regardless of what
+   *  the rest of the form does, or shows it even when the form otherwise hides them. */
+  showSubscript?: boolean;
 }

@@ -1,7 +1,7 @@
 // column configuration: what a consumer authors, and the runtime layout state the grid tracks
 
-import { ActionButton, DynamicValue } from '../action-buttons/action-button.interface';
-import { FormField } from '../generic-form';
+import { ActionButton, DynamicValue } from '../../action-buttons/action-button.interface';
+import { FormField } from '../../generic-form';
 import { GridClassMap } from './grid-cell.interface';
 import { SearchType } from './grid-search.interface';
 
@@ -23,6 +23,15 @@ export interface GridColumn_<RowType = any> {
   /** default searchType this column's search instance uses — see GridSearchConfig.defaultSearchType
    *  for the grid-wide fallback and the resolution order (grid-row.helpers.ts) */
   searchType?: SearchType;
+
+  /**
+   * Per-column override of `GridParameter.mergeCells`'s vertical (rowspan) auto-merge: when this
+   * column has a streak of consecutive rows with the same resolved value, the first cell in the
+   * streak spans them (rowspan) until the value changes. `true`/`false` here always wins over the
+   * grid-wide `mergeCells` default for this column specifically; leave undefined to just follow
+   * the grid-wide default.
+   */
+  mergeConsecutive?: boolean;
 
   width?: string; // e.g. '100px', '20%'
   minWidth?: string;
@@ -111,6 +120,7 @@ export const GRID_COLUMN_PROPS = [
   'editable type(boolean)',
   'truncate type(number)',
   'contentClass',
+  'columns type(stringArray)', // nested/grouped headers, object form only
   'icon',
   'iconClass',
 ];

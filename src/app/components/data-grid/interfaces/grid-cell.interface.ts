@@ -1,13 +1,13 @@
 // per-row and per-cell override features (rendered on top of the column's own config)
 
 import { Observable } from 'rxjs';
-import { DynamicValue } from '../action-buttons/action-button.interface';
+import { DynamicValue } from '../../action-buttons/action-button.interface';
 
 /**
  * Independent class-predicate map: every entry whose predicate returns true contributes its
  * key (a class name) to the row/cell — entries stack rather than override each other, so
  * independent visual signals (e.g. a color class + a font-weight class + an icon class) can
- * compose freely. Used for `GridParameter.conditionalRowFormat` and
+ * compose freely. Used for `GridParameter.rowFormatter` and
  * `GridColumn_.conditionalFormat`.
  */
 export type GridClassMap<RowType = any> = Record<string, (row: RowType, index?: number) => boolean>;
@@ -64,6 +64,15 @@ export interface RowProps<RowType = any> {
   /** shows a checkbox for this row; only meaningful when `GridParameter.selectionMode !== 'none'` */
   showCheckbox?: DynamicValue<boolean, RowType>;
   checkboxDisabled?: DynamicValue<boolean, RowType>;
+
+  /**
+   * Horizontal (colspan) analog of `GridColumn_.mergeConsecutive`, scoped to THIS row: scans
+   * this row's real columns left to right for a streak of consecutive columns with the same
+   * resolved value — the first cell in the streak spans them (colspan) until the value changes.
+   * Not a grid-wide default (unlike vertical merge's `GridParameter.mergeCells`) — set per row
+   * that actually needs it. Manual `_cellsProps` overrides still win over this.
+   */
+  mergeConsecutive?: boolean;
 
   class?: DynamicValue<string, RowType>;
   tooltip?: DynamicValue<string, RowType>;

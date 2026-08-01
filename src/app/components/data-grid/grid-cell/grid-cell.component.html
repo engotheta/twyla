@@ -1,15 +1,27 @@
 @if (isEditing()) {
   <div class="flex items-start gap-1">
     <div class="flex-1 min-w-0">
-      <app-generic-form [params]="editFormParams()" (instanceChange)="onEditFormInstance($event)" />
+      <generic-form [params]="editFormParams()" (instanceChange)="onEditFormInstance($event)" />
       @if (editError(); as err) {
         <p class="text-xs text-red-600 mt-1">{{ err }}</p>
       }
     </div>
-    <button type="button" mat-icon-button class="!w-7 !h-7" aria-label="Save" (click)="commitEdit()">
+    <button
+      type="button"
+      mat-icon-button
+      class="!w-7 !h-7"
+      aria-label="Save"
+      (click)="commitEdit()"
+    >
       <mat-icon class="!text-base">check</mat-icon>
     </button>
-    <button type="button" mat-icon-button class="!w-7 !h-7" aria-label="Cancel" (click)="cancelEdit()">
+    <button
+      type="button"
+      mat-icon-button
+      class="!w-7 !h-7"
+      aria-label="Cancel"
+      (click)="cancelEdit()"
+    >
       <mat-icon class="!text-base">close</mat-icon>
     </button>
   </div>
@@ -34,13 +46,21 @@
       <span [innerHTML]="displayValue()"></span>
     } @else {
       @if (resolved().icon; as icon) {
-        <mat-icon class="!text-base align-middle mr-1" [class]="resolved().iconClass ?? ''">{{ icon }}</mat-icon>
+        <mat-icon class="!text-base align-middle mr-1" [class]="resolved().iconClass ?? ''">{{
+          icon
+        }}</mat-icon>
       }
       <span>{{ displayValue() }}</span>
     }
 
     @if (canEdit() && trigger_() === 'button') {
-      <button type="button" mat-icon-button class="!w-6 !h-6 ml-1" aria-label="Edit" (click)="onEditButtonClick($event)">
+      <button
+        type="button"
+        mat-icon-button
+        class="!w-6 !h-6 ml-1"
+        aria-label="Edit"
+        (click)="onEditButtonClick($event)"
+      >
         <mat-icon class="!text-sm">edit</mat-icon>
       </button>
     }

@@ -1,11 +1,17 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { CdkDrag, CdkDragDrop, CdkDragPlaceholder, CdkDragPreview, CdkDropList } from '@angular/cdk/drag-drop';
+import {
+  CdkDrag,
+  CdkDragDrop,
+  CdkDragPlaceholder,
+  CdkDragPreview,
+  CdkDropList,
+} from '@angular/cdk/drag-drop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { GridInstance } from '../grid-engine.service';
-import { GridColumnState } from '../grid-column.interface';
+import { GridColumnState } from '../interfaces/grid-column.interface';
 
 /** Show/hide, reorder (drag or keyboard move-up/down), and pin/unpin columns. */
 @Component({
@@ -27,7 +33,12 @@ export class GridColumnPanelComponent<RowType = any> {
   readonly instance = input.required<GridInstance<RowType>>();
 
   private readonly labelByKey = computed(
-    () => new Map(this.instance().leafColumns().map((c) => [c.key, c.label ?? c.key])),
+    () =>
+      new Map(
+        this.instance()
+          .leafColumns()
+          .map((c) => [c.key, c.label ?? c.key]),
+      ),
   );
 
   protected readonly entries = computed(() => {

@@ -31,7 +31,7 @@ import { firstErrorMessage } from '../field-errors.util';
 
     @switch (f.dateType ?? 'date') {
       @case ('time') {
-        <mat-form-field [appearance]="appearance()" class="w-full">
+        <mat-form-field [appearance]="appearance()" class="w-full" [class.hide-subscript]="!showSubscript()">
           @if (f.showLabel !== false && f.label) {
             <mat-label>{{ f.label }}</mat-label>
           }
@@ -54,7 +54,7 @@ import { firstErrorMessage } from '../field-errors.util';
       }
       @case ('dateTime') {
         <div class="flex gap-2">
-          <mat-form-field [appearance]="appearance()" class="flex-1">
+          <mat-form-field [appearance]="appearance()" class="flex-1" [class.hide-subscript]="!showSubscript()">
             @if (f.showLabel !== false && f.label) {
               <mat-label>{{ f.label }}</mat-label>
             }
@@ -74,7 +74,7 @@ import { firstErrorMessage } from '../field-errors.util';
               <mat-error>{{ message }}</mat-error>
             }
           </mat-form-field>
-          <mat-form-field [appearance]="appearance()" class="w-32">
+          <mat-form-field [appearance]="appearance()" class="w-32" [class.hide-subscript]="!showSubscript()">
             <mat-label>Time</mat-label>
             <input matInput type="time" [formControl]="timePartControl" [readonly]="f.readonly === true" />
           </mat-form-field>
@@ -84,7 +84,7 @@ import { firstErrorMessage } from '../field-errors.util';
         }
       }
       @default {
-        <mat-form-field [appearance]="appearance()" class="w-full">
+        <mat-form-field [appearance]="appearance()" class="w-full" [class.hide-subscript]="!showSubscript()">
           @if (f.showLabel !== false && f.label) {
             <mat-label>{{ f.label }}</mat-label>
           }
@@ -128,6 +128,9 @@ export class DateFieldComponent {
 
   protected readonly appearance = computed(
     () => this.state().appearance ?? this.instance().params.appearance ?? 'outline',
+  );
+  protected readonly showSubscript = computed(
+    () => this.state().showSubscript ?? this.instance().params.showSubscript ?? true,
   );
 
   protected readonly required = computed(

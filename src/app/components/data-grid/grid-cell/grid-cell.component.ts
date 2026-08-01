@@ -10,10 +10,10 @@ import { mergeClasses } from '../../details/util/class-name/class-name.helpers';
 import { resolveDynamicValue$ } from '../../action-buttons/dynamic-value.util';
 import { FormField, FormInstance, FormParameters, GenericFormComponent } from '../../generic-form';
 import { GridInstance } from '../grid-engine.service';
-import { GridColumn_ } from '../grid-column.interface';
-import { GridCell, GridRow } from '../grid-cell.interface';
-import { formatCellValue, resolveClassMap } from '../grid-format.helpers';
-import { getCellValue } from '../grid-row.helpers';
+import { GridColumn_ } from '../interfaces/grid-column.interface';
+import { GridCell, GridRow } from '../interfaces/grid-cell.interface';
+import { formatCellValue, resolveClassMap } from '../helpers/grid-format.helpers';
+import { getCellValue } from '../helpers/grid-row.helpers';
 
 interface ResolvedCellProps {
   value: unknown;
@@ -26,7 +26,11 @@ interface ResolvedCellProps {
   editable: boolean | undefined;
 }
 
-function resolveCellValue$<RowType>(override: GridCell<RowType> | undefined, row: RowType, data: RowType[]): Observable<unknown> {
+function resolveCellValue$<RowType>(
+  override: GridCell<RowType> | undefined,
+  row: RowType,
+  data: RowType[],
+): Observable<unknown> {
   if (override?.value === undefined) return of(undefined);
   const raw = typeof override.value === 'function' ? override.value(row, data) : override.value;
   return isObservable(raw) ? raw : of(raw);
@@ -35,7 +39,13 @@ function resolveCellValue$<RowType>(override: GridCell<RowType> | undefined, row
 /** Renders one real data column's cell content for one row (synthetic columns — index/select/expand/actions — render inline in the shell). */
 @Component({
   selector: 'grid-cell',
-  imports: [NgTemplateOutlet, MatButtonModule, MatIconModule, MatTooltipModule, GenericFormComponent],
+  imports: [
+    NgTemplateOutlet,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+    GenericFormComponent,
+  ],
   templateUrl: './grid-cell.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -63,7 +73,10 @@ export class GridCellComponent<RowType = any> {
     toObservable(this.trigger).pipe(
       switchMap(({ row, column, override, data }) =>
         combineLatest({
-          value: override?.value !== undefined ? resolveCellValue$(override, row, data) : of(getCellValue(row, column)),
+          value:
+            override?.value !== undefined
+              ? resolveCellValue$(override, row, data)
+              : of(getCellValue(row, column)),
           columnClass: resolveDynamicValue$(column.class, row),
           contentClass: resolveDynamicValue$(column.contentClass, row),
           overrideClass: resolveDynamicValue$(override?.class, row),
@@ -90,7 +103,10 @@ export class GridCellComponent<RowType = any> {
 
   protected readonly cellClass = computed(() => {
     const conditional = resolveClassMap(this.column().conditionalFormat, this.row());
-    return mergeClasses(mergeClasses(this.resolved().columnClass ?? '', conditional), this.resolved().overrideClass ?? '');
+    return mergeClasses(
+      mergeClasses(this.resolved().columnClass ?? '', conditional),
+      this.resolved().overrideClass ?? '',
+    );
   });
 
   protected readonly type = computed(() => this.override()?.type ?? this.column().type);
@@ -112,9 +128,13 @@ export class GridCellComponent<RowType = any> {
 
   protected readonly canEdit = computed(() => {
     const editingCfg = this.instance().params.editing;
-    return !!editingCfg?.editable && this.resolved().editable !== false && !!this.column().editField;
+    return (
+      !!editingCfg?.editable && this.resolved().editable !== false && !!this.column().editField
+    );
   });
-  protected readonly trigger_ = computed(() => this.instance().params.editing?.trigger ?? 'dblclick');
+  protected readonly trigger_ = computed(
+    () => this.instance().params.editing?.trigger ?? 'dblclick',
+  );
 
   protected readonly isEditing = signal(false);
   protected readonly editError = signal<string | undefined>(undefined);

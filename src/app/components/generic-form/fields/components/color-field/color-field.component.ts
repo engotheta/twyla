@@ -27,7 +27,7 @@ import { fromHex, toHex } from './color.util';
         (blur)="control().markAsTouched()"
       />
 
-      <mat-form-field [appearance]="appearance()" class="w-full">
+      <mat-form-field [appearance]="appearance()" class="w-full" [class.hide-subscript]="!showSubscript()">
         @if (f.showLabel !== false && f.label) {
           <mat-label>{{ f.label }}</mat-label>
         }
@@ -57,6 +57,9 @@ export class ColorFieldComponent {
 
   protected readonly appearance = computed(
     () => this.state().appearance ?? this.instance().params.appearance ?? 'outline',
+  );
+  protected readonly showSubscript = computed(
+    () => this.state().showSubscript ?? this.instance().params.showSubscript ?? true,
   );
 
   protected readonly hexValue = computed(() =>

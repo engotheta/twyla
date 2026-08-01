@@ -1,12 +1,20 @@
-<div class="w-80 max-h-[32rem] overflow-y-auto p-3">
-  <app-generic-form [params]="formParams()" (instanceChange)="onFormInstance($event)" />
+<div
+  [class]="
+    inline()
+      ? 'flex flex-wrap items-center gap-2'
+      : 'w-80 max-h-[32rem] overflow-y-auto p-3 bg-white'
+  "
+>
+  <generic-form [params]="formParams()" (instanceChange)="onFormInstance($event)" />
 
-  <div class="flex justify-end gap-2 mt-2">
+  <div [class]="inline() ? 'flex items-center gap-1' : 'flex justify-end gap-2 mt-2'">
     @if (showClear()) {
       <button type="button" mat-button (click)="clear()">{{ clearLabel() }}</button>
     }
     @if (!isLive()) {
-      <button type="button" mat-flat-button color="primary" (click)="apply()">{{ applyLabel() }}</button>
+      <button type="button" mat-flat-button color="primary" (click)="apply()">
+        {{ applyLabel() }}
+      </button>
     }
   </div>
 </div>
