@@ -2,7 +2,7 @@
 
 /**
  * Server-facing operator for one filter key. `PageDetails.filters` stays a plain
- * `Record<string, any>` of raw values — this tells a `gridDataFn` implementation how to
+ * `Record<string, any>` of raw values — this tells a `fetchFn` implementation how to
  * translate a given key's value into a query (e.g. a 'between' filter's value is a
  * two-element tuple). Keys not listed in `filterOperators` default to 'equals'.
  */
@@ -44,7 +44,7 @@ export interface GridFilterConfig {
   /** default 'and' */
   filterCombination?: GridFilterCombination;
 
-  /** forwarded to `FormParameters.changeDebounce` when `filtersTrigger` is 'live' */
+  /** forwarded to `FormParameter.changeDebounce` when `filtersTrigger` is 'live' */
   changeDebounce?: number;
 
   /** default 'Apply'; only rendered when `filtersTrigger` is 'manual' */

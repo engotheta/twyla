@@ -46,6 +46,11 @@ export interface GridParameter<RowType = any> {
   // show/hide columns, pin/unpin columns, sort columns by dragging
   showTableControlsToggle?: boolean;
 
+  // if true, the column panel shows a button that scans the current data for keys not already
+  // declared as columns and adds them (initially hidden/unchecked, the user can then show them).
+  // Session-only: discovered columns aren't persisted across a reload. Default is false.
+  canAddColumns?: boolean;
+
   // grid options to change the grid features, e.g. pageSize, columns, etc.
   // only the properties defined in the gridOptions and not in excludedOptionKeys
   // will be overidden, other properties will remain the same
@@ -76,13 +81,13 @@ export interface GridParameter<RowType = any> {
   // function to fetch data for the grid, e.g. from an API, it will be called with page details
   // if server paginated one would require return the GridData instead of just the data array,
   // so that the grid can show the paginator correctly
-  gridDataFn?: (
+  fetchFn?: (
     page?: PageDetails,
   ) => Observable<GridData<RowType> | RowType[]> | GridData<RowType> | RowType[];
 
   // if serverPaginated is true, then the search input and the gridFilters,
   // will not filter the data locally in the grid,
-  // but will be passed to the gridDataFn as part of the page details,
+  // but will be passed to the fetchFn as part of the page details,
   // so that the server can filter the data and return the correct data for the grid
   serverPaginated?: boolean; // default is false
 
@@ -147,7 +152,7 @@ export interface GridParameter<RowType = any> {
 
   // runtime column layout (order/visible/width/pinned per key) — seed it to restore a
   // previously-saved layout, and persist it yourself (e.g. to localStorage) via
-  // onColumnStateChange. Column-state changes never trigger a gridDataFn refetch.
+  // onColumnStateChange. Column-state changes never trigger a fetchFn refetch.
   initialColumnState?: GridColumnState[];
   onColumnStateChange?: (state: GridColumnState[]) => void;
 

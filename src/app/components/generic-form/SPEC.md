@@ -85,7 +85,7 @@ Vocabulary: "the engine" = `FormEngineService` + `FormInstance`. "config" = a
   register their controls on the **top-level form**; the submitted value has
   no step wrapper keys. This is why `StepField` has no required `key`.
 - If any outer field is a step, all non-step outer fields are collected into
-  one auto-generated step (`FormParameters.mixedStepLabel`, default
+  one auto-generated step (`FormParameter.mixedStepLabel`, default
   `'More Info'`; `mixedStepPosition`, default `'last'`).
 - When steps are present the form footer is hidden; stepper buttons replace it
   (first step: cancel-if-modal instead of previous; last step: submit).
@@ -97,7 +97,7 @@ Vocabulary: "the engine" = `FormEngineService` + `FormInstance`. "config" = a
 - `clearOnHide` (default `false`): whether the control's value resets to
   `defaultValue ?? null` when hidden. Value otherwise **survives** hiding.
 - Hidden fields are **included in the submit payload by default** — same
-  default as disabled fields (`FormParameters.includeDisabled`, §7). Set
+  default as disabled fields (`FormParameter.includeDisabled`, §7). Set
   `excludeHiddenOnSubmit: true` on the field to drop it while hidden instead.
   Retention in the control and inclusion in the payload are independent
   decisions.
@@ -115,7 +115,7 @@ first and can fail the whole assembly.
 3. Drop every field with `ignoreOnSubmit: true` (content/label default `true`).
 4. Drop fields currently hidden, if `excludeHiddenOnSubmit: true` (default:
    keep them — see §6).
-5. If `FormParameters.includeDisabled === false`, drop disabled fields.
+5. If `FormParameter.includeDisabled === false`, drop disabled fields.
 6. Run each remaining field's `toSubmit(value, formState)` transform (leaf
    fields first, then containers).
 7. Cross validators (§9) must pass and the form must be valid **before**
@@ -251,13 +251,13 @@ Added so a parent embedding `<generic-form>` (e.g. a data-grid's advanced
 filter panel) can react to changes live and drive the form programmatically,
 without subscribing to internals it isn't supposed to touch.
 
-- `FormParameters.onChange`, when set, subscribes to `form.valueChanges` —
+- `FormParameter.onChange`, when set, subscribes to `form.valueChanges` —
   plain `valueChanges`, no `startWith`, so (unlike §1's Dynamic-prop
   observers, which also fire once at init) it does **not** fire on init, only
   on subsequent user-driven changes. It's wired _after_ the initial observer
   pass (§1) completes inside `build()`, specifically so synchronous value
   writes during that initial resolution don't themselves count as a "change."
-- Debounced via `FormParameters.changeDebounce` (ms) when set — same pattern
+- Debounced via `FormParameter.changeDebounce` (ms) when set — same pattern
   as the existing per-field `debounce` (§8).
 - Its subscription lives in a form-level bag (separate from the per-field
   `rt.subs` bags), torn down in `instance.destroy()` (§10) alongside them.

@@ -10,7 +10,7 @@ export * from './fields/container.fields';
 export * from './fields/control.fields';
 export * from './fields/static.fields';
 export * from './interfaces/form-field.interface';
-export * from './interfaces/form-parameters.interface';
+export * from './interfaces/form-parameter.interface';
 export * from './form-engine.service';
 export * from './generic-form.component';
 

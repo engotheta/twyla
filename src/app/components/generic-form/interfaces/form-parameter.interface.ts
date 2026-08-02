@@ -44,7 +44,7 @@ export type CrossValidator =
       message: string;
     });
 
-export interface FormParameters<T = Record<string, unknown>> {
+export interface FormParameter<T = Record<string, unknown>> {
   /** if launched from a modal: title of the modal dialog */
   title?: string;
   icon?: string;

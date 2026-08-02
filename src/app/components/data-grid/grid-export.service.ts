@@ -37,7 +37,7 @@ export class GridExportService {
     instance: GridInstance<RowType>,
     overrideColumns?: GridColumn_[],
   ): Promise<void> {
-    const cfg = instance.params.export;
+    const cfg = instance.params().export;
     const rows = cfg?.exportAllData === false ? instance.rows() : await instance.getAllRows();
     const columns = overrideColumns ?? this.resolveColumns(instance, cfg);
     const records = cfg?.mapRow
@@ -46,7 +46,7 @@ export class GridExportService {
     const fileName = this.resolveFileName(cfg, format);
     const styles =
       cfg?.matchGridStyle && format !== 'csv'
-        ? this.resolveStyles(rows, columns, instance.params)
+        ? this.resolveStyles(rows, columns, instance.params())
         : undefined;
 
     if (format === 'csv') {
@@ -56,7 +56,7 @@ export class GridExportService {
       // which is only ever populated for the current page's VISIBLE columns) — correct for both the
       // current-page case and `exportAllData`/`allFields`, not just a special case of one of them.
       const headerRows = this.resolveHeaderRows(instance, columns, !!overrideColumns);
-      const bodyPlan = buildCellSpanPlan(rows, columns, !!instance.params.mergeCells);
+      const bodyPlan = buildCellSpanPlan(rows, columns, !!instance.params().mergeCells);
       if (format === 'excel')
         await this.downloadExcel(records, columns, headerRows, bodyPlan, fileName, styles);
       else await this.downloadPdf(records, columns, headerRows, bodyPlan, fileName, styles);

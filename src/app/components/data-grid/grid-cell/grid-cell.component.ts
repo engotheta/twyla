@@ -7,13 +7,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { mergeClasses } from '../../details/util/class-name/class-name.helpers';
+import { ActionButtonsComponent } from '../../action-buttons/action-buttons.component';
 import { resolveDynamicValue$ } from '../../action-buttons/dynamic-value.util';
-import { FormField, FormInstance, FormParameters, GenericFormComponent } from '../../generic-form';
+import { FormField, FormInstance, FormParameter, GenericFormComponent } from '../../generic-form';
 import { GridInstance } from '../grid-engine.service';
 import { GridColumn_ } from '../interfaces/grid-column.interface';
 import { GridCell, GridRow } from '../interfaces/grid-cell.interface';
 import { formatCellValue, resolveClassMap } from '../helpers/grid-format.helpers';
 import { getCellValue } from '../helpers/grid-row.helpers';
+import { MergeClassesPipe } from '../../details/util/class-name/merge-classes.pipe';
 
 interface ResolvedCellProps {
   value: unknown;
@@ -44,7 +46,9 @@ function resolveCellValue$<RowType>(
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    ActionButtonsComponent,
     GenericFormComponent,
+    MergeClassesPipe,
   ],
   templateUrl: './grid-cell.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -111,13 +115,17 @@ export class GridCellComponent<RowType = any> {
 
   protected readonly type = computed(() => this.override()?.type ?? this.column().type);
   protected readonly template = computed(() => this.override()?.template ?? this.column().template);
-  protected readonly templateContext = computed(() => ({
-    $implicit: this.row(),
-    row: this.row(),
-    column: this.column(),
-    value: this.resolved().value,
-    context: this.override()?.templateContext ?? this.column().templateContext,
-  }));
+  protected readonly templateContext = computed(() => {
+    const row = this.row();
+    const raw = this.override()?.templateContext ?? this.column().templateContext;
+    const context =
+      typeof raw === 'function'
+        ? raw(row)
+        : (raw ?? { row, column: this.column(), value: this.resolved().value });
+    return { $implicit: row, ...context };
+  });
+
+  protected readonly buttons = computed(() => this.override()?.buttons ?? this.column().buttons);
 
   protected readonly displayValue = computed(() => {
     const value = this.resolved().value;
@@ -127,20 +135,20 @@ export class GridCellComponent<RowType = any> {
   });
 
   protected readonly canEdit = computed(() => {
-    const editingCfg = this.instance().params.editing;
+    const editingCfg = this.instance().params().editing;
     return (
       !!editingCfg?.editable && this.resolved().editable !== false && !!this.column().editField
     );
   });
   protected readonly trigger_ = computed(
-    () => this.instance().params.editing?.trigger ?? 'dblclick',
+    () => this.instance().params().editing?.trigger ?? 'dblclick',
   );
 
   protected readonly isEditing = signal(false);
   protected readonly editError = signal<string | undefined>(undefined);
   private editFormInstance?: FormInstance;
 
-  protected readonly editFormParams = computed<FormParameters>(() => {
+  protected readonly editFormParams = computed<FormParameter>(() => {
     const field = this.column().editField;
     const key = this.column().key;
     if (!field) return { fields: [] };
@@ -182,7 +190,7 @@ export class GridCellComponent<RowType = any> {
     const key = this.column().key;
     const newValue = (value as Record<string, unknown>)[key];
     const previous = this.resolved().value;
-    const editingCfg = this.instance().params.editing;
+    const editingCfg = this.instance().params().editing;
 
     const validationError = await editingCfg?.validateFn?.(this.row(), key, newValue);
     if (validationError) {

@@ -1,0 +1,46 @@
+:host {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+// default list-mode layout (ContentsViewParameter.contentsContainerClass override wins)
+.contents-view-default-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// tabsOrientation: 'vertical' — Material's mat-tab-group has no built-in vertical
+// mode, so this reflows the header into a left-hand sidebar column
+.contents-view-tabs-vertical {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+
+  ::ng-deep {
+    > .mat-mdc-tab-header {
+      flex: 0 0 auto;
+      border-bottom: none;
+      border-right: 1px solid rgba(0, 0, 0, 0.12);
+
+      .mat-mdc-tab-labels {
+        flex-direction: column;
+      }
+
+      .mdc-tab {
+        justify-content: flex-start;
+        width: 100%;
+      }
+    }
+
+    > .mat-mdc-tab-body-wrapper {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+  }
+}

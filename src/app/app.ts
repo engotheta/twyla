@@ -9,7 +9,8 @@ import { DetailsComponent } from './components/details/details.component';
 import { DetailsParameter } from './components/details/detail.interface';
 import { FieldType, GenericFormComponent, obs } from './components/generic-form';
 import { createSpeakerFormParams } from './conference-speaker-form.params';
-import { DataGridComponent, GridParameter, RowProps } from './components/data-grid';
+import { CellsProps, DataGridComponent, GridParameter, RowProps } from './components/data-grid';
+import { ContentsViewComponent, ContentsViewParameter } from './components/contents-view';
 import { gridPar } from './data';
 
 const entity = {
@@ -60,6 +61,7 @@ type Employee = (typeof employees)[number];
     DetailsComponent,
     GenericFormComponent,
     DataGridComponent,
+    ContentsViewComponent,
     JsonPipe,
   ],
   templateUrl: './app.html',
@@ -83,19 +85,50 @@ export class App {
     label: 'Employees',
     icon: 'groups',
     identifierKey: ['id'],
+
     gridData: employees.map((item, index) => ({
       ...item,
       _cellsProps:
-        index === 3 ? { name: { rowspan: 3, colspan: 4, class: 'bg-red-300' } } : undefined,
+        index === 3
+          ? <CellsProps>{ name: { rowspan: 3, colspan: 4, class: 'bg-red-300', click(row) {} } }
+          : undefined,
       _rowProps: <RowProps>{ mergeConsecutive: true, class: index % 2 === 0 ? 'bg-gray-50' : '' },
     })),
+
     size: 10,
 
     sort: { key: 'salary', direction: 'asc' },
 
     columns: [
       'id label(ID) sortable(true) width(70px)',
-      'name label(Name) sortable(true) searchable(true)',
+      {
+        key: 'name',
+        label: 'Name',
+        sortable: true,
+        searchable: true,
+        contentClass: 'flex gap-2',
+        // action buttons hosted in this column's own body cells — row is passed as data
+        buttons: [
+          {
+            type: 'icon',
+            icon: 'visibility',
+            tooltip: 'View',
+            click: (row) => this.log.set(`View clicked (column button) for ${row?.name}`),
+          },
+        ],
+        // action buttons hosted in this column's header cell — GridState is passed as data
+        headerButtons: [
+          {
+            type: 'icon',
+            icon: 'refresh',
+            tooltip: 'Refresh',
+            click: (state) =>
+              this.log.set(
+                `Header button clicked — page ${state?.gridData?.page}, ${state?.gridData?.content?.length} row(s) on page`,
+              ),
+          },
+        ],
+      },
 
       // 'address.city label(City) searchable(true)',
       // 'address.zip label(Zip) type(number) width(80px) visible(false)',
@@ -105,7 +138,29 @@ export class App {
       {
         key: 'address',
         columns: [
-          { key: 'address.city', label: 'City', searchable: true, sortable: true },
+          {
+            key: 'address.city',
+            label: 'City',
+            searchable: true,
+            sortable: true,
+
+            // renders the mapped value as HTML (sanitized by Angular's default [innerHTML] binding)
+            type: 'html',
+
+            // a mapper function that takes a row and returns a value to be
+            // displayed in the cell for this column.
+
+            valueFn: (row: Employee) =>
+              `${row.address?.city}${row.address?.zip ? ` <span class="text-gray-400">(${row.address.zip})</span>` : ''}`,
+
+            //a component or template that will be used to render the cell for this column.
+            // template: '',
+
+            // // a function or object to provide context for the template
+            // // a row is always passed  to the templateContextFn,
+            // // and the return value is passed to the template as context.
+            // templateContext: (row: Employee) => ({ row, value: row.address?.city }),
+          },
           { key: 'address.zip', label: 'Zip', type: 'number', width: '80px', visible: false },
           { key: 'address.street', label: 'Street' },
         ],
@@ -163,6 +218,8 @@ export class App {
     },
 
     // addIndexColumn: false,
+
+    canAddColumns: true,
 
     selectionMode: 'multiple',
     onRowSelection: (rows) => this.log.set(`Selected ${rows?.length ?? 0} employee(s)`),
@@ -228,7 +285,7 @@ export class App {
       users: {
         label: 'Users Listo',
         class: 'text-purple-600',
-        tabular: false,
+        tabular: true,
         pageSize: 10,
         value: (entity: any) =>
           [{ id: 0, name: 'Default User', role: 'viewer' }]?.concat(entity?.users),
@@ -268,6 +325,48 @@ export class App {
       { label: 'Details', icon: 'info', fields: ['...'] },
     ],
     entity: entity,
+  };
+
+  protected readonly contentsViewParameter: ContentsViewParameter = {
+    showContentsInTabs: true,
+    contents: [
+      {
+        type: 'table',
+        slug: 'employees',
+        label: 'Employees',
+        icon: 'groups',
+        gridParams: this.gridParameter,
+      },
+      {
+        type: 'details',
+        slug: 'profile',
+        label: 'Profile',
+        icon: 'person',
+        badge: 3,
+        detailsParams: this.detailsParameter,
+      },
+      {
+        type: 'group',
+        slug: 'more',
+        label: 'More',
+        icon: 'more_horiz',
+        showContentsInTabs: true,
+        contents: [
+          {
+            type: 'html',
+            slug: 'about',
+            label: 'About',
+            html: '<p>A <b>nested</b> group tab.</p>',
+          },
+          {
+            type: 'form',
+            slug: 'speaker-form',
+            label: 'Speaker Form',
+            formParams: this.speakerFormParams,
+          },
+        ],
+      },
+    ],
   };
 
   protected readonly buttons: ActionButton[] = [

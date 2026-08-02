@@ -1,9 +1,12 @@
 // column configuration: what a consumer authors, and the runtime layout state the grid tracks
 
+import { TemplateRef } from '@angular/core';
 import { ActionButton, DynamicValue } from '../../action-buttons/action-button.interface';
 import { FormField } from '../../generic-form';
 import { GridClassMap } from './grid-cell.interface';
+import type { GridValueType } from '../helpers/grid-format.helpers';
 import { SearchType } from './grid-search.interface';
+import type { GridState } from './grid-state.interface';
 
 /**
  * If a string, a `GridColumn_` is created with `key` as the string and other properties
@@ -42,11 +45,23 @@ export interface GridColumn_<RowType = any> {
     class?: string;
     buttons?: ActionButton<GridColumn_<RowType>>[];
   };
+  /** action buttons rendered in this column's header cell — distinct from
+   *  `headerProps.buttons` (data: the column); data passed to these is the grid's live
+   *  GridState. */
+  headerButtons?: ActionButton<GridState<RowType>>[];
 
-  type?: 'text' | 'number' | 'boolean' | 'date' | 'datetime' | 'time' | 'currency' | 'percent';
+  type?: GridValueType;
   align?: 'left' | 'center' | 'right';
-  template?: any;
-  templateContext?: any;
+  /** a component or template that will be used to render the cell for this column */
+  template?: TemplateRef<unknown>;
+  /** a function or object to provide context for the template — a row is always passed to the
+   *  function, and the return value is passed to the template as context (in addition to
+   *  `$implicit`, always the row, for `let-x` shorthand bindings). Omitted (only `template` set):
+   *  falls back to `{ row, column, value }`. */
+  templateContext?: ((row: RowType) => Record<string, unknown>) | Record<string, unknown>;
+  /** a mapper function that takes a row and returns the value to be displayed in the cell —
+   *  also feeds search/sort-merge/export (see `getCellValue`, helpers/grid-row.helpers.ts) */
+  valueFn?: (row: RowType) => unknown;
 
   /** applies to all cells in the column, including the header cell */
   class?: DynamicValue<string, RowType>;
@@ -60,6 +75,10 @@ export interface GridColumn_<RowType = any> {
   contentClass?: DynamicValue<string, RowType>;
   icon?: DynamicValue<string, RowType>;
   iconClass?: DynamicValue<string, RowType>;
+
+  /** action buttons rendered in this column's body cell, alongside its value. Data passed to
+   *  each button is the row. */
+  buttons?: ActionButton<RowType>[];
 
   /** inline cell editing (see GridEditingConfig): whether cells in this column are editable */
   editable?: DynamicValue<boolean, RowType>;

@@ -12,6 +12,7 @@ export * from './interfaces/grid-render-mode.interface';
 export * from './interfaces/grid-editing.interface';
 export * from './interfaces/grid-export.interface';
 export * from './interfaces/grid-parameter.interface';
+export * from './row-details.token';
 
 // ── pure helpers ──
 export * from './helpers/grid-column.helpers';

@@ -27,7 +27,7 @@
   </div>
 } @else {
   <div
-    [class]="cellClass()"
+    [class]="'flex items-center ' | mergeClasses: cellClass()"
     [style.text-align]="column().align ?? null"
     [class.cursor-pointer]="canEdit() && trigger_() !== 'button'"
     [matTooltip]="resolved().tooltip ?? ''"
@@ -51,6 +51,12 @@
         }}</mat-icon>
       }
       <span>{{ displayValue() }}</span>
+    }
+
+    @if (buttons()?.length) {
+      <span (click)="$event.stopPropagation()" class="ml-1 inline-flex">
+        <action-buttons [data]="row()" [buttons]="buttons()" />
+      </span>
     }
 
     @if (canEdit() && trigger_() === 'button') {

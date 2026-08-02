@@ -68,11 +68,11 @@ export class GridToolbarComponent<RowType = any> {
   }
 
   protected readonly filtersInline = computed(
-    () => this.instance().params.filterConfig?.filtersMode === 'inline',
+    () => this.instance().params().filterConfig?.filtersMode === 'inline',
   );
 
-  protected readonly renderModes = computed(() => this.instance().params.renderMode?.modes ?? []);
-  protected readonly exportFormats = computed(() => this.instance().params.export?.formats ?? []);
+  protected readonly renderModes = computed(() => this.instance().params().renderMode?.modes ?? []);
+  protected readonly exportFormats = computed(() => this.instance().params().export?.formats ?? []);
 
   protected selectOption(slug: string): void {
     this.instance().selectOption(slug);

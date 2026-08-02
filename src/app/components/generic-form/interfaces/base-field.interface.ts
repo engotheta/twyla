@@ -72,7 +72,7 @@ export interface ValueField<V = unknown> extends CoreField {
   clearOnHide?: boolean;
   /**
    * Hidden fields are included in the submit payload by default (same as disabled fields,
-   * see `FormParameters.includeDisabled`) — set true to drop this field while hidden instead.
+   * see `FormParameter.includeDisabled`) — set true to drop this field while hidden instead.
    * default false. SPEC §6
    */
   excludeHiddenOnSubmit?: boolean;
@@ -105,7 +105,7 @@ export interface ValueField<V = unknown> extends CoreField {
   suffixIcon?: Dynamic<string>;
   /** appends a clear suffix button when the field has a value; default false */
   showClear?: boolean;
-  /** per-field override of `FormParameters.showSubscript` (default true, i.e. follow the
+  /** per-field override of `FormParameter.showSubscript` (default true, i.e. follow the
    *  form-level setting) — hides this field's reserved hint/error strip regardless of what
    *  the rest of the form does, or shows it even when the form otherwise hides them. */
   showSubscript?: boolean;

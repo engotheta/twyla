@@ -2,7 +2,9 @@ import { GridParameter } from './components/data-grid';
 import { from, map } from 'rxjs';
 
 export const gridPar: GridParameter<any> = {
-  gridDataFn: (page) => {
+  canAddColumns: true,
+  lastDotAsName: true,
+  fetchFn: (page) => {
     let limit = page?.size ?? 10;
     let skip = page?.page ? (page.page - 1) * (page.size ?? 10) : 0;
     let url = `https://dummyjson.com/users/search?limit=${limit}&skip=${skip} `;

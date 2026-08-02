@@ -97,10 +97,10 @@ export class InputFieldComponent {
   protected readonly status = controlStatus(this.control);
 
   protected readonly appearance = computed(
-    () => this.state().appearance ?? this.instance().params.appearance ?? 'outline',
+    () => this.state().appearance ?? this.instance().params().appearance ?? 'outline',
   );
   protected readonly showSubscript = computed(
-    () => this.state().showSubscript ?? this.instance().params.showSubscript ?? true,
+    () => this.state().showSubscript ?? this.instance().params().showSubscript ?? true,
   );
 
   protected readonly htmlType = computed(() => HTML_TYPE[this.state().inputType ?? 'text']);

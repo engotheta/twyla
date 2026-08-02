@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  signal,
+  TemplateRef,
+} from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, map, Observable, of, switchMap } from 'rxjs';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
@@ -16,7 +24,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ArrayConfig, FieldConfig, FieldGroupConfig } from '../../detail.interface';
 import { ActionButtonsComponent } from '../../../action-buttons/action-buttons.component';
 import { resolveDynamicValue$ } from '../../../action-buttons/dynamic-value.util';
-import { DataTableComponent } from '../../../data-table/data-table.component';
+import { DataGridComponent, GridColumn_, GridParameter } from '../../../data-grid';
 import { BgIconMarkComponent } from '../../bg-icon-mark/bg-icon-mark.component';
 import { mergeClasses } from '../../util/class-name/class-name.helpers';
 import { MergeClassesPipe } from '../../util/class-name/merge-classes.pipe';
@@ -60,7 +68,7 @@ import {
     MatButtonModule,
     MatDialogModule,
     ActionButtonsComponent,
-    DataTableComponent,
+    DataGridComponent,
     BgIconMarkComponent,
     MergeClassesPipe,
     FieldValueComponent,
@@ -281,13 +289,39 @@ export class FieldGroupComponent<D = unknown> {
     return row.vm.valueClass ? mergeClasses(base, row.vm.valueClass) : base;
   }
 
-  protected tableColumns(f: FieldData): { key: string; label: string }[] {
+  // The tabular array view's grid: rows stay `FieldGroupData` wrappers (not the raw item), same
+  // as the non-tabular card-list branch, so cells render via `cellField`+`<field-value>` — reusing
+  // each field's already-resolved icon/tooltip/formatting instead of re-deriving it from scratch.
+  protected tabularGridParameter(
+    f: FieldData,
+    cellTemplate: TemplateRef<unknown>,
+    actionsTemplate: TemplateRef<unknown>,
+  ): GridParameter<FieldGroupData> {
     const first = f.fieldGroups?.[0];
+    const columns: GridColumn_<FieldGroupData>[] = (
+      (first?.fields as FieldData[] | undefined) ?? []
+    ).map((c) => ({ key: c.key, label: c.label ?? c.key, template: cellTemplate }));
 
-    return ((first?.fields as FieldData[] | undefined) ?? []).map((c) => ({
-      key: c.key,
-      label: c.label ?? c.key,
-    }));
+    if (f.itemButtons?.length) {
+      columns.push({ key: '__item_actions__', label: 'Actions', template: actionsTemplate });
+    }
+
+    const size = this.pageSizeFor(f);
+
+    return {
+      columns,
+      gridData: f.fieldGroups ?? [],
+      label: f.label,
+      size,
+      sizeOptions: [size],
+      showToolbar: false,
+      showTableControlsToggle: false,
+      addIndexColumn: this.effectiveArrayConfig().showHeaders !== false,
+      // rows are `FieldGroupData` wrappers, not the raw item — the click-to-view-details
+      // affordance would show the wrapper's internal shape instead of the actual entity.
+      viewDetailsClicks: 0,
+      animation: this.resolvedAnimation(),
+    };
   }
 
   protected cellField(row: FieldGroupData, key: string): FieldData | undefined {

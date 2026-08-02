@@ -21,7 +21,7 @@ generic-form/
 │   ├── static.fields.ts        Button, Content, Label
 │   └── components/             one folder per renderer, see below
 ├── form-field.interface.ts     FormField union + type guards
-├── form-parameters.interface.ts FormParameters, CrossValidator
+├── form-parameter.interface.ts  FormParameter, CrossValidator
 ├── form-engine.service.ts       build / observers / submit / lists / attachments
 ├── generic-form.component.ts    renderer shell (stepper / footer / modal)
 └── generic-form.component.html
@@ -54,9 +54,9 @@ fields/components/
 ## Usage
 
 ```typescript
-import { FieldType, FormParameters, observe } from './generic-form';
+import { FieldType, FormParameter, observe } from './generic-form';
 
-const params: FormParameters<{ name: string; country: string; city: string }> = {
+const params: FormParameter<{ name: string; country: string; city: string }> = {
   title: 'New License Company',
   fields: [
     { type: FieldType.input, key: 'name', validations: [required] },
@@ -85,7 +85,7 @@ const params: FormParameters<{ name: string; country: string; city: string }> = 
 ## `fieldsClass` vs `fieldsContainerClass`
 
 Every container that has a `fields` list (`ObjectField`, `StepField`,
-top-level `FormParameters`) has both:
+top-level `FormParameter`) has both:
 
 - **`fieldsClass`** — applied to **each** direct child field's own wrapper.
   It's a _descendant_ class: `fieldsClass: 'mb-4'` puts `mb-4` on every field

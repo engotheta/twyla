@@ -1,3 +1,4 @@
+import { Observable } from 'rxjs';
 import { FieldLayout, DataField, Field } from './field/field.interface';
 import { FieldGroup, FieldsGroupsMap, FieldsSort } from './field/field-group.interface';
 
@@ -23,6 +24,11 @@ export interface DetailsParameter<TEntity = Record<string, unknown>> {
   layout?: FieldLayout;
 
   entity?: TEntity;
+
+  // function to fetch the entity, e.g. from an API — resolved asynchronously; while pending (or
+  // when omitted), `entity` above (if provided) is used as a fallback value. Sets `loading`/
+  // `error` on the rendering `DetailsComponent`.
+  fetchFn?: () => Observable<TEntity> | Promise<TEntity> | TEntity;
 
   // if set, only these fields will be shown,
   // if ['key1', 'key2', ...] then these keys will be shown in that order plus the rest of the keys

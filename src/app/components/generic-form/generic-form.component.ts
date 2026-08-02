@@ -23,7 +23,7 @@ import { FieldComponent } from './fields/components/field/field.component';
 import { StepField } from './fields/container.fields';
 import { FormEngineService, FormInstance } from './form-engine.service';
 import { FormField, isStepField, isValueField } from './interfaces/form-field.interface';
-import { FormParameters } from './interfaces/form-parameters.interface';
+import { FormParameter } from './interfaces/form-parameter.interface';
 import { StepState } from './interfaces/form-state.interface';
 
 /** one rendered step: either a real StepField, or the synthetic step collecting non-step outer
@@ -62,7 +62,7 @@ interface DisplayStep {
   templateUrl: './generic-form.component.html',
 })
 export class GenericFormComponent implements OnInit, OnDestroy {
-  readonly params = input.required<FormParameters>();
+  readonly params = input.required<FormParameter>();
   /** emits the built FormInstance once, at the end of ngOnInit (SPEC §15) — lets a parent
    *  embedding <generic-form> call instance.form.reset()/.submit()/.formState() directly */
   readonly instanceChange = output<FormInstance>();
@@ -85,7 +85,7 @@ export class GenericFormComponent implements OnInit, OnDestroy {
   private readonly subs = new Subscription();
 
   ngOnInit(): void {
-    this.instance = this.engine.build(this.params());
+    this.instance = this.engine.build(this.params, this.injector);
     this.instanceChange.emit(this.instance);
     runInInjectionContext(this.injector, () => {
       this.buildSteps();

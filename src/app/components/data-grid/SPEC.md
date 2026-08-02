@@ -216,7 +216,7 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
   first — so the toolbar and the dialog can never diverge into two forms
   describing the same search state.
 - Server mode: `searchFields` is always forwarded via `PageDetails`,
-  exactly like `filters` already was — `gridDataFn` implements whichever
+  exactly like `filters` already was — `fetchFn` implements whichever
   fields it cares about; the grid does no server-side filtering itself.
 - In `'modal'` mode, once a 2nd+ instance exists, the toolbar mount always
   shows a "view all" button (badged with the total count) instead of the
@@ -319,9 +319,9 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
 - `GridParameter.serverPaginated` decides which of two RxJS pipelines
   feeds the grid: `serverContent$` (reacts to `pageDetails` — page, sort,
   search, filters — and refetches on every change) or `clientSource$`
-  (reacts only to `refetchTrigger`; assumes `gridDataFn`/`gridData`
+  (reacts only to `refetchTrigger`; assumes `fetchFn`/`gridData`
   already returns the full row set and pages/sorts/filters it locally).
-  Forgetting `serverPaginated: true` on a `gridDataFn` that's actually
+  Forgetting `serverPaginated: true` on a `fetchFn` that's actually
   written for server paging (takes `page`/`size`, returns a real
   `totalLength`) used to mean page changes silently never reached it.
 - The engine now self-corrects: if a client-mode fetch resolves to a
@@ -340,7 +340,7 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
   `clientSource$`'s subscription and subscribes `serverContent$` fresh,
   which immediately fetches against the current page/sort/search/filters
   — so the very next (and all subsequent) page changes reach
-  `gridDataFn` correctly. The practical cost is that the initial fetch
+  `fetchFn` correctly. The practical cost is that the initial fetch
   that revealed the mismatch runs twice (once client-mode, once more
   immediately after upgrading) — a one-time startup cost, not a
   per-page-change one.
@@ -350,11 +350,19 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
 - `DataGridComponent.onRowClick` counts clicks per row (keyed by
   `instance.rowId(row)`, accumulated for the life of the grid instance —
   not reset by a timeout) and, once the count reaches
-  `GridParameter.viewDetailsClicks`, opens `DetailsComponent` directly —
-  `dialog.open(DetailsComponent, { data: { entity: row } })` — then resets
-  that row's count to 0. No separate wrapper component is needed:
-  `DetailsComponent` is dual-mode (mirrors `FieldGroupComponent`'s own
-  dual-mode pattern), detecting `MAT_DIALOG_DATA` via an optional inject
+  `GridParameter.viewDetailsClicks`, opens whatever component is provided
+  for the `ROW_DETAILS_COMPONENT` injection token (`row-details.token.ts`)
+  — `dialog.open(this.rowDetailsComponent, { data: { entity: row } })` —
+  then resets that row's count to 0; if nothing is provided for the token,
+  the click-counting is skipped entirely. `DetailsComponent` is the
+  intended component for this (app-wide via
+  `{ provide: ROW_DETAILS_COMPONENT, useValue: DetailsComponent }`, see
+  `app.config.ts`), but data-grid never imports it directly — `field-group`
+  (a `details` descendant) renders `<data-grid>` for tabular array columns,
+  so a direct import back to `details.component` would form a
+  `data-grid -> details -> data-grid` circular standalone-component
+  dependency. `DetailsComponent` is dual-mode (mirrors `FieldGroupComponent`'s
+  own dual-mode pattern), detecting `MAT_DIALOG_DATA` via an optional inject
   and adding its own dialog chrome (a "Details" title — or `dialogData.title`
   if the caller set one — plus a Close button) only when opened that way;
   used as a plain embeddable child (`[parameter]`) elsewhere, it renders

@@ -15,7 +15,7 @@ export enum FieldType {
   // multi-step forms. Steps are presentational chrome, NOT data: children
   // register their controls on the top-level form; the submit payload has no
   // step wrapper keys (SPEC §5). If any outer field is a step, all non-step
-  // outer fields are grouped into one auto step (FormParameters.mixedStep*)
+  // outer fields are grouped into one auto step (FormParameter.mixedStep*)
   step = 'step',
 
   // ── value controls ──

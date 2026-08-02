@@ -1,3 +1,4 @@
+import { Observable, from, isObservable, of } from 'rxjs';
 import { DetailsParameter } from './detail.interface';
 import { resolveFieldGroups } from './field/field-group.helpers';
 import { FieldGroupData, FieldsParameter } from './field/field-group.interface';
@@ -6,6 +7,13 @@ import { getAllFields } from './field/fields.helper';
 import { isValue } from './util/util.helpers';
 
 const SENSITIVE_MASK = '••••••';
+
+/** Normalizes a `DetailsParameter.fetchFn` result (Observable, Promise, or plain value) into an
+ *  observable stream. */
+export function toObservableSource<T>(value: Observable<T> | Promise<T> | T): Observable<T> {
+  if (isObservable(value)) return value;
+  return value instanceof Promise ? from(value) : of(value);
+}
 
 function toFieldsParameter<T>(parameter: DetailsParameter<T>): FieldsParameter {
   return {

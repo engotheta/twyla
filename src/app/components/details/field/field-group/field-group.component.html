@@ -181,23 +181,20 @@
 
                 <!-- array  tabublar -->
                 @else if (f.fieldGroups?.length && f.tabular) {
-                  <data-table
-                    [columns]="tableColumns(f)"
-                    [rows]="f.fieldGroups ?? []"
-                    [caption]="f.label"
-                    [showIndex]="arrayConfig?.showHeaders !== false"
-                    [indexClass]="arrayConfig?.indexClass"
-                    [cellTemplate]="cellTpl"
-                    [rowActions]="f.itemButtons"
-                    [rowActionsData]="itemActionsData"
-                    [animation]="resolvedAnimation()"
-                    [pageSize]="pageSizeFor(f)"
-                  />
+                  <data-grid [parameter]="tabularGridParameter(f, cellTpl, actionsTpl)" />
 
-                  <ng-template #cellTpl let-item let-column="column">
-                    @if (cellField(item, column.key); as cf) {
+                  <ng-template #cellTpl let-row let-column="column">
+                    @if (cellField(row, column.key); as cf) {
                       <field-value [field]="cf" />
                     }
+                  </ng-template>
+
+                  <ng-template #actionsTpl let-row>
+                    <action-buttons
+                      [data]="itemActionsData(row)"
+                      [buttons]="f.itemButtons"
+                      [animation]="resolvedAnimation()"
+                    />
                   </ng-template>
                 }
 

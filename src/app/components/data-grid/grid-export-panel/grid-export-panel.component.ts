@@ -90,7 +90,7 @@ export class GridExportPanelComponent<RowType = any> {
 
     const label = (key: string): string => this.columnByKey.get(key)?.label ?? labelFromFieldString(key);
 
-    const initialKeys = inst.params.export?.initialKeys;
+    const initialKeys = inst.params().export?.initialKeys;
     const preselected = initialKeys?.length
       ? initialKeys
       : visibleKeys;

@@ -9,7 +9,7 @@
 @switch (instance.renderMode()) {
   @case ('table') {
     <div class="overflow-x-auto">
-      <table class="w-full text-sm border-collapse" [class]="parameter().class ?? ''">
+      <table class="w-full text-sm border-collapse" [class]="instance.params().class ?? ''">
         <thead>
           @for (headerRow of instance.headerRows(); track $index) {
             <tr>
@@ -30,55 +30,72 @@
                   [style.z-index]="cell.column?.pinned ? 2 : null"
                   (click)="onHeaderClick(cell)"
                 >
-                  @switch (cell.column?.key) {
-                    @case (DRAG_KEY) {
-                      <span class="sr-only">Reorder rows</span>
-                      <mat-icon class="!text-base opacity-40" aria-hidden="true">drag_indicator</mat-icon>
-                    }
-                    @case (SELECT_KEY) {
-                      @if (instance.params.selectionMode === 'multiple') {
-                        <mat-checkbox
-                          [checked]="isSelectAllChecked()"
-                          (click)="onSelectAllToggle($event)"
-                          aria-label="Select all rows on this page"
-                        />
-                      } @else {
-                        <span class="sr-only">Select row</span>
-                        <mat-icon class="!text-base opacity-40" aria-hidden="true">check_box_outline_blank</mat-icon>
+                  <div class="flex items-center">
+                    @switch (cell.column?.key) {
+                      @case (DRAG_KEY) {
+                        <span class="sr-only">Reorder rows</span>
+                        <mat-icon class="!text-base opacity-40" aria-hidden="true"
+                          >drag_indicator</mat-icon
+                        >
                       }
-                    }
-                    @case (INDEX_KEY) {
-                      <span class="sr-only">Row number</span>
-                      <span aria-hidden="true">{{ cell.label }}</span>
-                    }
-                    @case (EXPAND_KEY) {
-                      <span class="sr-only">Expand row</span>
-                    }
-                    @default {
-                      <span class="inline-flex items-center gap-1">
-                        {{ cell.label }}
-                        @if (sortIcon(cell); as icon) {
-                          <mat-icon class="!text-sm">{{ icon }}</mat-icon>
+                      @case (SELECT_KEY) {
+                        @if (instance.params().selectionMode === 'multiple') {
+                          <mat-checkbox
+                            [checked]="isSelectAllChecked()"
+                            (click)="onSelectAllToggle($event)"
+                            aria-label="Select all rows on this page"
+                          />
+                        } @else {
+                          <span class="sr-only">Select row</span>
+                          <mat-icon class="!text-base opacity-40" aria-hidden="true"
+                            >check_box_outline_blank</mat-icon
+                          >
                         }
-                      </span>
-                      @if (cell.column?.headerProps?.buttons?.length) {
-                        <action-buttons [data]="cell.column" [buttons]="cell.column!.headerProps!.buttons" class="ml-1 inline-flex" />
                       }
-                      @if (
-                        cell.isLeaf &&
-                        cell.column?.key !== ACTIONS_KEY &&
-                        cell.column?.resizable !== false &&
-                        instance.params.columnsResizable !== false
-                      ) {
-                        <span
-                          columnResize
-                          class="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-black/20"
-                          (resizeStart)="onResizeStart(headerCellEl)"
-                          (resize)="onResize(cell.column!, $event)"
-                        ></span>
+                      @case (INDEX_KEY) {
+                        <span class="sr-only">Row number</span>
+                        <span aria-hidden="true">{{ cell.label }}</span>
+                      }
+                      @case (EXPAND_KEY) {
+                        <span class="sr-only">Expand row</span>
+                      }
+                      @default {
+                        <span class="inline-flex items-center gap-1">
+                          {{ cell.label }}
+                          @if (sortIcon(cell); as icon) {
+                            <mat-icon class="!text-sm">{{ icon }}</mat-icon>
+                          }
+                        </span>
+                        @if (cell.column?.headerProps?.buttons?.length) {
+                          <action-buttons
+                            [data]="cell.column"
+                            [buttons]="cell.column!.headerProps!.buttons"
+                            class="ml-1 inline-flex"
+                          />
+                        }
+                        @if (cell.column?.headerButtons?.length) {
+                          <action-buttons
+                            [data]="instance.state()"
+                            [buttons]="cell.column!.headerButtons"
+                            class="ml-1 inline-flex"
+                          />
+                        }
+                        @if (
+                          cell.isLeaf &&
+                          cell.column?.key !== ACTIONS_KEY &&
+                          cell.column?.resizable !== false &&
+                          instance.params().columnsResizable !== false
+                        ) {
+                          <span
+                            columnResize
+                            class="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-black/20"
+                            (resizeStart)="onResizeStart(headerCellEl)"
+                            (resize)="onResize(cell.column!, $event)"
+                          ></span>
+                        }
                       }
                     }
-                  }
+                  </div>
                 </th>
               }
             </tr>
@@ -88,14 +105,14 @@
         <tbody
           cdkDropList
           [cdkDropListData]="instance.rows()"
-          [cdkDropListDisabled]="!instance.params.rowsDraggable"
+          [cdkDropListDisabled]="!instance.params().rowsDraggable"
           (cdkDropListDropped)="onRowDrop($event)"
         >
           @for (row of instance.rows(); track instance.rowId(row); let ri = $index) {
             <tr
               cdkDrag
               [cdkDragData]="row"
-              [cdkDragDisabled]="!instance.params.rowsDraggable"
+              [cdkDragDisabled]="!instance.params().rowsDraggable"
               [class]="rowClass(row)"
               class="border-t border-black/10 hover:bg-black/[0.03]"
               (click)="onRowClick(row)"
@@ -145,7 +162,7 @@
                       }
                       @case (SELECT_KEY) {
                         @if (showRowCheckbox(row)) {
-                          @if (instance.params.selectionMode === 'multiple') {
+                          @if (instance.params().selectionMode === 'multiple') {
                             <mat-checkbox
                               [checked]="instance.isSelected(row)"
                               [disabled]="rowCheckboxDisabled(row)"
@@ -171,11 +188,17 @@
                           aria-label="Toggle row detail"
                           (click)="onExpandToggle(row, $event)"
                         >
-                          <mat-icon class="!text-base">{{ instance.isExpanded(row) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                          <mat-icon class="!text-base">{{
+                            instance.isExpanded(row) ? 'expand_less' : 'expand_more'
+                          }}</mat-icon>
                         </button>
                       }
                       @case (ACTIONS_KEY) {
-                        <action-buttons [data]="row" [buttons]="instance.params.rowButtons" [animation]="instance.params.animation" />
+                        <action-buttons
+                          [data]="row"
+                          [buttons]="instance.params().rowButtons"
+                          [animation]="instance.params().animation"
+                        />
                       }
                       @default {
                         <grid-cell [instance]="instance" [column]="column" [row]="row" />
@@ -185,10 +208,18 @@
                 }
               }
             </tr>
-            @if (instance.params.rowDetail && instance.isExpanded(row)) {
+            @if (instance.params().rowDetail && instance.isExpanded(row)) {
               <tr class="border-t border-black/10">
-                <td [attr.colspan]="instance.visibleColumns().length" class="px-2 py-2 bg-black/[0.02]">
-                  <grid-row-detail [config]="instance.params.rowDetail" [row]="row" [index]="ri" [gridData]="instance.rows()" />
+                <td
+                  [attr.colspan]="instance.visibleColumns().length"
+                  class="px-2 py-2 bg-black/[0.02]"
+                >
+                  <grid-row-detail
+                    [config]="instance.params().rowDetail"
+                    [row]="row"
+                    [index]="ri"
+                    [gridData]="instance.rows()"
+                  />
                 </td>
               </tr>
             }
@@ -203,14 +234,14 @@
       class="flex flex-col gap-2 py-2"
       cdkDropList
       [cdkDropListData]="instance.rows()"
-      [cdkDropListDisabled]="!instance.params.rowsDraggable"
+      [cdkDropListDisabled]="!instance.params().rowsDraggable"
       (cdkDropListDropped)="onRowDrop($event)"
     >
       @for (row of instance.rows(); track instance.rowId(row); let ri = $index) {
         <div
           cdkDrag
           [cdkDragData]="row"
-          [cdkDragDisabled]="!instance.params.rowsDraggable"
+          [cdkDragDisabled]="!instance.params().rowsDraggable"
           [class]="rowClass(row)"
           class="rounded-md border border-black/10 p-2"
           (click)="onRowClick(row)"
@@ -237,7 +268,7 @@
           </div>
 
           <div class="flex items-center gap-1">
-            @if (instance.params.rowsDraggable) {
+            @if (instance.params().rowsDraggable) {
               <button
                 type="button"
                 cdkDragHandle
@@ -263,15 +294,19 @@
                 >chevron_right</mat-icon
               >
 
-              @if (instance.params.addIndexColumn !== false) {
+              @if (instance.params().addIndexColumn !== false) {
                 <span class="shrink-0 text-xs tabular-nums opacity-60">
                   {{ (instance.page() - 1) * instance.size() + ri + 1 }}
                 </span>
               }
 
-              @if (instance.params.selectionMode && instance.params.selectionMode !== 'none' && showRowCheckbox(row)) {
+              @if (
+                instance.params().selectionMode &&
+                instance.params().selectionMode !== 'none' &&
+                showRowCheckbox(row)
+              ) {
                 <span (click)="$event.stopPropagation()">
-                  @if (instance.params.selectionMode === 'multiple') {
+                  @if (instance.params().selectionMode === 'multiple') {
                     <mat-checkbox
                       [checked]="instance.isSelected(row)"
                       [disabled]="rowCheckboxDisabled(row)"
@@ -292,9 +327,13 @@
               <span class="truncate text-sm font-medium">{{ listRowTitle(row) }}</span>
             </button>
 
-            @if (instance.params.rowButtons?.length) {
+            @if (instance.params().rowButtons?.length) {
               <span (click)="$event.stopPropagation()">
-                <action-buttons [data]="row" [buttons]="instance.params.rowButtons" [animation]="instance.params.animation" />
+                <action-buttons
+                  [data]="row"
+                  [buttons]="instance.params().rowButtons"
+                  [animation]="instance.params().animation"
+                />
               </span>
             }
           </div>
@@ -305,8 +344,11 @@
           >
             <div class="min-h-0 overflow-hidden">
               <div class="pl-9 pt-1.5">
-                @if (instance.params.renderMode?.listItemTemplate; as tpl) {
-                  <ng-container [ngTemplateOutlet]="tpl" [ngTemplateOutletContext]="{ $implicit: row, row, index: ri }" />
+                @if (instance.params().renderMode?.listItemTemplate; as tpl) {
+                  <ng-container
+                    [ngTemplateOutlet]="tpl"
+                    [ngTemplateOutletContext]="{ $implicit: row, row, index: ri }"
+                  />
                 } @else {
                   <div class="flex flex-wrap gap-x-4 gap-y-1">
                     @for (column of instance.visibleColumns(); track column.key) {
@@ -330,14 +372,26 @@
   @case ('cards') {
     <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 py-2">
       @for (row of instance.rows(); track instance.rowId(row); let ri = $index) {
-        <div [class]="rowClass(row)" class="rounded border border-black/10 p-3" (click)="onRowClick(row)" (dblclick)="onRowDblClick(row)">
-          @if (instance.params.rowButtons?.length) {
+        <div
+          [class]="rowClass(row)"
+          class="rounded border border-black/10 p-3"
+          (click)="onRowClick(row)"
+          (dblclick)="onRowDblClick(row)"
+        >
+          @if (instance.params().rowButtons?.length) {
             <div class="flex justify-end mb-1" (click)="$event.stopPropagation()">
-              <action-buttons [data]="row" [buttons]="instance.params.rowButtons" [animation]="instance.params.animation" />
+              <action-buttons
+                [data]="row"
+                [buttons]="instance.params().rowButtons"
+                [animation]="instance.params().animation"
+              />
             </div>
           }
-          @if (instance.params.renderMode?.cardTemplate; as tpl) {
-            <ng-container [ngTemplateOutlet]="tpl" [ngTemplateOutletContext]="{ $implicit: row, row, index: ri }" />
+          @if (instance.params().renderMode?.cardTemplate; as tpl) {
+            <ng-container
+              [ngTemplateOutlet]="tpl"
+              [ngTemplateOutletContext]="{ $implicit: row, row, index: ri }"
+            />
           } @else {
             <div class="flex flex-col gap-1">
               @for (column of instance.visibleColumns(); track column.key) {
@@ -360,7 +414,7 @@
   <div class="flex flex-col items-center justify-center gap-2 py-10 opacity-70">
     <mat-icon class="!text-4xl !w-10 !h-10">inbox</mat-icon>
     <p>{{ noContentLabel() }}</p>
-    @if (instance.params.noContentClick) {
+    @if (instance.params().noContentClick) {
       <button type="button" mat-button (click)="onNoContentClick()">Reload</button>
     }
   </div>

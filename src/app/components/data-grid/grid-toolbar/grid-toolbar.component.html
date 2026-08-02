@@ -1,7 +1,7 @@
 <div class="flex flex-wrap items-center gap-2 py-2">
-  @if (!showSearch() && instance().params.label; as label) {
+  @if (!showSearch() && instance().params().label; as label) {
     <h2 class="text-base font-medium flex items-center gap-1 mr-2">
-      @if (instance().params.icon; as icon) {
+      @if (instance().params().icon; as icon) {
         <mat-icon>{{ icon }}</mat-icon>
       }
       {{ label }}
@@ -26,13 +26,13 @@
     />
   }
 
-  @if (filtersInline() && instance().params.gridFilters?.length) {
+  @if (filtersInline() && instance().params().gridFilters?.length) {
     <grid-filter-panel [instance]="instance()" [inline]="true" />
   }
 
   <span class="flex-1"></span>
 
-  @if (!filtersInline() && instance().params.gridFilters?.length) {
+  @if (!filtersInline() && instance().params().gridFilters?.length) {
     <button
       #filtersOrigin="cdkOverlayOrigin"
       cdkOverlayOrigin
@@ -80,7 +80,7 @@
     </mat-menu>
   }
 
-  @if (instance().params.showTableControlsToggle !== false) {
+  @if (instance().params().showTableControlsToggle !== false) {
     <button
       #columnsOrigin="cdkOverlayOrigin"
       cdkOverlayOrigin
@@ -107,7 +107,7 @@
     </ng-template>
   }
 
-  @if (instance().params.buttons?.length) {
-    <action-buttons [data]="instance().state()" [buttons]="instance().params.buttons" [animation]="instance().params.animation" />
+  @if (instance().params().buttons?.length) {
+    <action-buttons [data]="instance().state()" [buttons]="instance().params().buttons" [animation]="instance().params().animation" />
   }
 </div>

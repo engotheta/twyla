@@ -81,6 +81,57 @@ export function autoGenerateColumns<RowType = any>(
     }));
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date);
+}
+
+function collectColumnKeys(
+  obj: Record<string, unknown>,
+  prefix: string,
+  seen: Map<string, unknown>,
+): void {
+  for (const key of Object.keys(obj)) {
+    if (AUTO_COLUMN_HIDDEN_KEYS.has(key)) continue;
+    const path = prefix ? `${prefix}.${key}` : key;
+    const value = obj[key];
+    if (isPlainObject(value)) collectColumnKeys(value, path, seen);
+    else if (!seen.has(path)) seen.set(path, value);
+  }
+}
+
+/**
+ * Scans ALL supplied rows (not just the first, so sparse/optional fields aren't missed) for keys
+ * not already in `knownKeys`, recursing into nested plain objects (arrays/Dates are leaves, never
+ * recursed into) to produce dotted-path keys matching how manually-configured columns already
+ * look (e.g. `address.city`). Unlike `autoGenerateColumns`, this is uncapped — driven by an
+ * explicit user action (`GridParameter.canAddColumns`), not an implicit fallback — and every
+ * returned column starts `visible: false` (`columnState`'s own default then keeps it hidden until
+ * the user checks it).
+ */
+export function discoverColumnsFromData<RowType = any>(
+  rows: RowType[],
+  knownKeys: Set<string>,
+  lastDotAsName = false,
+): GridColumn_<RowType>[] {
+  const seen = new Map<string, unknown>();
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    collectColumnKeys(row as Record<string, unknown>, '', seen);
+  }
+  return Array.from(seen.entries())
+    .filter(([key]) => !knownKeys.has(key))
+    .map(
+      ([key, value]) =>
+        ({
+          key,
+          label: labelFromFieldString(key, lastDotAsName),
+          type: inferColumnType(value),
+          sortable: true,
+          visible: false,
+        }) as GridColumn_<RowType>,
+    );
+}
+
 /** Leaf columns (no nested `columns`), in declaration order — what body rows actually render. */
 export function flattenLeafColumns<RowType = any>(
   columns: GridColumn_<RowType>[],

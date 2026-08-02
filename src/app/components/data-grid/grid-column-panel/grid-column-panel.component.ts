@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import {
   CdkDrag,
   CdkDragDrop,
@@ -88,6 +88,15 @@ export class GridColumnPanelComponent<RowType = any> {
 
   protected reset(): void {
     this.instance().resetColumnState();
+  }
+
+  protected readonly canAddColumns = computed(() => !!this.instance().params().canAddColumns);
+  protected readonly discovering = signal(false);
+
+  protected async discoverColumns(): Promise<void> {
+    this.discovering.set(true);
+    await this.instance().addColumnsFromData();
+    this.discovering.set(false);
   }
 
   protected readonly trackByKey = (_: number, entry: GridColumnState): string => entry.key;

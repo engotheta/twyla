@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { FormInstance, FormParameters, GenericFormComponent } from '../../generic-form';
+import { FormInstance, FormParameter, GenericFormComponent } from '../../generic-form';
 import { GridInstance } from '../grid-engine.service';
 
 /**
@@ -24,15 +24,15 @@ export class GridFilterPanelComponent<RowType = any> {
   protected formInstance?: FormInstance;
 
   protected readonly isLive = computed(
-    () => (this.instance().params.filterConfig?.filtersTrigger ?? 'manual') === 'live',
+    () => (this.instance().params().filterConfig?.filtersTrigger ?? 'manual') === 'live',
   );
 
-  protected readonly formParams = computed<FormParameters>(() => {
-    const cfg = this.instance().params.filterConfig;
+  protected readonly formParams = computed<FormParameter>(() => {
+    const cfg = this.instance().params().filterConfig;
     const live = this.isLive();
 
     return {
-      fields: this.instance().params.gridFilters ?? [],
+      fields: this.instance().params().gridFilters ?? [],
       showFooter: false,
       // inline mode sits in the toolbar's own flex row — lay fields out the same way
       // grid-search-fields does, instead of generic-form's default vertical stack, and free the
@@ -48,13 +48,13 @@ export class GridFilterPanelComponent<RowType = any> {
   });
 
   protected readonly applyLabel = computed(
-    () => this.instance().params.filterConfig?.applyButtonLabel ?? 'Apply',
+    () => this.instance().params().filterConfig?.applyButtonLabel ?? 'Apply',
   );
   protected readonly clearLabel = computed(
-    () => this.instance().params.filterConfig?.clearButtonLabel ?? 'Clear',
+    () => this.instance().params().filterConfig?.clearButtonLabel ?? 'Clear',
   );
   protected readonly showClear = computed(() => {
-    const explicit = this.instance().params.filterConfig?.showClearButton;
+    const explicit = this.instance().params().filterConfig?.showClearButton;
     return explicit ?? Object.keys(this.instance().filters()).length > 0;
   });
 

@@ -5,6 +5,7 @@ import { catchError, switchMap, tap } from 'rxjs/operators';
 import {
   autoGenerateColumns,
   buildHeaderRows,
+  discoverColumnsFromData,
   flattenLeafColumns,
   normalizeColumns,
   orderColumnsForHeader,
@@ -57,7 +58,9 @@ const EMPTY_SPAN: CellSpan = { rowspan: 1, colspan: 1, hidden: false };
 
 /** per-instance runtime handle returned by `GridEngineService.build()` — components render, the engine derives/mutates state */
 export interface GridInstance<RowType = any> {
-  params: GridParameter<RowType>;
+  /** live, `gridOptions`-merged config — reacts to both a new `parameter()` input and a
+   *  `selectOption()` slug swap; see `GridEngineService.build`'s `activeParams` */
+  params: Signal<GridParameter<RowType>>;
 
   loading: Signal<boolean>;
   error: Signal<unknown>;
@@ -110,6 +113,10 @@ export interface GridInstance<RowType = any> {
   selectOption(slug: string): void;
   /** every row matching the current search/filters/sort, ignoring pagination — used by `GridExportConfig.exportAllData` */
   getAllRows(): Promise<RowType[]>;
+  /** GridParameter.canAddColumns: scans the full dataset for keys not already declared as
+   *  columns and appends them (initially hidden) — see helpers/grid-column.helpers.ts's
+   *  `discoverColumnsFromData`. Session-only, not persisted across a reload. */
+  addColumnsFromData(): Promise<void>;
 
   rowId(row: RowType): unknown;
   isSelected(row: RowType): boolean;
@@ -315,14 +322,23 @@ export class GridEngineService {
    * its cleanup to that injector's `DestroyRef`. Passing this service's own (root) injector would
    * leak every reactive subscription for the app's lifetime instead of on component destroy.
    */
-  build<RowType = any>(params: GridParameter<RowType>, injector: Injector): GridInstance<RowType> {
+  build<RowType = any>(
+    paramsSignal: Signal<GridParameter<RowType>>,
+    injector: Injector,
+  ): GridInstance<RowType> {
     const subs: Subscription[] = [];
+    // one-time snapshot — seeds user-owned runtime UI state below (page/sort/selection/etc.),
+    // which must NOT re-derive from later `paramsSignal()` emissions (see grid-engine reactivity
+    // design note: re-seeding these on every incidental new-but-equivalent `parameter()` object
+    // would reset a user's current page/sort/filters/selection every time a parent re-renders)
+    const initialParams = paramsSignal();
 
     // ── grid options: an option's own properties merge over the base params (excludedOptionKeys wins) ──
     const selectedOptionSlug = signal<string | undefined>(
-      params.slug ?? params.gridOptions?.[0]?.slug,
+      initialParams.slug ?? initialParams.gridOptions?.[0]?.slug,
     );
     const activeParams = computed<GridParameter<RowType>>(() => {
+      const params = paramsSignal();
       const options = params.gridOptions;
       if (!options?.length) return params;
       const active = options.find((o) => o.slug === selectedOptionSlug()) ?? options[0];
@@ -335,11 +351,16 @@ export class GridEngineService {
     });
 
     // ── columns: static config, or auto-generated once the first row of data is known ──
-    const configColumns = params.columns?.length
-      ? normalizeColumns(params.columns, params.lastDotAsName)
-      : undefined;
+    const configColumns = computed<GridColumn_<RowType>[] | undefined>(() => {
+      const params = activeParams();
+      return params.columns?.length ? normalizeColumns(params.columns, params.lastDotAsName) : undefined;
+    });
     const autoColumnsSig = signal<GridColumn_<RowType>[]>([]);
-    const columns = computed(() => configColumns ?? autoColumnsSig());
+    // SPEC §2b: columns discovered from the data via `addColumnsFromData()` (GridParameter.canAddColumns)
+    // — appended on top of whichever base (configured or auto-generated) is active
+    const discoveredColumnsSig = signal<GridColumn_<RowType>[]>([]);
+    const baseColumns = computed(() => configColumns() ?? autoColumnsSig());
+    const columns = computed(() => [...baseColumns(), ...discoveredColumnsSig()]);
     const leafColumns = computed(() => flattenLeafColumns(columns()));
     // auto-generated columns (autoGenerateColumns) never set `searchable` — only explicit
     // `params.columns` can, and those are already known synchronously here at build() time
@@ -400,7 +421,7 @@ export class GridEngineService {
 
     // ── column runtime state: sparse overrides layered over each column's own config defaults ──
     const seedOverrides: Record<string, Partial<GridColumnState>> = {};
-    for (const entry of params.initialColumnState ?? []) seedOverrides[entry.key] = entry;
+    for (const entry of initialParams.initialColumnState ?? []) seedOverrides[entry.key] = entry;
     const columnOverrides = signal<Record<string, Partial<GridColumnState>>>(seedOverrides);
 
     const columnState = computed<GridColumnState[]>(() => {
@@ -492,13 +513,13 @@ export class GridEngineService {
     });
 
     // ── request state ──
-    const page = signal(params.page ?? 1);
-    const size = signal(params.size ?? 10);
-    const sortSig = signal<GridSort | undefined>(params.sort);
+    const page = signal(initialParams.page ?? 1);
+    const size = signal(initialParams.size ?? 10);
+    const sortSig = signal<GridSort | undefined>(initialParams.sort);
     // seeded once from configColumns (never from auto-generated columns — those are never
     // `searchable`), so this is correct at signal-creation time with no async re-seed needed
     const searchFieldsSig = signal<SearchField[]>(
-      seedSearchFields(configColumns, params.searchConfig),
+      seedSearchFields(configColumns(), initialParams.searchConfig),
     );
     const filtersSig = signal<Record<string, any>>({});
     const refetchTrigger = signal(0);
@@ -507,7 +528,7 @@ export class GridEngineService {
     const loading = signal(false);
     const error = signal<unknown>(undefined);
 
-    // Auto-upgrade: a consumer can forget `serverPaginated: true` on a `gridDataFn` that's
+    // Auto-upgrade: a consumer can forget `serverPaginated: true` on a `fetchFn` that's
     // otherwise clearly written for server paging (takes `page`/`size`, returns a real
     // `totalLength`) — the exact mistake that motivated this. Once the FIRST client-mode fetch
     // resolves to a genuine `GridData` (not a plain array) with a numeric `totalLength`, that's
@@ -516,7 +537,7 @@ export class GridEngineService {
     // while still unset — see the `clientSource$` tap below).
     const autoServerMode = signal(false);
     const serverMode = computed(
-      () => !!((activeParams().serverPaginated || autoServerMode()) && activeParams().gridDataFn),
+      () => !!((activeParams().serverPaginated || autoServerMode()) && activeParams().fetchFn),
     );
 
     const pageDetails = computed<PageDetails>(() => ({
@@ -527,16 +548,26 @@ export class GridEngineService {
       filters: filtersSig(),
     }));
 
+    // Neither `serverContent$` nor `clientSource$` re-fetches just because `gridData`/`fetchFn`
+    // changed identity on its own (only `pageDetails`/`refetchTrigger` ticking does) — this closes
+    // that gap. Deduped (custom `equal`) so unrelated `parameter()` changes (e.g. just `label`)
+    // don't force a refetch.
+    const dataSourceParams = computed(
+      () => ({ gridData: activeParams().gridData, fetchFn: activeParams().fetchFn }),
+      { equal: (a, b) => a.gridData === b.gridData && a.fetchFn === b.fetchFn },
+    );
+
     const serverContent$ = combineLatest([
       toObservable(pageDetails, { injector }),
       toObservable(refetchTrigger, { injector }),
+      toObservable(dataSourceParams, { injector }),
     ]).pipe(
       tap(() => {
         loading.set(true);
         error.set(undefined);
       }),
       switchMap(([pd]) =>
-        normalizeSource(activeParams().gridDataFn!(pd)).pipe(
+        normalizeSource(activeParams().fetchFn!(pd)).pipe(
           catchError((err) => {
             error.set(err);
             return of([] as RowType[]);
@@ -546,14 +577,17 @@ export class GridEngineService {
       tap(() => loading.set(false)),
     );
 
-    const clientSource$ = toObservable(refetchTrigger, { injector }).pipe(
+    const clientSource$ = combineLatest([
+      toObservable(refetchTrigger, { injector }),
+      toObservable(dataSourceParams, { injector }),
+    ]).pipe(
       tap(() => {
         loading.set(true);
         error.set(undefined);
       }),
       switchMap(() => {
         const p = activeParams();
-        const source = p.gridData ?? (p.gridDataFn ? p.gridDataFn(pageDetails()) : []);
+        const source = p.gridData ?? (p.fetchFn ? p.fetchFn(pageDetails()) : []);
         return normalizeSource(source).pipe(
           catchError((err) => {
             error.set(err);
@@ -578,7 +612,7 @@ export class GridEngineService {
     // the auto-upgrade above can actually take effect: once `autoServerMode` flips, `switchMap`
     // tears down `clientSource$`'s subscription and subscribes `serverContent$` fresh, which
     // immediately fires a (server-style) fetch against the CURRENT page/sort/search/filters —
-    // so page changes from that point on correctly reach `gridDataFn`. This means the very fetch
+    // so page changes from that point on correctly reach `fetchFn`. This means the very fetch
     // that revealed the mismatch runs twice (once as the client attempt, once more immediately
     // after upgrading) — a one-time, initial-load-only cost, not a per-page-change one.
     const rawData = toSignal(
@@ -591,7 +625,7 @@ export class GridEngineService {
     const fetchedContent = computed(() => extractContent(rawData()));
 
     // seed auto-generated columns once, from the first row of the first successful fetch
-    let autoColumnsSeeded = !!configColumns;
+    let autoColumnsSeeded = !!configColumns();
     effect(
       () => {
         const content = fetchedContent();
@@ -650,12 +684,34 @@ export class GridEngineService {
       const natural = naturalRows();
       const order = manualRowOrder();
       if (!order.length) return natural;
-      const byId = new Map(natural.map((r) => [getRowId(r, params.identifierKey), r]));
+      const identifierKey = activeParams().identifierKey;
+      const byId = new Map(natural.map((r) => [getRowId(r, identifierKey), r]));
       const orderSet = new Set(order);
       const ordered = order.map((id) => byId.get(id)).filter((r): r is RowType => r !== undefined);
-      const remaining = natural.filter((r) => !orderSet.has(getRowId(r, params.identifierKey)));
+      const remaining = natural.filter((r) => !orderSet.has(getRowId(r, identifierKey)));
       return [...ordered, ...remaining];
     });
+
+    // A genuinely new `gridData`/`fetchFn` means a fundamentally different row set — mirrors
+    // `selectOption()`'s existing reset (page 1, drop any manual drag order), so a smaller
+    // replacement dataset doesn't land on a now-out-of-range page. Skips its own first
+    // (build-time) run — same "fire on change only" idiom as `onChangeOnly` below.
+    let firstDataSourceRun = true;
+    effect(
+      () => {
+        dataSourceParams();
+        if (firstDataSourceRun) {
+          firstDataSourceRun = false;
+          return;
+        }
+        page.set(1);
+        manualRowOrder.set([]);
+        // columns discovered from the PREVIOUS dataset (canAddColumns) don't necessarily apply
+        // to a fundamentally different row set — drop them rather than leak stale/blank columns
+        discoveredColumnsSig.set([]);
+      },
+      { injector },
+    );
 
     // ── row/cell spans (mergeCells auto vertical-merge + manual GridCell overrides) ──
     // Keyed by column KEY, not position — `visibleColumns()` order can change (drag/move reorder),
@@ -676,8 +732,8 @@ export class GridEngineService {
     );
 
     // ── selection (current-page-only "select all") ──
-    const selectedSig = signal<RowType[]>(params.initialSelected ?? []);
-    const rowId = (row: RowType): unknown => getRowId(row, params.identifierKey);
+    const selectedSig = signal<RowType[]>(initialParams.initialSelected ?? []);
+    const rowId = (row: RowType): unknown => getRowId(row, activeParams().identifierKey);
     const isSelected = (row: RowType): boolean => {
       const id = rowId(row);
       return selectedSig().some((r) => rowId(r) === id);
@@ -687,7 +743,7 @@ export class GridEngineService {
     effect(
       () => {
         if (
-          params.autoSelectFirstRow &&
+          activeParams().autoSelectFirstRow &&
           !autoSelectedFirstRow &&
           rows().length &&
           !selectedSig().length
@@ -700,11 +756,13 @@ export class GridEngineService {
     );
 
     // ── expansion ──
-    const expandedSig = signal<RowType[]>((params.rowDetail?.initialExpanded as RowType[]) ?? []);
+    const expandedSig = signal<RowType[]>(
+      (initialParams.rowDetail?.initialExpanded as RowType[]) ?? [],
+    );
 
     // ── render mode ──
     const renderModeSig = signal<GridRenderMode>(
-      params.renderMode?.initialMode ?? params.renderMode?.modes?.[0] ?? 'table',
+      initialParams.renderMode?.initialMode ?? initialParams.renderMode?.modes?.[0] ?? 'table',
     );
 
     // ── public state snapshot ──
@@ -735,17 +793,27 @@ export class GridEngineService {
         { injector },
       );
     };
-    onChangeOnly(columnState, params.onColumnStateChange);
-    onChangeOnly(selectedSig, params.onRowSelection);
-    onChangeOnly(expandedSig, params.rowDetail?.onExpandChange);
-    onChangeOnly(renderModeSig, params.renderMode?.onModeChange);
+    onChangeOnly(columnState, initialParams.onColumnStateChange);
+    onChangeOnly(selectedSig, initialParams.onRowSelection);
+    onChangeOnly(expandedSig, initialParams.rowDetail?.onExpandChange);
+    onChangeOnly(renderModeSig, initialParams.renderMode?.onModeChange);
     onChangeOnly(
       computed(() => activeParams().gridOptions ?? []),
-      params.optionChange,
+      initialParams.optionChange,
     );
 
+    // factored out so `addColumnsFromData` (canAddColumns) can reuse it alongside `instance.getAllRows`
+    const getAllRows = async (): Promise<RowType[]> => {
+      if (!serverMode()) return clientFilteredSorted();
+      // server mode: ask for everything in one page rather than looping per-page
+      const all = await normalizeToPromise(
+        activeParams().fetchFn!({ ...pageDetails(), page: 1, size: totalLength() || 100000 }),
+      );
+      return extractContent(all);
+    };
+
     const instance: GridInstance<RowType> = {
-      params,
+      params: activeParams,
       loading,
       error,
       headerRows,
@@ -815,13 +883,12 @@ export class GridEngineService {
         manualRowOrder.set([]);
         refetchTrigger.update((n) => n + 1);
       },
-      getAllRows: async () => {
-        if (!serverMode()) return clientFilteredSorted();
-        // server mode: ask for everything in one page rather than looping per-page
-        const all = await normalizeToPromise(
-          activeParams().gridDataFn!({ ...pageDetails(), page: 1, size: totalLength() || 100000 }),
-        );
-        return extractContent(all);
+      getAllRows,
+      addColumnsFromData: async () => {
+        const all = await getAllRows();
+        const known = new Set(leafColumns().map((c) => c.key));
+        const discovered = discoverColumnsFromData(all, known, activeParams().lastDotAsName);
+        if (discovered.length) discoveredColumnsSig.update((cols) => [...cols, ...discovered]);
       },
 
       rowId,
@@ -857,7 +924,7 @@ export class GridEngineService {
       },
       toggleExpand: (row) => {
         const id = rowId(row);
-        const multi = params.rowDetail?.multiExpand ?? false;
+        const multi = activeParams().rowDetail?.multiExpand ?? false;
         expandedSig.update((list) => {
           const exists = list.some((r) => rowId(r) === id);
           if (exists) return list.filter((r) => rowId(r) !== id);
@@ -894,7 +961,8 @@ export class GridEngineService {
       setRenderMode: (mode) => renderModeSig.set(mode),
 
       dragRow: (fromIndex, toIndex) => {
-        if (!activeParams().rowsDraggable) return;
+        const params = activeParams();
+        if (!params.rowsDraggable) return;
         const current = rows();
         if (
           fromIndex === toIndex ||

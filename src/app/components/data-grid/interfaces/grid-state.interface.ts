@@ -10,7 +10,7 @@ export interface GridSort {
 }
 
 /**
- * Passed to `gridDataFn` on every fetch (initial load, page/size change, sort change,
+ * Passed to `fetchFn` on every fetch (initial load, page/size change, sort change,
  * search fields change, or filters change). Column-state changes (order/visible/width/pinned)
  * never produce a fetch — see `GridParameter.onColumnStateChange`.
  */

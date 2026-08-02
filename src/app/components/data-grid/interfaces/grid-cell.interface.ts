@@ -1,7 +1,9 @@
 // per-row and per-cell override features (rendered on top of the column's own config)
 
+import { TemplateRef } from '@angular/core';
 import { Observable } from 'rxjs';
-import { DynamicValue } from '../../action-buttons/action-button.interface';
+import { ActionButton, DynamicValue } from '../../action-buttons/action-button.interface';
+import type { GridValueType } from '../helpers/grid-format.helpers';
 
 /**
  * Independent class-predicate map: every entry whose predicate returns true contributes its
@@ -32,14 +34,18 @@ export interface GridCell<RowType = any> {
   tooltipPosition?: 'above' | 'below' | 'left' | 'right' | 'before' | 'after';
   tooltipClass?: string;
 
-  type?:
-    'text' | 'number' | 'boolean' | 'date' | 'datetime' | 'time' | 'currency' | 'percent' | 'html';
+  type?: GridValueType;
   align?: 'left' | 'center' | 'right';
-  template?: any;
-  templateContext?: any;
+  /** per-cell override of the column's `template` */
+  template?: TemplateRef<unknown>;
+  /** per-cell override of the column's `templateContext` — see `GridColumn_.templateContext` */
+  templateContext?: ((row: RowType) => Record<string, unknown>) | Record<string, unknown>;
 
   /** per-cell override of the column's `editable` (inline cell editing) */
   editable?: DynamicValue<boolean, RowType>;
+
+  /** per-cell override of the column's `buttons` */
+  buttons?: ActionButton<RowType>[];
 
   click?: (row: RowType) => void;
   hover?: (row: RowType) => boolean;

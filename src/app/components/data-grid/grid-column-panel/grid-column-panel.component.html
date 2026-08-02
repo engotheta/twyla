@@ -78,4 +78,17 @@
     <mat-icon>restart_alt</mat-icon>
     Reset columns
   </button>
+
+  @if (canAddColumns()) {
+    <button
+      type="button"
+      mat-button
+      class="mt-1 w-full"
+      [disabled]="discovering()"
+      (click)="discoverColumns()"
+    >
+      <mat-icon>auto_awesome</mat-icon>
+      {{ discovering() ? 'Scanning…' : 'Add columns from data' }}
+    </button>
+  }
 </div>

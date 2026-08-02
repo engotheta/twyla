@@ -4,14 +4,18 @@
 
   <!-- <div class="w-full max-w-5xl rounded-lg bg-white p-4 shadow">
     <all-details [parameter]="detailsParameter" />
-  </div>
-
+  </div> -->
+  <!--
   <div class="w-full max-w-4xl rounded-lg bg-white p-4 shadow">
     <generic-form [params]="speakerFormParams" />
   </div> -->
 
   <div class="w-full max-w-5xl rounded-lg bg-white p-4 shadow">
     <data-grid [parameter]="gridPar" />
+  </div>
+
+  <div class="w-full max-w-5xl rounded-lg bg-white p-4 shadow" style="height: 600px">
+    <contents-view [parameter]="contentsViewParameter" />
   </div>
 
   @if (formResult(); as result) {
@@ -27,5 +31,19 @@
     </div>
   }
 </main>
+
+<ng-template #cellTemplate let-row>
+  <action-buttons
+    [buttons]="[
+      {
+        label: 'View',
+        icon: 'visibility',
+        click: (row_) =>
+          log.set(`View clicked for row with id: ${row_?.id}` + ` and name: ${row_.salary}`),
+      },
+    ]"
+    [data]="row"
+  />
+</ng-template>
 
 <router-outlet />

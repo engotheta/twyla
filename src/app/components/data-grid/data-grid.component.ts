@@ -44,14 +44,14 @@ import {
   INDEX_COLUMN_KEY,
   SELECT_COLUMN_KEY,
 } from './grid-engine.service';
-import { DetailsComponent } from '../details/details.component';
-import { DetailsDialogData } from '../details/detail.interface';
 import { formatCellValue, resolveClassMap } from './helpers/grid-format.helpers';
 import { GridHeaderCell } from './interfaces/grid-header.interface';
 import { GridParameter } from './interfaces/grid-parameter.interface';
 import { getCellValue } from './helpers/grid-row.helpers';
 import { GridRowDetailComponent } from './grid-row-detail/grid-row-detail.component';
 import { GridToolbarComponent } from './grid-toolbar/grid-toolbar.component';
+import { ROW_DETAILS_COMPONENT, RowDetailsDialogData } from './row-details.token';
+import { MergeClassesPipe } from '../details/util/class-name/merge-classes.pipe';
 
 const DEFAULT_SIZE_OPTIONS = [10, 25, 50, 100, 200, 500, 1000];
 const DEFAULT_PINNED_WIDTH = 120;
@@ -79,6 +79,7 @@ const DEFAULT_VIEW_DETAILS_CLICKS = 7;
     GridCellComponent,
     GridRowDetailComponent,
     GridToolbarComponent,
+    MergeClassesPipe,
   ],
   templateUrl: './data-grid.component.html',
   styleUrl: './data-grid.component.scss',
@@ -94,6 +95,7 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   private readonly engine = inject(GridEngineService);
   private readonly injector = inject(Injector);
   private readonly dialog = inject(MatDialog);
+  private readonly rowDetailsComponent = inject(ROW_DETAILS_COMPONENT, { optional: true });
 
   protected instance!: GridInstance<RowType>;
 
@@ -104,13 +106,13 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   protected readonly ACTIONS_KEY = ACTIONS_COLUMN_KEY;
 
   protected readonly sizeOptions = computed(
-    () => this.parameter().sizeOptions ?? DEFAULT_SIZE_OPTIONS,
+    () => this.instance.params().sizeOptions ?? DEFAULT_SIZE_OPTIONS,
   );
 
   private clickCounts = new Map<unknown, number>();
 
   ngOnInit(): void {
-    this.instance = this.engine.build(this.parameter(), this.injector);
+    this.instance = this.engine.build(this.parameter, this.injector);
     this.instanceChange.emit(this.instance);
   }
 
@@ -119,7 +121,7 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   }
 
   protected readonly showToolbar = computed(() => {
-    const p = this.instance.params;
+    const p = this.instance.params();
     if (p.showToolbar !== undefined) return p.showToolbar;
     return !!(
       p.gridFilters?.length ||
@@ -133,14 +135,14 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   });
 
   protected readonly showPaginator = computed(() => {
-    const p = this.instance.params;
+    const p = this.instance.params();
     if (p.showPaginator !== undefined) return p.showPaginator;
     return this.instance.size() > 0 && this.instance.totalLength() > this.instance.size();
   });
 
   // never hides while a search field has a value — see grid-toolbar's search-hiding bug fix
   protected readonly showSearch = computed(() => {
-    const p = this.instance.params;
+    const p = this.instance.params();
     if (p.showSearch !== undefined) return p.showSearch;
     return this.showPaginator() || this.instance.searchFields().some((f) => !!f.value);
   });
@@ -148,13 +150,13 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   protected readonly noContent = computed(
     () => !this.instance.loading() && this.instance.rows().length === 0,
   );
-  protected readonly noContentLabel = computed(
-    () =>
-      this.instance.params.noContentLabel ?? `No ${this.instance.params.label ?? 'results'} found`,
-  );
+  protected readonly noContentLabel = computed(() => {
+    const p = this.instance.params();
+    return p.noContentLabel ?? `No ${p.label ?? 'results'} found`;
+  });
 
   protected onNoContentClick(): void {
-    this.instance.params.noContentClick?.(this.instance.state());
+    this.instance.params().noContentClick?.(this.instance.state());
   }
 
   protected onPage(event: PageEvent): void {
@@ -243,9 +245,9 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   // ── row-level dynamic props (resolved synchronously — see resolveSyncDynamic) ──
 
   protected rowClass(row: RowType): string {
-    const base = resolveSyncDynamic(this.instance.params.rowClass, row) ?? '';
+    const base = resolveSyncDynamic(this.instance.params().rowClass, row) ?? '';
     const rowProps = (row as GridRow<RowType>)?._rowProps;
-    const conditional = resolveClassMap(this.instance.params.rowFormatter, row);
+    const conditional = resolveClassMap(this.instance.params().rowFormatter, row);
     const propsClass = resolveSyncDynamic(rowProps?.class, row) ?? '';
     return mergeClasses(mergeClasses(base, conditional), propsClass);
   }
@@ -266,9 +268,10 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   // ── row interaction ──
 
   protected onRowClick(row: RowType): void {
-    this.instance.params.rowClick?.(row);
-    const configured = this.instance.params.viewDetailsClicks;
-    if (configured === 0) return; // explicit opt-out
+    this.instance.params().rowClick?.(row);
+    const configured = this.instance.params().viewDetailsClicks;
+    // explicit opt-out, or no details component registered (see ROW_DETAILS_COMPONENT)
+    if (configured === 0 || !this.rowDetailsComponent) return;
 
     const threshold = configured ?? DEFAULT_VIEW_DETAILS_CLICKS;
     const id = this.instance.rowId(row);
@@ -279,14 +282,14 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
 
     this.clickCounts.set(id, 0);
 
-    this.dialog.open<DetailsComponent<RowType>, DetailsDialogData<RowType>>(DetailsComponent, {
-      data: { entity: row } satisfies DetailsDialogData<RowType>,
+    this.dialog.open(this.rowDetailsComponent, {
+      data: { entity: row } satisfies RowDetailsDialogData<RowType>,
       width: '640px',
     });
   }
 
   protected onRowDblClick(row: RowType): void {
-    this.instance.params.rowDClick?.(row);
+    this.instance.params().rowDClick?.(row);
   }
 
   protected onRowSelectToggle(row: RowType, event: Event): void {

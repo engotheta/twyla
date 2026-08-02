@@ -1,0 +1,90 @@
+@if (parameter().showContentsInTabs) {
+  <mat-tab-group
+    [animationDuration]="'0ms'"
+    [preserveContent]="parameter().preserveInactiveContent ?? true"
+    [selectedIndex]="activeIndex()"
+    (selectedIndexChange)="onTabIndexChange($event)"
+    [class]="tabsContainerClass()"
+  >
+    @for (rc of visibleContents(); track trackContent($index, rc)) {
+      <mat-tab [disabled]="rc.disabled" [label]="rc.content.label ?? ''">
+        <ng-template mat-tab-label>
+          <span class="inline-flex items-center gap-1">
+            @if (rc.content.icon) {
+              <mat-icon class="!text-base" aria-hidden="true">{{ rc.content.icon }}</mat-icon>
+            }
+            {{ rc.content.label }}
+            @if (rc.badge !== undefined && rc.badge !== null && rc.badge !== '') {
+              <span class="ml-1 rounded-full bg-black/10 px-1.5 text-xs">{{ rc.badge }}</span>
+            }
+          </span>
+        </ng-template>
+        <ng-template matTabContent>
+          <ng-container
+            [ngTemplateOutlet]="contentBody"
+            [ngTemplateOutletContext]="{ $implicit: rc }"
+          />
+        </ng-template>
+      </mat-tab>
+    }
+  </mat-tab-group>
+} @else {
+  <div [class]="contentsContainerClass()">
+    @for (rc of visibleContents(); track trackContent($index, rc)) {
+      <div [class]="(parameter().contentsClass ?? '') | mergeClasses: rc.content.class ?? ''">
+        @if (rc.content.label || rc.content.icon) {
+          <div class="mb-1 flex items-center gap-1 font-medium">
+            @if (rc.content.icon) {
+              <mat-icon class="!text-base" aria-hidden="true">{{ rc.content.icon }}</mat-icon>
+            }
+            <span>{{ rc.content.label }}</span>
+            @if (rc.badge !== undefined && rc.badge !== null && rc.badge !== '') {
+              <span class="ml-1 rounded-full bg-black/10 px-1.5 text-xs">{{ rc.badge }}</span>
+            }
+          </div>
+        }
+        <ng-container
+          [ngTemplateOutlet]="contentBody"
+          [ngTemplateOutletContext]="{ $implicit: rc }"
+        />
+      </div>
+    }
+  </div>
+}
+
+<ng-template #contentBody let-rc>
+  @switch (rc.content.type) {
+    @case ('table') {
+      <data-grid [parameter]="rc.content.gridParams" />
+    }
+    @case ('details') {
+      <all-details [parameter]="rc.content.detailsParams" />
+    }
+    @case ('form') {
+      <generic-form [params]="rc.content.formParams" />
+    }
+    @case ('html') {
+      <span [innerHTML]="rc.html ?? ''"></span>
+    }
+    @case ('component') {
+      @if (rc.content.componentParams?.component; as cmp) {
+        <ng-container
+          [ngComponentOutlet]="cmp"
+          [ngComponentOutletInputs]="rc.content.componentParams?.inputs ?? {}"
+        />
+      } @else if (rc.content.componentParams?.template; as tpl) {
+        <ng-container
+          [ngTemplateOutlet]="tpl"
+          [ngTemplateOutletContext]="{
+            $implicit: rc.content,
+            content: rc.content,
+            ...(rc.content.componentParams?.templateContext ?? {}),
+          }"
+        />
+      }
+    }
+  }
+  @if (rc.content.contents?.length) {
+    <contents-view [parameter]="nestedParameter(rc.content)" class="mt-2 block" />
+  }
+</ng-template>

@@ -1,5 +1,5 @@
 import { Validators } from '@angular/forms';
-import { FieldType, FormParameters, observe } from './components/generic-form';
+import { FieldType, FormParameter, observe } from './components/generic-form';
 
 // ─────────────────────────────────────────────
 // "Conference Speaker & Session Proposal" — an end-to-end scenario built to exercise as much of
@@ -92,7 +92,7 @@ function titleCase(value: string): string {
 export function createSpeakerFormParams(
   onSubmit: (value: Record<string, unknown>) => void,
   onPreview: (value: Record<string, unknown>) => void,
-): FormParameters<Record<string, unknown>> {
+): FormParameter<Record<string, unknown>> {
   return {
     title: 'Conference Speaker & Session Proposal',
     icon: 'campaign',

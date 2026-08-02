@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  Injector,
   OnInit,
   computed,
   inject,
@@ -21,6 +22,7 @@ import {
   FormEngineService,
   FormField,
   FormInstance,
+  FormParameter,
   ObjectField,
   Option,
   observe,
@@ -77,11 +79,12 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
 
   private readonly engine = inject(FormEngineService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
 
   protected formInstance!: FormInstance;
   protected objectField!: ObjectField;
   private searchableColumns: { key: string; label?: string; searchType?: SearchType }[] = [];
-  private searchConfig: GridInstance<RowType>['params']['searchConfig'];
+  protected readonly searchConfig = computed(() => this.instance().params().searchConfig);
 
   protected readonly typeOverrideOn = signal(false);
   protected readonly searchTypeLabel = (t: SearchType): string => SEARCH_TYPE_LABELS[t];
@@ -98,11 +101,11 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
   /** in 'modal' mode, the toolbar's OWN mount (not reusing an instance — i.e. not inside the
    *  dialog) shows only the first instance; everything else lives in the dialog */
   protected readonly onlyFirstVisible = computed(
-    () => (this.searchConfig?.searchFieldsMode ?? 'inline') === 'modal' && !this.existingInstance(),
+    () =>
+      (this.searchConfig()?.searchFieldsMode ?? 'inline') === 'modal' && !this.existingInstance(),
   );
 
   ngOnInit(): void {
-    this.searchConfig = this.instance().params.searchConfig;
     const existing = this.existingInstance();
     if (existing) {
       this.formInstance = existing;
@@ -124,7 +127,7 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
 
   private buildForm(): void {
     const inst = this.instance();
-    const cfg = this.searchConfig;
+    const cfg = this.searchConfig();
     this.searchableColumns = inst
       .leafColumns()
       .filter((c) => c.searchable)
@@ -182,15 +185,18 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
       fields: itemFields,
     };
 
-    this.formInstance = this.engine.build({
-      fields: [this.objectField],
-      // compound search fields sit in the toolbar row (or a compact dialog) — free the vertical
-      // space every mat-form-field otherwise reserves for a hint/error that's never shown here
-      showSubscript: false,
-      onChange: (value) =>
-        this.pushSearchFields((value as { searchFields?: SearchField[] }).searchFields ?? []),
-      changeDebounce: cfg?.changeDebounce ?? 300,
-    });
+    this.formInstance = this.engine.build(
+      signal<FormParameter>({
+        fields: [this.objectField],
+        // compound search fields sit in the toolbar row (or a compact dialog) — free the vertical
+        // space every mat-form-field otherwise reserves for a hint/error that's never shown here
+        showSubscript: false,
+        onChange: (value) =>
+          this.pushSearchFields((value as { searchFields?: SearchField[] }).searchFields ?? []),
+        changeDebounce: cfg?.changeDebounce ?? 300,
+      }),
+      this.injector,
+    );
   }
 
   private columnOptions(allItems: SearchField[], ownKey: string | undefined): Option<string>[] {
@@ -201,7 +207,7 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
 
   private resolveDefaultSearchType(key: string | undefined): SearchType {
     const column = this.searchableColumns.find((c) => c.key === key);
-    return column?.searchType ?? this.searchConfig?.defaultSearchType ?? 'like';
+    return column?.searchType ?? this.searchConfig()?.defaultSearchType ?? 'like';
   }
 
   private pushSearchFields(
@@ -259,7 +265,7 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
   }
 
   protected readonly showTypeToggleButton = computed(
-    () => !!this.searchConfig?.searchTypeChangeable && this.searchableColumns.length > 0,
+    () => !!this.searchConfig()?.searchTypeChangeable && this.searchableColumns.length > 0,
   );
 
   protected toggleTypeOverride(): void {

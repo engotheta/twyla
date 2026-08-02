@@ -25,6 +25,11 @@ export interface ObjectField extends ValueField<Record<string, unknown>> {
   itemLabelKey?: string; // default 'label' + (n+1)
   showIndex?: boolean; // default true
   itemClass?: string; // class wrapper for each item
+  /** Stable per-item identity for reconciling this list's items across a params() emission whose
+   *  `value` array differs (add/remove/reorder rows while preserving each surviving row's live
+   *  control state). Default when omitted: positional identity — tail-append/tail-trim only, no
+   *  reordering, a safe no-op for any existing isList usage that doesn't opt in. */
+  itemKey?: (item: unknown, index: number) => string | number;
 }
 
 /**

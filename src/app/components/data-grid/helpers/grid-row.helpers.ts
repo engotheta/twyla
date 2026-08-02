@@ -29,7 +29,7 @@ export function rowsEqual<RowType = any>(
 }
 
 export function getCellValue<RowType = any>(row: RowType, column: GridColumn_<RowType>): unknown {
-  return getPathValue(row, column.key);
+  return column.valueFn ? column.valueFn(row) : getPathValue(row, column.key);
 }
 
 function toSearchableText(value: unknown): string {
