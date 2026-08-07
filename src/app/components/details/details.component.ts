@@ -1,5 +1,13 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
@@ -35,7 +43,7 @@ import { MergeClassesPipe } from './util/class-name/merge-classes.pipe';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DetailsComponent<Entity = Record<string, unknown>> {
-  readonly parameter = input<DetailsParameter<Entity>>();
+  readonly params = input<DetailsParameter<Entity>>();
 
   // Set only when this instance was created via `dialog.open(DetailsComponent, { data })` instead
   // of being used as a normal embedded component.
@@ -44,7 +52,7 @@ export class DetailsComponent<Entity = Record<string, unknown>> {
   protected readonly dialogRef = inject(MatDialogRef<DetailsComponent<Entity>>, { optional: true });
 
   protected readonly resolvedParameter = computed<DetailsParameter<Entity>>(
-    () => this.dialogData ?? this.parameter() ?? {},
+    () => this.dialogData ?? this.params() ?? {},
   );
 
   // a DEDICATED computed the fetch effect depends on, not `resolvedParameter()` directly — a

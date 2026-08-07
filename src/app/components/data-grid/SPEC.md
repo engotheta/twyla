@@ -96,7 +96,14 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
 - `orderedRealLeafColumns` (flattened from `orderedColumnsTree`, §1) is the
   ONE source of truth for real-column order — both `headerRows` (as a
   tree) and `visibleColumns` (flattened) render from it, so they can't
-  disagree.
+  disagree. `orderedColumnsTree` also applies each leaf's live `columnState`
+  override (width/pinned, via `applyColumnOverrides`/`applyColumnState`,
+  `grid-column.helpers.ts`) on top of the reorder, restoring the same
+  single-source-of-truth guarantee for a resized/pinned column: before this,
+  `headerRows` read straight from the static, never-overridden `columns()`
+  tree, so a column-resize drag updated `visibleColumns()`/body `<td>`s but
+  never the `<th>` actually bound to a width style — the header simply never
+  moved.
 - `GridInstance.moveColumn(fromIndex, toIndex)` takes indices into the REAL
   columns only — exactly what `grid-column-panel` lists and drags (it
   filters `columnState()` down to non-synthetic keys before rendering,
@@ -381,3 +388,44 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
   `ActionButtonComponent.handleClick`'s own unconditional
   `stopPropagation()`) never reach it — only clicks on otherwise-inert
   parts of the row count.
+
+## 11. Column width: precise resize vs. an "autoish" unsized default
+
+- Table mode uses `table-layout: fixed` (`data-grid.component.html`'s
+  `<table>`) with a `<colgroup>` — one `<col>` per `visibleColumns()` entry,
+  in the same order the body `<td>`s render — driving each column's width
+  authoritatively (see §2's note on `orderedColumnsTree`/resize precision).
+  `<th>`/`<td>` themselves no longer bind `width` directly; the `<colgroup>`
+  is the one place it's set, sidestepping how a grouped/nested header's own
+  colspan'd `<th>` (§1) would otherwise divide a width across its children
+  and silently override what those leaf columns actually want.
+- A column with no explicit `width` (author-configured or resized) still
+  needs SOME concrete value under `table-layout: fixed` — a single flat
+  number for every unsized column (regardless of whether it holds an id, a
+  yes/no flag, or a paragraph-length description) looks wrong. Instead,
+  `DataGridComponent.estimateColumnWidth` (`data-grid.component.ts`) gives
+  each unsized column a width estimated from what's known synchronously at
+  config time: a known-shape `type` (`boolean`/`date`/`number`/...) gets a
+  typical width for that shape, independent of its label's length; anything
+  else (typically `'text'`) sizes to its header label's character count.
+  Clamped to `[COLUMN_WIDTH_ESTIMATE_MIN, COLUMN_WIDTH_ESTIMATE_MAX]`. This
+  is a heuristic, not real cell-content measurement (no extra render pass,
+  no per-row scanning) — a reasonable starting point the user can always
+  override by dragging, not a precise fit. Results are cached per column
+  key (`columnWidthEstimates`), since the `<colgroup>` binding re-evaluates
+  on every change detection pass and a column's config is stable for its
+  lifetime. Purely a rendering default — consulted only via
+  `column.width ?? estimateColumnWidth(column)`, so it never affects, and is
+  never affected by, resize (a resized column's `columnState` width is
+  always defined, short-circuiting the estimate).
+- A group column's `visible: false` (`GridColumn_.columns` nesting, §1)
+  hides its whole subtree, not just itself — `collectAncestorHiddenLeafKeys`
+  (`grid-column.helpers.ts`) walks the static `columns()` tree once and
+  marks every descendant leaf of a `visible: false` node as forced-hidden,
+  consulted by `columnState` (`grid-engine.service.ts`) ahead of — and
+  overriding — that leaf's own `visible`/runtime column-state override: a
+  child can't be individually un-hidden while its parent section is hidden,
+  since there'd be no group header left to show it under anyway. Only the
+  STATIC config tree is walked (group columns never get their own
+  `GridColumnState` entry — only leaves do), so this isn't something
+  toggleable at runtime the way a leaf's own visibility is.

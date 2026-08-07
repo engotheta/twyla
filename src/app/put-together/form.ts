@@ -1,5 +1,6 @@
 import { Validators } from '@angular/forms';
-import { FieldType, FormParameter, observe } from './components/generic-form';
+import { FieldType, FormParameter, observe } from '../components/generic-form';
+import { formResult } from './support/form-results';
 
 // ─────────────────────────────────────────────
 // "Conference Speaker & Session Proposal" — an end-to-end scenario built to exercise as much of
@@ -89,10 +90,7 @@ function titleCase(value: string): string {
   return value.replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
-export function createSpeakerFormParams(
-  onSubmit: (value: Record<string, unknown>) => void,
-  onPreview: (value: Record<string, unknown>) => void,
-): FormParameter<Record<string, unknown>> {
+export function getFormParameter(): FormParameter<Record<string, unknown>> {
   return {
     title: 'Conference Speaker & Session Proposal',
     icon: 'campaign',
@@ -433,7 +431,7 @@ export function createSpeakerFormParams(
             type: FieldType.button,
             label: 'Preview JSON',
             icon: 'visibility',
-            click: (formValue) => onPreview(formValue ?? {}),
+            click: (formValue) => formResult.set({ mode: 'preview', value: formValue ?? {} }),
           },
         ],
       },
@@ -476,6 +474,6 @@ export function createSpeakerFormParams(
       },
     ],
 
-    onSubmit: (value) => onSubmit(value),
+    onSubmit: (value) => formResult.set({ mode: 'submitted', value }),
   };
 }

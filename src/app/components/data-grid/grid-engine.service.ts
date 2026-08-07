@@ -3,8 +3,11 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, firstValueFrom, isObservable, Observable, of, Subscription } from 'rxjs';
 import { catchError, switchMap, tap } from 'rxjs/operators';
 import {
+  applyColumnOverrides,
+  applyColumnState,
   autoGenerateColumns,
   buildHeaderRows,
+  collectAncestorHiddenLeafKeys,
   discoverColumnsFromData,
   flattenLeafColumns,
   normalizeColumns,
@@ -75,6 +78,13 @@ export interface GridInstance<RowType = any> {
   columnState: Signal<GridColumnState[]>;
   /** leaf columns (incl. synthetic index/select/expand/actions) filtered+ordered per `columnState` */
   visibleColumns: Signal<GridColumn_<RowType>[]>;
+  /** true once `setColumnWidth` has been called for at least one column (a live resize, or
+   *  `initialColumnState`) and stays true until `resetColumnState()` clears it back to false —
+   *  table mode uses this to decide whether column widths should still free-flow (`table-layout:
+   *  auto`, like a plain HTML table) or have committed to being pixel-authoritative
+   *  (`table-layout: fixed`, needed for a resize to be precise/unbounded — see
+   *  `data-grid.component.ts`'s `onResizeStart`). */
+  hasWidthOverrides: Signal<boolean>;
 
   page: Signal<number>;
   size: Signal<number>;
@@ -423,15 +433,26 @@ export class GridEngineService {
     const seedOverrides: Record<string, Partial<GridColumnState>> = {};
     for (const entry of initialParams.initialColumnState ?? []) seedOverrides[entry.key] = entry;
     const columnOverrides = signal<Record<string, Partial<GridColumnState>>>(seedOverrides);
+    const hasWidthOverrides = computed(() =>
+      Object.values(columnOverrides()).some((o) => o.width !== undefined),
+    );
+
+    // leaf keys hidden by an ancestor group's `visible: false` — takes precedence over the leaf's
+    // own `visible`/runtime override below, since a hidden section can't be cherry-pick-unhidden
+    // one child at a time (there'd be no group header left to show it under anyway).
+    const ancestorHiddenLeafKeys = computed(() => collectAncestorHiddenLeafKeys(columns()));
 
     const columnState = computed<GridColumnState[]>(() => {
       const leaves = allLeafColumns();
       const overrides = columnOverrides();
+      const hiddenByAncestor = ancestorHiddenLeafKeys();
       return leaves
         .map((col, i) => ({
           key: col.key,
           order: overrides[col.key]?.order ?? i,
-          visible: overrides[col.key]?.visible ?? col.visible ?? true,
+          visible: hiddenByAncestor.has(col.key)
+            ? false
+            : (overrides[col.key]?.visible ?? col.visible ?? true),
           width: overrides[col.key]?.width ?? col.width,
           pinned: overrides[col.key]?.pinned ?? col.pinned,
         }))
@@ -440,35 +461,32 @@ export class GridEngineService {
 
     // The nested `columns()` tree (real columns only — synthetic ones are never part of it, see
     // above) reordered to match `columnState`'s order at every level (`orderColumnsForHeader`,
-    // grid-column.helpers.ts) — the SINGLE source of truth both `headerRows` (as a tree, for
+    // grid-column.helpers.ts) AND with each leaf's live width/pinned override applied
+    // (`applyColumnOverrides`) — the SINGLE source of truth both `headerRows` (as a tree, for
     // span computation) and `visibleColumns` (flattened to leaves) render from, so header and
-    // body can never disagree about real-column order. See SPEC.md §1.
+    // body can never disagree about a real column's order, width, or pinned state. See SPEC.md §1.
     const orderedColumnsTree = computed(() => {
-      const orderByKey = new Map(columnState().map((s) => [s.key, s.order]));
-      return orderColumnsForHeader(columns(), orderByKey);
+      const states = columnState();
+      const orderByKey = new Map(states.map((s) => [s.key, s.order]));
+      const ordered = orderColumnsForHeader(columns(), orderByKey);
+      const stateByKey = new Map(states.map((s) => [s.key, s]));
+      return applyColumnOverrides(ordered, stateByKey);
     });
     const orderedRealLeafColumns = computed(() => flattenLeafColumns(orderedColumnsTree()));
 
     const visibleColumns = computed<GridColumn_<RowType>[]>(() => {
       const stateByKey = new Map(columnState().map((s) => [s.key, s]));
-      const applyState = (col: GridColumn_<RowType>): GridColumn_<RowType> => {
-        const s = stateByKey.get(col.key);
-        if (!s) return col;
-        return s.width || s.pinned !== col.pinned
-          ? { ...col, width: s.width ?? col.width, pinned: s.pinned }
-          : col;
-      };
       const isVisible = (key: string) => stateByKey.get(key)?.visible !== false;
 
+      // leading/trailing synthetic columns live outside orderedColumnsTree, so they still need
+      // their own override pass; orderedRealLeafColumns is already override-applied above.
       const leading = leadingSyntheticColumns()
         .filter((c) => isVisible(c.key))
-        .map(applyState);
-      const real = orderedRealLeafColumns()
-        .filter((c) => isVisible(c.key))
-        .map(applyState);
+        .map((c) => applyColumnState(c, stateByKey.get(c.key)));
+      const real = orderedRealLeafColumns().filter((c) => isVisible(c.key));
       const trailing = trailingSyntheticColumns()
         .filter((c) => isVisible(c.key))
-        .map(applyState);
+        .map((c) => applyColumnState(c, stateByKey.get(c.key)));
       return [...leading, ...real, ...trailing];
     });
 
@@ -483,11 +501,9 @@ export class GridEngineService {
     // within the leaf's own group; every other reorder (including moving a whole group) renders
     // correctly. See grid-column.helpers.ts's `orderColumnsForHeader` and SPEC.md §1.
     const headerRows = computed<GridHeaderRow<RowType>[]>(() => {
-      const visibleKeys = new Set(
-        columnState()
-          .filter((s) => s.visible)
-          .map((s) => s.key),
-      );
+      const states = columnState();
+      const visibleKeys = new Set(states.filter((s) => s.visible).map((s) => s.key));
+      const stateByKey = new Map(states.map((s) => [s.key, s]));
       const real = buildHeaderRows(orderedColumnsTree(), visibleKeys);
       const depth = real.length || 1;
       const byKey = new Map(allLeafColumns().map((c) => [c.key, c]));
@@ -495,7 +511,14 @@ export class GridEngineService {
       const makeSyntheticCell = (key: string): GridHeaderCell<RowType> | undefined => {
         const col = byKey.get(key);
         if (!col || !visibleKeys.has(key)) return undefined;
-        return { label: col.label ?? '', colspan: 1, rowspan: depth, column: col, isLeaf: true };
+        const resolved = applyColumnState(col, stateByKey.get(key));
+        return {
+          label: resolved.label ?? '',
+          colspan: 1,
+          rowspan: depth,
+          column: resolved,
+          isLeaf: true,
+        };
       };
       const leading = [DRAG_COLUMN_KEY, INDEX_COLUMN_KEY, SELECT_COLUMN_KEY, EXPAND_COLUMN_KEY]
         .map(makeSyntheticCell)
@@ -821,6 +844,7 @@ export class GridEngineService {
       leafColumns,
       columnState,
       visibleColumns,
+      hasWidthOverrides,
       page,
       size,
       sort: sortSig,

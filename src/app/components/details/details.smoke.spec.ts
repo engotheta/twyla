@@ -8,9 +8,9 @@ describe('DetailsComponent — fetchFn', () => {
     TestBed.configureTestingModule({ imports: [DetailsComponent] });
   });
 
-  function mount(parameter: DetailsParameter) {
+  function mount(params: DetailsParameter) {
     const fixture = TestBed.createComponent(DetailsComponent);
-    fixture.componentRef.setInput('parameter', parameter);
+    fixture.componentRef.setInput('params', params);
     return fixture;
   }
 

@@ -1,6 +1,6 @@
 import { Injector, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { GridEngineService } from './grid-engine.service';
+import { GridEngineService, GridInstance } from './grid-engine.service';
 import { GridParameter } from './interfaces/grid-parameter.interface';
 import { GridColumn_ } from './interfaces/grid-column.interface';
 import { getCellValue } from './helpers/grid-row.helpers';
@@ -52,6 +52,75 @@ describe('GridEngineService (parameter reactivity)', () => {
       ]),
     );
     expect(instance.leafColumns().map((c) => c.key)).toEqual(['id', 'name', 'role']);
+  });
+
+  it("hides a group column's children when the group itself has visible: false", async () => {
+    const params = signal<GridParameter<Row & { city: string; street: string }>>({
+      columns: [
+        'id',
+        {
+          key: 'address',
+          label: 'Address',
+          visible: false,
+          columns: [
+            { key: 'city', label: 'City' },
+            { key: 'street', label: 'Street' },
+          ],
+        },
+      ],
+      gridData: [{ id: 1, name: 'Ada', city: 'NYC', street: 'Elm St' }],
+    });
+    const instance = engine.build(params, injector);
+
+    await vi.waitFor(() => expect(instance.rows().length).toBe(1));
+
+    expect(instance.visibleColumns().map((c) => c.key)).not.toContain('city');
+    expect(instance.visibleColumns().map((c) => c.key)).not.toContain('street');
+    // the group header cell itself disappears too — no descendant left to span
+    const allHeaderLabels = instance
+      .headerRows()
+      .flatMap((row) => row.cells.map((c) => c.label));
+    expect(allHeaderLabels).not.toContain('Address');
+    expect(allHeaderLabels).not.toContain('City');
+    expect(allHeaderLabels).not.toContain('Street');
+  });
+
+  it("a child's own visible: true can't override its hidden parent group", async () => {
+    const params = signal<GridParameter<Row & { city: string }>>({
+      columns: [
+        'id',
+        {
+          key: 'address',
+          label: 'Address',
+          visible: false,
+          columns: [{ key: 'city', label: 'City', visible: true }],
+        },
+      ],
+      gridData: [{ id: 1, name: 'Ada', city: 'NYC' }],
+    });
+    const instance = engine.build(params, injector);
+
+    await vi.waitFor(() => expect(instance.rows().length).toBe(1));
+    expect(instance.visibleColumns().map((c) => c.key)).not.toContain('city');
+  });
+
+  it("a top-level (non-grouped) column's own visible: false — e.g. an auto-discovered column — stays toggleable via setColumnVisible, unlike a group-hidden one", async () => {
+    const params = signal<GridParameter<Row & { extra: string }>>({
+      columns: [
+        'id',
+        { key: 'extra', label: 'Extra', visible: false }, // not nested under any group
+      ],
+      gridData: [{ id: 1, name: 'Ada', extra: 'x' }],
+    });
+    const instance = engine.build(params, injector);
+
+    await vi.waitFor(() => expect(instance.rows().length).toBe(1));
+    expect(instance.visibleColumns().map((c) => c.key)).not.toContain('extra');
+
+    instance.setColumnVisible('extra', true);
+    await vi.waitFor(() =>
+      expect(instance.visibleColumns().map((c) => c.key)).toContain('extra'),
+    );
   });
 
   it('does NOT reset page/selection/sort just because parameter() re-emits an unrelated change', async () => {
@@ -273,6 +342,39 @@ describe('GridCellComponent — column buttons', () => {
     expect(text).toContain('Override button');
     expect(text).not.toContain('Column button');
   });
+
+  it("renders type: 'imageUrl' as an <img>, with the cell value as src and imageClass merged in, plus a non-empty alt for accessibility", async () => {
+    interface PhotoRow {
+      id: number;
+      photo: string;
+    }
+    const column: GridColumn_<PhotoRow> = {
+      key: 'photo',
+      label: 'Avatar',
+      type: 'imageUrl',
+      imageClass: 'rounded-full',
+    };
+    const params = signal<GridParameter<PhotoRow>>({
+      columns: [column],
+      gridData: [{ id: 1, photo: 'https://example.com/avatar.png' }],
+    });
+    const instance = engine.build(params, injector);
+    await vi.waitFor(() => expect(instance.rows().length).toBe(1));
+
+    const fixture = TestBed.createComponent(GridCellComponent<PhotoRow>);
+    fixture.componentRef.setInput('instance', instance);
+    fixture.componentRef.setInput('column', column);
+    fixture.componentRef.setInput('row', instance.rows()[0]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const img = (fixture.nativeElement as HTMLElement).querySelector('img');
+    expect(img).toBeTruthy();
+    expect(img?.getAttribute('src')).toBe('https://example.com/avatar.png');
+    expect(img?.className).toContain('rounded-full');
+    expect(img?.getAttribute('alt')).toBeTruthy(); // non-empty — a11y requires a real alt, not none/blank
+  });
 });
 
 describe('DataGridComponent — headerButtons', () => {
@@ -295,7 +397,7 @@ describe('DataGridComponent — headerButtons', () => {
     };
 
     const fixture = TestBed.createComponent(DataGridComponent<Row>);
-    fixture.componentRef.setInput('parameter', params);
+    fixture.componentRef.setInput('params', params);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -307,5 +409,67 @@ describe('DataGridComponent — headerButtons', () => {
     btn?.dispatchEvent(new Event('click', { bubbles: true }));
 
     expect(seenPages).toEqual([1]); // GridState.gridData.page, not the column
+  });
+
+  it('table-mode columns free-flow (no width, plain table-layout: auto) until the first resize, then commit to table-layout: fixed with an "autoish" estimate for whatever is still unsized', async () => {
+    interface WideRow {
+      id: number;
+      active: boolean;
+      description: string;
+      pinned: number;
+    }
+    const params: GridParameter<WideRow> = {
+      addIndexColumn: false, // avoid the synthetic leading "#" column shifting <col> indices
+      columns: [
+        { key: 'id', label: 'ID', type: 'text' }, // short label, no explicit width
+        { key: 'active', label: 'Active', type: 'boolean' }, // typed, should stay narrow
+        { key: 'description', label: 'A Fairly Long Description' }, // long label, should be wide
+        { key: 'pinned', label: 'Pinned', width: '333px' }, // explicit width always wins
+      ],
+      gridData: [{ id: 1, active: true, description: 'x', pinned: 1 }],
+    };
+
+    const fixture = TestBed.createComponent(DataGridComponent<WideRow>);
+    let instance!: GridInstance<WideRow>;
+    fixture.componentInstance.instanceChange.subscribe((i) => (instance = i));
+    fixture.componentRef.setInput('params', params);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const cols = () =>
+      Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('table colgroup col'),
+      ) as HTMLElement[];
+    const widthOf = (key: string) => {
+      const idx = ['id', 'active', 'description', 'pinned'].indexOf(key);
+      return cols()[idx].style.width;
+    };
+    const table = () => (fixture.nativeElement as HTMLElement).querySelector('table')!;
+
+    // before any resize: free-flowing — explicit width still applies, unsized columns get none
+    expect(table().classList.contains('table-fixed')).toBe(false);
+    expect(widthOf('pinned')).toBe('333px');
+    expect(widthOf('id')).toBe('');
+    expect(widthOf('active')).toBe('');
+    expect(widthOf('description')).toBe('');
+
+    // a resize (real or, here, any setColumnWidth call — same mechanism onResizeStart uses)
+    // commits the whole table to table-layout: fixed
+    instance.setColumnWidth('id', '55px');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(table().classList.contains('table-fixed')).toBe(true);
+    expect(widthOf('id')).toBe('55px'); // the actual resize
+    expect(widthOf('pinned')).toBe('333px'); // explicit width, still untouched
+    // still-unsized columns (not captured by a real resize's natural-width snapshot in this
+    // jsdom-only test — see data-grid.component.ts's captureNaturalColumnWidths for that, which
+    // needs real layout to verify) now fall back to the "autoish" estimate rather than staying
+    // width-less under fixed layout, and it varies rather than being one flat value
+    expect(widthOf('active')).not.toBe('');
+    expect(widthOf('description')).not.toBe('');
+    expect(parseFloat(widthOf('active'))).toBeLessThan(parseFloat(widthOf('description')));
   });
 });

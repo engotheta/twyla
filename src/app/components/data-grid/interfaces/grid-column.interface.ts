@@ -75,6 +75,8 @@ export interface GridColumn_<RowType = any> {
   contentClass?: DynamicValue<string, RowType>;
   icon?: DynamicValue<string, RowType>;
   iconClass?: DynamicValue<string, RowType>;
+  /** class for the rendered `<img>` when `type: 'imageUrl'` (the cell value is the image's URL) */
+  imageClass?: DynamicValue<string, RowType>;
 
   /** action buttons rendered in this column's body cell, alongside its value. Data passed to
    *  each button is the row. */
@@ -116,7 +118,7 @@ export interface GridColumnState {
  * arbitrary-depth tree into one string isn't practical. Object/function-valued props
  * (`headerProps`, `template`, `templateContext`, `editField`, `conditionalFormat`) are excluded
  * because they aren't string-expressible; `DynamicValue` props (`contentClass`/`icon`/
- * `iconClass`/`editable`) are reachable via the DSL only for their plain-value variant.
+ * `iconClass`/`imageClass`/`editable`) are reachable via the DSL only for their plain-value variant.
  *
  * The label also supports the Details field-string `'<key> as <Label>'` alias (via the shared
  * `labelFromFieldString`, `details/field/field-labels.helpers.ts`) as a shorthand for the more
@@ -142,4 +144,5 @@ export const GRID_COLUMN_PROPS = [
   'columns type(stringArray)', // nested/grouped headers, object form only
   'icon',
   'iconClass',
+  'imageClass',
 ];

@@ -43,14 +43,23 @@
         {{ resolved().value ? 'check' : 'close' }}
       </mat-icon>
     } @else if (type() === 'html') {
-      <span [innerHTML]="displayValue()"></span>
+      <span class="min-w-0 break-words" [innerHTML]="displayValue()"></span>
+    } @else if (type() === 'imageUrl') {
+      @if (displayValue(); as src) {
+        <img
+          [src]="src"
+          [alt]="column().label ?? column().key"
+          [class]="'max-h-full ' | mergeClasses: resolved().imageClass ?? ''"
+          loading="lazy"
+        />
+      }
     } @else {
       @if (resolved().icon; as icon) {
         <mat-icon class="!text-base align-middle mr-1" [class]="resolved().iconClass ?? ''">{{
           icon
         }}</mat-icon>
       }
-      <span>{{ displayValue() }}</span>
+      <span class="min-w-0 break-words">{{ displayValue() }}</span>
     }
 
     @if (buttons()?.length) {

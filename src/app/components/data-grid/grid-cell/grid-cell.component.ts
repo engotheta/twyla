@@ -24,6 +24,7 @@ interface ResolvedCellProps {
   overrideClass: string | undefined;
   icon: string | undefined;
   iconClass: string | undefined;
+  imageClass: string | undefined;
   tooltip: string | undefined;
   editable: boolean | undefined;
 }
@@ -86,6 +87,7 @@ export class GridCellComponent<RowType = any> {
           overrideClass: resolveDynamicValue$(override?.class, row),
           icon: resolveDynamicValue$(column.icon, row),
           iconClass: resolveDynamicValue$(column.iconClass, row),
+          imageClass: resolveDynamicValue$(column.imageClass, row),
           tooltip: resolveDynamicValue$(override?.tooltip, row),
           editable: resolveDynamicValue$(override?.editable ?? column.editable, row),
         }),
@@ -99,6 +101,7 @@ export class GridCellComponent<RowType = any> {
         overrideClass: undefined,
         icon: undefined,
         iconClass: undefined,
+        imageClass: undefined,
         tooltip: undefined,
         editable: undefined,
       } as ResolvedCellProps,

@@ -4,7 +4,12 @@
 import { propsFromString } from '../../details/field/field-string.helpers';
 import { keyFromFieldString } from '../../details/field/field-keys.helpers';
 import { labelFromFieldString } from '../../details/field/field-labels.helpers';
-import { GRID_COLUMN_PROPS, GridColumn, GridColumn_ } from '../interfaces/grid-column.interface';
+import {
+  GRID_COLUMN_PROPS,
+  GridColumn,
+  GridColumn_,
+  GridColumnState,
+} from '../interfaces/grid-column.interface';
 import { GridHeaderCell, GridHeaderRow } from '../interfaces/grid-header.interface';
 
 /** Normalizes one `GridColumn` (string shorthand or object) into a `GridColumn_`, recursing into nested `columns`. */
@@ -139,6 +144,38 @@ export function flattenLeafColumns<RowType = any>(
   return columns.flatMap((col) => (col.columns?.length ? flattenLeafColumns(col.columns) : [col]));
 }
 
+/**
+ * Leaf keys whose visibility is forced false by an ANCESTOR GROUP column with `visible === false`
+ * in the static config tree — hiding a group hides its whole subtree, regardless of any
+ * descendant's own `visible`/runtime column-state override. Deliberately only cascades a GROUP
+ * node's (one with nested `columns`) own `visible: false` onto its descendants — a LEAF's own
+ * `visible: false` (e.g. an auto-discovered column, created hidden by default until the user
+ * opts in via the column panel) must NOT land here, or it'd be indistinguishable from a
+ * group-hidden leaf and `columnState` (below) would hard-lock it, permanently ignoring the
+ * runtime override that's supposed to be able to re-show it — only its own group ancestors matter
+ * for this set; its own `visible` is already handled correctly by the normal
+ * `override ?? col.visible ?? true` fallback chain. Only the STATIC `columns()` tree is consulted
+ * here (not `columnState`'s per-leaf runtime overrides) — group columns never get their own
+ * `GridColumnState` entry (only leaves do), so there'd otherwise be no way to toggle a whole
+ * section off at once.
+ */
+export function collectAncestorHiddenLeafKeys<RowType = any>(
+  columns: GridColumn_<RowType>[],
+): Set<string> {
+  const hidden = new Set<string>();
+  const visit = (cols: GridColumn_<RowType>[], ancestorHidden: boolean): void => {
+    for (const col of cols) {
+      if (col.columns?.length) {
+        visit(col.columns, ancestorHidden || col.visible === false);
+      } else if (ancestorHidden) {
+        hidden.add(col.key);
+      }
+    }
+  };
+  visit(columns, false);
+  return hidden;
+}
+
 function isVisible(column: GridColumn_, visibleKeys?: Set<string>): boolean {
   if (!visibleKeys) return true;
   return column.columns?.length
@@ -190,6 +227,36 @@ export function orderColumnsForHeader<RowType = any>(
     }))
     .sort((a, b) => a.order - b.order || a.i - b.i)
     .map((entry) => entry.col);
+}
+
+/** Applies one leaf column's runtime `GridColumnState` override (width/pinned) onto its static
+ *  config — the same override-wins-when-set rule `columnState` itself uses. Returns the same
+ *  reference when nothing actually changed. */
+export function applyColumnState<RowType = any>(
+  column: GridColumn_<RowType>,
+  state: GridColumnState | undefined,
+): GridColumn_<RowType> {
+  if (!state) return column;
+  return state.width || state.pinned !== column.pinned
+    ? { ...column, width: state.width ?? column.width, pinned: state.pinned }
+    : column;
+}
+
+/**
+ * Recursively applies `GridColumnState` overrides onto a column tree — the width/pinned analog
+ * of `orderColumnsForHeader`'s order recursion. Only leaf columns ever carry a `GridColumnState`
+ * entry (group/parent nodes never do), so a group node is rebuilt with just its children
+ * recursed into.
+ */
+export function applyColumnOverrides<RowType = any>(
+  columns: GridColumn_<RowType>[],
+  stateByKey: Map<string, GridColumnState>,
+): GridColumn_<RowType>[] {
+  return columns.map((col) =>
+    col.columns?.length
+      ? { ...col, columns: applyColumnOverrides(col.columns, stateByKey) }
+      : applyColumnState(col, stateByKey.get(col.key)),
+  );
 }
 
 /**

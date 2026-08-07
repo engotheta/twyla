@@ -1,5 +1,10 @@
 :host {
   display: block;
+  // Lets the grid participate in an ancestor's percentage/flex height (e.g. contents-view's
+  // fit-mode body-scroll region) instead of always auto-sizing to its full unclipped content
+  // height — a no-op when the parent has no definite height to give (h-full falls back to auto).
+  height: 100%;
+  min-height: 0;
 }
 
 th[style*='sticky'],
@@ -25,3 +30,24 @@ tbody tr.cdk-drag-placeholder {
     visibility: hidden;
   }
 }
+
+// thead {
+//   position: relative;
+
+//   &::after {
+//     content: '';
+//     position: absolute;
+//     left: 0;
+//     display: block;
+//     bottom: -1px;
+//     height: 2px !important;
+//     width: 0%;
+
+//     background: linear-gradient(
+//       to right,
+//       var(--mat-sys-primary, #1976d2),
+//       var(--mat-sys-primary, #1976d2)
+//     );
+//     z-index: 9999;
+//   }
+// }

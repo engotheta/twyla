@@ -1,0 +1,103 @@
+// mat tabs
+.mat-mdc-tab-group {
+  .mat-mdc-tab-header {
+    background: var(--color-white);
+    border-radius: var(--border-radius-small);
+    padding: 7px;
+    gap: 4px;
+  }
+
+  &.simple {
+    .mat-mdc-tab-header {
+      border-radius: var(--border-radius-small) var(--border-radius-small) 0 0;
+    }
+  }
+
+  .mat-mdc-tab-body-wrapper {
+    flex-grow: 1;
+  }
+
+  .mat-mdc-tab-body-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mat-mdc-tab-header-pagination {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+
+  .mat-mdc-tab-label-container {
+    border: 1px solid var(--color-neutral);
+    background-color: var(--color-white);
+    border-radius: var(--border-radius);
+    flex-grow: 0;
+  }
+
+  .mat-mdc-tab {
+    padding-left: 14px;
+    padding-right: 14px;
+
+    &:not(:last-of-type) {
+      border-right: 1px solid var(--color-pale);
+    }
+
+    &:hover {
+      &.mat-focus-indicator {
+        background: none !important;
+      }
+    }
+
+    .mdc-tab__text-label {
+      color: var(--color-black);
+    }
+
+    &:not(.mdc-tab--active):hover .mdc-tab__text-label {
+      color: var(--color-dark);
+    }
+
+    &.mdc-tab--active:hover .mdc-tab__text-label {
+      color: var(--color-white_);
+    }
+
+    &.mdc-tab--active {
+      .mdc-tab__text-label {
+        color: var(--color-white_) !important;
+      }
+
+      .mdc-tab-indicator__content--underline {
+        height: 100%;
+        width: 100%;
+        background: var(--color-primary);
+        transition:
+          transform 300ms var(--ease-in-out),
+          width 300ms var(--ease-in-out);
+      }
+    }
+  }
+}
+
+.custom-tabs {
+  position: relative;
+}
+
+.custom-tabs .mdc-tab-indicator {
+  display: none; /* disable default */
+}
+
+.custom-tabs .mat-mdc-tab-labels::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  margin: auto;
+  height: 90%;
+  width: calc(var(--indicator-width, 100px) - 10px);
+  left: 5px;
+  border-radius: var(--border-radius);
+  transform: translateX(var(--indicator-x));
+  background: var(--color-primary);
+  transition:
+    transform 300ms ease,
+    width 300ms ease;
+}

@@ -1,9 +1,20 @@
-import { GridParameter } from './components/data-grid';
+import { GridParameter } from '../components/data-grid';
 import { from, map } from 'rxjs';
 
-export const gridPar: GridParameter<any> = {
+export const gridParameterFetch: GridParameter<any> = {
   canAddColumns: true,
   lastDotAsName: true,
+  export: { formats: ['excel', 'pdf'] },
+  columns: [
+    'firstName',
+    'lastName',
+    'maidenName',
+    'image type(imageUrl) imageClass(w-[40px] h-[40px] )',
+    'age',
+    'userAgent',
+    'gender',
+  ],
+
   fetchFn: (page) => {
     let limit = page?.size ?? 10;
     let skip = page?.page ? (page.page - 1) * (page.size ?? 10) : 0;

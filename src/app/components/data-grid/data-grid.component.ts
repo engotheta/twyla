@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
   inject,
   Injector,
   input,
@@ -10,6 +11,7 @@ import {
   OnInit,
   output,
   signal,
+  viewChildren,
 } from '@angular/core';
 import {
   CdkDrag,
@@ -44,18 +46,54 @@ import {
   INDEX_COLUMN_KEY,
   SELECT_COLUMN_KEY,
 } from './grid-engine.service';
-import { formatCellValue, resolveClassMap } from './helpers/grid-format.helpers';
+import { formatCellValue, GridValueType, resolveClassMap } from './helpers/grid-format.helpers';
 import { GridHeaderCell } from './interfaces/grid-header.interface';
 import { GridParameter } from './interfaces/grid-parameter.interface';
 import { getCellValue } from './helpers/grid-row.helpers';
 import { GridRowDetailComponent } from './grid-row-detail/grid-row-detail.component';
 import { GridToolbarComponent } from './grid-toolbar/grid-toolbar.component';
 import { ROW_DETAILS_COMPONENT, RowDetailsDialogData } from './row-details.token';
-import { MergeClassesPipe } from '../details/util/class-name/merge-classes.pipe';
 
 const DEFAULT_SIZE_OPTIONS = [10, 25, 50, 100, 200, 500, 1000];
-const DEFAULT_PINNED_WIDTH = 120;
+/** Fallback for pinned-column sticky-offset math (`parseWidthPx`) when a column has no explicit
+ *  `width` — a plain constant is fine there since it only affects a neighboring column's sticky
+ *  offset, not what's actually rendered (see `estimateColumnWidth` for the latter). */
+const DEFAULT_COLUMN_WIDTH = 120;
 const DEFAULT_VIEW_DETAILS_CLICKS = 7;
+
+// ── "autoish" width estimate — fallback for a column with no explicit or captured width, but
+//    ONLY once the table has already committed to `table-layout: fixed` (isFixedLayout) ──
+//
+// Before the first resize, an unsized column has NO width at all — free-flowing, plain
+// `table-layout: auto` content-fit sizing, like a normal HTML table (see `isFixedLayout`).
+// `onResizeStart` freezes every THEN-visible unsized column at its natural rendered width right
+// before switching to `fixed`, so this estimate never applies to columns that were already on
+// screen. It exists only for the narrower edge case of a column that becomes visible (e.g. via
+// the column panel) AFTER the table is already in fixed mode, where there's no "natural" auto-
+// layout moment left to measure — `fixed` layout requires SOME concrete width for every column,
+// and dividing the remaining space equally among newly-shown columns regardless of their likely
+// content (an "ID" column and a "Description" column both the same width) looks wrong. Estimated
+// from what's known synchronously at config time — the column's `type` (a known-shape value like
+// a boolean or date has a fairly predictable rendered width regardless of its label) falling back
+// to its header label's length (for free-text columns, where the label is the best available
+// proxy for how much room the content likely needs) — NOT real cell-content measurement, so treat
+// it as a reasonable starting point, not a precise fit.
+const COLUMN_WIDTH_ESTIMATE_MIN = 70;
+const COLUMN_WIDTH_ESTIMATE_MAX = 240;
+const COLUMN_WIDTH_ESTIMATE_CHAR_PX = 7;
+/** icon + sort-arrow + cell padding + resize-handle allowance, roughly */
+const COLUMN_WIDTH_ESTIMATE_LABEL_PADDING_PX = 48;
+/** typical rendered width for a known-shape value type, independent of its header label's length */
+const COLUMN_WIDTH_ESTIMATE_BY_TYPE: Partial<Record<GridValueType, number>> = {
+  boolean: 70,
+  time: 90,
+  number: 90,
+  percent: 80,
+  currency: 110,
+  date: 110,
+  datetime: 150,
+  imageUrl: 80,
+};
 
 /** Highly dynamic, config-driven data grid — see `grid-parameter.interface.ts` for the full contract. */
 @Component({
@@ -79,14 +117,13 @@ const DEFAULT_VIEW_DETAILS_CLICKS = 7;
     GridCellComponent,
     GridRowDetailComponent,
     GridToolbarComponent,
-    MergeClassesPipe,
   ],
   templateUrl: './data-grid.component.html',
   styleUrl: './data-grid.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
-  readonly parameter = input.required<GridParameter<RowType>>();
+  readonly params = input.required<GridParameter<RowType>>();
 
   /** emits the built GridInstance once, at the end of
    *  ngOnInit — mirrors GenericFormComponent.instanceChange */
@@ -112,7 +149,7 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   private clickCounts = new Map<unknown, number>();
 
   ngOnInit(): void {
-    this.instance = this.engine.build(this.parameter, this.injector);
+    this.instance = this.engine.build(this.params, this.injector);
     this.instanceChange.emit(this.instance);
   }
 
@@ -191,8 +228,35 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
     return sort.direction === 'asc' ? 'arrow_upward' : 'arrow_downward';
   }
 
+  /** table-mode column widths free-flow (`table-layout: auto`, like a plain HTML table — no
+   *  width on an unconfigured column) until the FIRST resize, at which point the whole table
+   *  commits to `table-layout: fixed` (needed for a resize to be precise/unbounded rather than
+   *  capped by the browser's auto-layout algorithm) — see `onResizeStart`'s capture step below.
+   *  Derived from the engine, not a plain local flag, so `resetColumnState()` (column panel
+   *  "reset") correctly drops the grid back to free-flow too. */
+  protected readonly isFixedLayout = computed(() => this.instance.hasWidthOverrides());
+
+  private readonly headerCellRefs = viewChildren<ElementRef<HTMLTableCellElement>>('headerCellEl');
+
+  /** Freezes every currently-unsized, currently-visible column at its CURRENT natural
+   *  (auto-layout-computed) rendered width — called once, right before the table commits to
+   *  `table-layout: fixed` for the first time, so existing columns don't jump/collapse to an
+   *  arbitrary default the moment fixed layout takes over. Columns that already have an explicit
+   *  `width` (author-configured or already resized) are left untouched. */
+  private captureNaturalColumnWidths(): void {
+    const byKey = new Map(this.instance.visibleColumns().map((c) => [c.key, c]));
+    for (const ref of this.headerCellRefs()) {
+      const key = ref.nativeElement.dataset['columnKey'];
+      const col = key ? byKey.get(key) : undefined;
+      if (!col || col.width) continue;
+      const width = Math.round(ref.nativeElement.getBoundingClientRect().width);
+      this.instance.setColumnWidth(col.key, `${width}px`);
+    }
+  }
+
   private resizeStartWidth = 0;
   protected onResizeStart(headerCell: HTMLElement): void {
+    if (!this.isFixedLayout()) this.captureNaturalColumnWidths();
     this.resizeStartWidth = headerCell.getBoundingClientRect().width;
   }
   protected onResize(column: GridColumn_<RowType>, delta: number): void {
@@ -210,7 +274,30 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
 
   private parseWidthPx(width?: string): number {
     const match = width ? /^(\d+(?:\.\d+)?)px$/.exec(width.trim()) : null;
-    return match ? parseFloat(match[1]) : DEFAULT_PINNED_WIDTH;
+    return match ? parseFloat(match[1]) : DEFAULT_COLUMN_WIDTH;
+  }
+
+  // cached by column key — config (label/type) is stable for a column's lifetime, and this is
+  // consulted from the <colgroup> template binding on every change detection pass.
+  private readonly columnWidthEstimates = new Map<string, string>();
+
+  /** "autoish" rendered width for a column with no explicit/captured width, once already in
+   *  fixed layout — see the COLUMN_WIDTH_ESTIMATE_* constants' doc comment for the reasoning. */
+  protected estimateColumnWidth(column: GridColumn_<RowType>): string {
+    const cached = this.columnWidthEstimates.get(column.key);
+    if (cached) return cached;
+
+    const typical = column.type ? COLUMN_WIDTH_ESTIMATE_BY_TYPE[column.type] : undefined;
+    const labelWidth =
+      (column.label ?? column.key).length * COLUMN_WIDTH_ESTIMATE_CHAR_PX +
+      COLUMN_WIDTH_ESTIMATE_LABEL_PADDING_PX;
+    const estimate = Math.min(
+      COLUMN_WIDTH_ESTIMATE_MAX,
+      Math.max(COLUMN_WIDTH_ESTIMATE_MIN, typical ?? labelWidth),
+    );
+    const width = `${Math.round(estimate)}px`;
+    this.columnWidthEstimates.set(column.key, width);
+    return width;
   }
 
   private readonly leftOffsets = computed(() => {

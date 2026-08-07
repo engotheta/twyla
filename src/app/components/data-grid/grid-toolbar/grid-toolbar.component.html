@@ -1,4 +1,4 @@
-<div class="flex flex-wrap items-center gap-2 py-2">
+<div class="flex flex-wrap items-center gap-2 bg-white p-2 rounded-t-lg">
   @if (!showSearch() && instance().params().label; as label) {
     <h2 class="text-base font-medium flex items-center gap-1 mr-2">
       @if (instance().params().icon; as icon) {
@@ -9,7 +9,10 @@
   }
 
   @if (instance().gridOptions().length) {
-    <mat-button-toggle-group [value]="instance().selectedOptionSlug()" aria-label="Grid view options">
+    <mat-button-toggle-group
+      [value]="instance().selectedOptionSlug()"
+      aria-label="Grid view options"
+    >
       @for (option of instance().gridOptions(); track option.slug) {
         <mat-button-toggle [value]="option.slug" (click)="selectOption(option.slug!)">
           {{ option.label }}
@@ -75,7 +78,9 @@
     </button>
     <mat-menu #exportMenu="matMenu">
       @for (format of exportFormats(); track format) {
-        <button type="button" mat-menu-item (click)="export(format)">{{ format.toUpperCase() }}</button>
+        <button type="button" mat-menu-item (click)="export(format)">
+          {{ format.toUpperCase() }}
+        </button>
       }
     </mat-menu>
   }
@@ -108,6 +113,10 @@
   }
 
   @if (instance().params().buttons?.length) {
-    <action-buttons [data]="instance().state()" [buttons]="instance().params().buttons" [animation]="instance().params().animation" />
+    <action-buttons
+      [data]="instance().state()"
+      [buttons]="instance().params().buttons"
+      [animation]="instance().params().animation"
+    />
   }
 </div>

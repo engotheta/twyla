@@ -7,6 +7,12 @@
 
 html {
   height: 100%;
+  // Chrome computes the root element's own scrollHeight from the union of all descendant boxes'
+  // natural layout extent, even when a nested flex/overflow-auto ancestor (e.g. a contents-view
+  // body-scroll region) already clips and internally scrolls that content — so scrollHeight can
+  // stay inflated, and show a page-level scrollbar, even once every element below body genuinely
+  // fits. All real scrolling here happens in those nested regions, so the root never needs to.
+  overflow: hidden;
   @include mat.theme((
     color: (
       primary: mat.$azure-palette,
@@ -32,6 +38,15 @@ body {
 
   // Reset the user agent margin.
   margin: 0;
+  height: 100%;
+}
+
+// app-root is an unstyled custom element (display: inline / height: auto by default), which
+// breaks the html/body height:100% chain right before it reaches app.html's `<main class="h-full">`
+// — without this, `h-full` resolves against an indefinite height and falls back to auto, so `<main>`
+// grows to fit its content instead of being capped, and the page gains an unwanted scrollbar.
+app-root {
+  display: block;
   height: 100%;
 }
 /* You can add global styles to this file, and also import other style files */

@@ -23,7 +23,11 @@
   @let arrayConfig = effectiveArrayConfig();
   @let groupClass = resolvedIsArrayItem() ? arrayConfig?.groupClass : groupConfig?.class;
 
-  <div class="{{ 'relative' | mergeClasses: groupClass | mergeClasses: g.class ?? '' }}">
+  <div
+    class="{{
+      'relative bg-white p-4 rounded-lg' | mergeClasses: groupClass | mergeClasses: g.class ?? ''
+    }}"
+  >
     @if (g.icon && resolvedShowBgIconMark()) {
       <bg-icon-mark [icon]="g.icon" [animation]="resolvedAnimation()" />
     }
@@ -181,7 +185,7 @@
 
                 <!-- array  tabublar -->
                 @else if (f.fieldGroups?.length && f.tabular) {
-                  <data-grid [parameter]="tabularGridParameter(f, cellTpl, actionsTpl)" />
+                  <data-grid [params]="tabularGridParameter(f, cellTpl, actionsTpl)" />
 
                   <ng-template #cellTpl let-row let-column="column">
                     @if (cellField(row, column.key); as cf) {
@@ -220,7 +224,7 @@
 
                   @if (isArrayPaginated(f)) {
                     <mat-paginator
-                      [length]="f.fieldGroups?.length ?? 0"
+                      [length]="$any(f.fieldGroups)?.length ?? 0"
                       [pageSize]="pageSizeFor(f)"
                       [pageIndex]="pageIndexFor(f)"
                       [hidePageSize]="true"
