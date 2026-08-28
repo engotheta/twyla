@@ -61,8 +61,9 @@ interface ContentViewBase extends ContentsLayout {
   badge?: string | number | Observable<string | number>;
 
   /** action buttons rendered in this content's own header, alongside label/icon/badge — reuses
-   *  `ActionButtonsComponent` verbatim (data passed to each button is this `ContentView`). Never
-   *  suppressed by `showFullHeaderInTabs` — unlike label/icon, action buttons always show. */
+   *  `ActionButtonsComponent` verbatim (data passed to each button is this `ContentView`). Under
+   *  `header: 'auto'` in tabs mode these are the ONLY thing that makes the panel header appear
+   *  (label/icon/badge are suppressed there); only `header: 'none'` hides them outright. */
   actionButtons?: DynamicValue<ActionButton<ContentView>[], ContentView>;
 
   /** hides this content (and its tab, if shown in tabs) entirely; default true */
@@ -92,13 +93,15 @@ interface ContentViewBase extends ContentsLayout {
   /** fires when this content is activated (tabs mode only) */
   onActive?: (content: ContentView, siblings: ContentView[]) => void;
 
-  /** When this content is shown as a tab (its PARENT has `showContentsInTabs: true`), its own
-   *  header's label+icon are suppressed by default — the tab toggle button right above it
-   *  already shows label+icon+badge, so repeating them above the body reads as redundant. Set
-   *  true to show the FULL header (label+icon+badge+actionButtons) even while active as a tab.
-   *  Badge and actionButtons are never suppressed by this flag, only label+icon are. No effect
-   *  outside tabs mode — list mode always shows the full header. Default false. */
-  showFullHeaderInTabs?: boolean;
+  /** controls this content's own header row (the label/icon/badge/actionButtons strip above its
+   *  body). Default `'auto'`.
+   *  - `'auto'`: list mode shows the full header; while shown as a tab the panel header appears
+   *    ONLY when the content has `actionButtons` — label/icon/badge are suppressed there since
+   *    the tab toggle button right above already shows them.
+   *  - `'full'`: always show the full header (label+icon+badge+actionButtons), even while active
+   *    as a tab.
+   *  - `'none'`: render nothing above the body, in both tabs and list mode. */
+  header?: 'auto' | 'full' | 'none';
 
   /** child contents — always available, on every variant, not just `'group'`. A node
    *  can both render its own view (a grid, a form, ...) AND have its own nested

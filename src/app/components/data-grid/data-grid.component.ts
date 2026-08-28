@@ -1,5 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -11,6 +12,7 @@ import {
   OnInit,
   output,
   signal,
+  viewChild,
   viewChildren,
 } from '@angular/core';
 import {
@@ -148,13 +150,53 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
 
   private clickCounts = new Map<unknown, number>();
 
+  constructor() {
+    // Keep `headerRowOffsets` in sync with the rendered header's real height so grouped
+    // header rows stack (each sticks below the previous) instead of piling up at top: 0.
+    afterNextRender(() => {
+      const thead = this.theadEl()?.nativeElement;
+      if (!thead) return;
+      this.measureHeaderRows();
+      if (typeof ResizeObserver === 'undefined') return;
+      this.headerResizeObserver = new ResizeObserver(() => this.measureHeaderRows());
+      this.headerResizeObserver.observe(thead);
+    });
+  }
+
   ngOnInit(): void {
     this.instance = this.engine.build(this.params, this.injector);
     this.instanceChange.emit(this.instance);
   }
 
   ngOnDestroy(): void {
+    this.headerResizeObserver?.disconnect();
     this.instance?.destroy();
+  }
+
+  // ── sticky column headers ──
+  // The table body scrolls vertically inside the `overflow-auto` wrapper in the template;
+  // `thead th` is `position: sticky` (data-grid.component.scss) so the header row(s) stay put.
+  // `top` per header row is measured here rather than assumed, so a wrapped or grouped header
+  // still stacks correctly.
+
+  private readonly theadEl = viewChild<ElementRef<HTMLTableSectionElement>>('theadEl');
+  private headerResizeObserver?: ResizeObserver;
+  private readonly headerRowOffsets = signal<readonly number[]>([0]);
+
+  private measureHeaderRows(): void {
+    const thead = this.theadEl()?.nativeElement;
+    if (!thead) return;
+    const offsets: number[] = [];
+    let cursor = 0;
+    for (const tr of Array.from(thead.rows)) {
+      offsets.push(cursor);
+      cursor += tr.getBoundingClientRect().height;
+    }
+    this.headerRowOffsets.set(offsets.length ? offsets : [0]);
+  }
+
+  protected headerRowTop(rowIndex: number): string {
+    return `${this.headerRowOffsets()[rowIndex] ?? 0}px`;
   }
 
   protected readonly showToolbar = computed(() => {

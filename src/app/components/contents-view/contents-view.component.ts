@@ -4,7 +4,6 @@ import {
   Component,
   computed,
   effect,
-  ElementRef,
   input,
   OnInit,
   output,
@@ -13,6 +12,7 @@ import {
 } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTabsModule } from '@angular/material/tabs';
 import { combineLatest, isObservable, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { ActionButtonsComponent } from '../action-buttons/action-buttons.component';
@@ -22,6 +22,7 @@ import { DetailsComponent } from '../details/details.component';
 import { GenericFormComponent } from '../generic-form';
 import { mergeClasses } from '../details/util/class-name/class-name.helpers';
 import { ContentsViewInstance, ContentsParameter, ContentView } from './contents.interface';
+import { SlidingTabIndicatorDirective } from './sliding-tab-indicator.directive';
 
 /** one resolved content, ready to render — `visible`/`disabled`/`badge`/`html`
  *  (DynamicValue/Observable-driven) already settled into plain current values */
@@ -58,6 +59,8 @@ function flattenContents(contents: ContentView[]): ContentView[] {
     NgComponentOutlet,
     NgTemplateOutlet,
     MatIconModule,
+    MatTabsModule,
+    SlidingTabIndicatorDirective,
     ActionButtonsComponent,
     DataGridComponent,
     DetailsComponent,
@@ -148,24 +151,6 @@ export class ContentsViewComponent implements OnInit {
     this.params().tabsOrientation === 'vertical' ? 'vertical' : 'horizontal',
   );
 
-  /** ALWAYS-applied structural layout (sidebar-left vertical vs row-on-top horizontal) for the
-   *  tablist+panels wrapper. `h-full min-h-0`, fitIntoView() only: lets the tablist (natural size)
-   *  and `.contents-view-panels` (fills the rest) correctly split a BOUNDED total height; with no
-   *  bound requested, this wrapper (like everything below it) just grows to its natural height. */
-  protected readonly tabsStructureClass = computed(() => {
-    const vertical = this.tabsOrientation() === 'vertical';
-    return [
-      vertical
-        ? 'contents-view-tabs-structure-vertical'
-        : 'contents-view-tabs-structure-horizontal',
-      'flex',
-      vertical ? 'flex-row items-stretch' : 'flex-col',
-      this.fitIntoView() ? 'h-full min-h-0' : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
-  });
-
   /** presents/arranges the tab toggle-button row only. Structural orientation styling (flex-
    *  direction + divider border) is computed directly from `tabsOrientation()` here, rather than
    *  a `> .contents-view-tablist { ... }` SCSS parent-combinator rule — unnecessary since
@@ -183,7 +168,7 @@ export class ContentsViewComponent implements OnInit {
     );
 
     const rounding =
-      activeRc && this.showsHeader(activeRc) ? 'rounded-t-lg mb-[1px]' : 'rounded-lg mb-2';
+      activeRc && this.showsHeader(activeRc) ? 'rounded-lg mb-2' : 'rounded-t-lg mb-[1px]';
 
     const structural = [
       'contents-view-tablist bg-white ',
@@ -196,33 +181,6 @@ export class ContentsViewComponent implements OnInit {
 
     return mergeClasses(structural, this.params().tabsContainerClass ?? '');
   });
-
-  /** every tab toggle button's class list. `contents-view-tab`/`contents-view-tab--active` remain
-   *  plain class-name tokens (not Tailwind utilities) — the residual SCSS's
-   *  `.contents-view-tab.contents-view-tab--active`/`:focus-visible` rules still target them by
-   *  name. No explicit font/color "inherit" utilities: Tailwind's Preflight already resets
-   *  `button` elements to inherit font and color from their ancestors. */
-  protected tabButtonClass(rc: ResolvedContent): string {
-    const active = rc.content.slug === this.effectiveActiveSlug();
-    return (
-      'contents-view-tab inline-flex items-center gap-1 px-3 py-2 border-none bg-transparent ' +
-      'cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed' +
-      (active ? ' contents-view-tab--active text-blue-400 ' : '')
-    );
-  }
-
-  /** min-width:0 (both orientations, not just the vertical flex-row case): without it, a wide
-   *  descendant (e.g. a data-grid with a resized column) grows THIS box to fit rather than being
-   *  clipped/scrolled locally — the classic "flex/grid item won't shrink below content" default.
-   *  `flex-auto` (`flex: 1 1 auto`, NOT `flex-1`/`flex: 1 1 0%`) preserves the original rule's
-   *  flex-basis. `min-h-0`, fitIntoView() only, is the same fix on the vertical axis — applied
-   *  regardless of orientation (harmless where it isn't strictly needed), matching this
-   *  component's own existing min-width:0 precedent/rationale. */
-  protected readonly panelsClass = computed(() =>
-    ['contents-view-panels', 'min-w-0 flex-auto', this.fitIntoView() ? 'min-h-0' : '']
-      .filter(Boolean)
-      .join(' '),
-  );
 
   /** every content's own wrapper (list item or tab panel). `min-w-0` (existing horizontal fix)
    *  always applies; `flex flex-col h-full min-h-0`, fitIntoView() only, turns it into the
@@ -244,19 +202,6 @@ export class ContentsViewComponent implements OnInit {
       mergeClasses(this.itemBaseClass(), this.params().contentsClass ?? ''),
       rc.content.class ?? '',
     );
-  }
-
-  /** tab-panel variant of `listItemClass`: an inactive (but mounted, per
-   *  `preserveInactiveContent`) panel gets plain `'hidden'` instead of the merged flex/grid
-   *  classes — deliberately at the STRING level, rather than adding a `hidden` class alongside
-   *  `flex`/`grid` ones and relying on the native `[hidden]` attribute to win: `[hidden]`'s
-   *  `display:none` comes from the user-agent stylesheet, and author-origin CSS (any Tailwind
-   *  utility class) always wins over user-agent-origin CSS regardless of source order — so once
-   *  this wrapper carries a real `flex`/`grid` class, `[hidden]` alone can no longer reliably hide
-   *  it. The `[hidden]` attribute (template, unchanged) stays too, redundantly, for native
-   *  hidden-content semantics (find-in-page, print, assistive tech). */
-  protected panelItemClass(rc: ResolvedContent): string {
-    return rc.content.slug === this.effectiveActiveSlug() ? this.listItemClass(rc) : 'hidden';
   }
 
   /** every content's own body-scroll region (see the `#contentBody` template) — wraps the
@@ -289,7 +234,7 @@ export class ContentsViewComponent implements OnInit {
   protected headerClass(rc: ResolvedContent): string {
     const structural = [
       'flex items-center gap-1 font-medium flex-none bg-white p-2 mb-2',
-      this.params().showContentsInTabs ? 'rounded-b-lg' : 'rounded-lg',
+      this.params().showContentsInTabs ? 'rounded-lg' : 'rounded-lg',
     ].join(' ');
 
     return mergeClasses(
@@ -324,78 +269,44 @@ export class ContentsViewComponent implements OnInit {
     mergeClasses(this.defaultContentsContainerClass(), this.params().contentsContainerClass ?? ''),
   );
 
-  /** unique-enough per-mount id prefix for tab/panel ARIA id pairs. */
-  private readonly instanceId = `contents-view-${Math.random().toString(36).slice(2)}`;
-
-  protected tabId(rc: ResolvedContent, index: number): string {
-    return `${this.instanceId}-tab-${rc.content.slug ?? index}`;
-  }
-  protected panelId(rc: ResolvedContent, index: number): string {
-    return `${this.instanceId}-panel-${rc.content.slug ?? index}`;
-  }
-
-  /** every slug that has been the active tab at least once — panels for these stay mounted
-   *  (subject to `preserveInactiveContent`) instead of being torn down, re-implementing what
-   *  Material's `preserveContent`/`matTabContent` used to give for free. */
-  private readonly everActivatedSlugs = signal<ReadonlySet<string | undefined>>(new Set());
-
-  protected isPanelMounted(rc: ResolvedContent): boolean {
-    const slug = rc.content.slug;
-    if (slug === this.effectiveActiveSlug()) return true;
-    if (!(this.params().preserveInactiveContent ?? true)) return false;
-    return this.everActivatedSlugs().has(slug);
-  }
-
-  /** whether THIS content's own header should show its label/icon — suppressed by default while
-   *  shown as a tab (the tab toggle button already shows label/icon/badge), unless overridden. */
+  /** whether THIS content's own header should show its label/icon/badge — suppressed by default
+   *  while shown as a tab (the tab toggle button already shows label/icon/badge), unless
+   *  `header: 'full'`. */
   protected showHeaderLabelIcon(content: ContentView): boolean {
-    return !this.params().showContentsInTabs || !!content.showFullHeaderInTabs;
+    if (content.header === 'full') return true;
+    return !this.params().showContentsInTabs;
   }
 
-  /** widened header gate: label-or-icon (when not suppressed) || badge || actionButtons — vs.
-   *  the label-only gate this used to have. */
+  /** whether THIS content renders a header row at all.
+   *  - `header: 'none'` → never.
+   *  - `'auto'` while shown as a tab → only when there are `actionButtons`; the tab toggle
+   *    button already carries label/icon/badge, so a panel header with just those is redundant.
+   *  - otherwise (`'full'`, or `'auto'` in list mode) → whenever there's a label, icon, badge
+   *    or actionButtons to show. */
   protected showsHeader(rc: ResolvedContent): boolean {
-    const hasLabelOrIcon =
-      this.showHeaderLabelIcon(rc.content) && !!(rc.content.label || rc.content.icon);
+    const content = rc.content;
+    if (content.header === 'none') return false;
+
+    const hasActionButtons = !!content.actionButtons;
+    if (content.header !== 'full' && this.params().showContentsInTabs) return hasActionButtons;
+
     const hasBadge = rc.badge !== undefined && rc.badge !== null && rc.badge !== '';
-    return hasLabelOrIcon || hasBadge || !!rc.content.actionButtons;
+    return !!(content.label || content.icon) || hasBadge || hasActionButtons;
   }
 
-  protected onTabClick(rc: ResolvedContent): void {
-    this.activateContent(rc.content);
-  }
-
-  private readonly tabButtons = viewChildren<ElementRef<HTMLButtonElement>>('tabButton');
-
-  /** WAI-ARIA APG "Tabs Pattern" roving-tabindex keyboard handling: arrow keys move focus AND
-   *  activate (automatic activation, matching the old click-to-switch-immediately UX), wrapping
-   *  at the ends; Home/End jump to the first/last enabled tab. Enter/Space activation and Tab-key
-   *  sequencing (skipping inactive tabs) come for free from native `<button>`/roving `tabindex`. */
-  protected onTablistKeydown(event: KeyboardEvent): void {
-    const enabled = this.visibleContents().filter((rc) => !rc.disabled);
-    if (!enabled.length) return;
-    const vertical = this.tabsOrientation() === 'vertical';
-    const nextKey = vertical ? 'ArrowDown' : 'ArrowRight';
-    const prevKey = vertical ? 'ArrowUp' : 'ArrowLeft';
-
-    let target: ResolvedContent | undefined;
-    if (event.key === nextKey || event.key === prevKey) {
-      const idx = enabled.findIndex((rc) => rc.content.slug === this.effectiveActiveSlug());
-      const delta = event.key === nextKey ? 1 : -1;
-      target = enabled[(idx + delta + enabled.length) % enabled.length];
-    } else if (event.key === 'Home') {
-      target = enabled[0];
-    } else if (event.key === 'End') {
-      target = enabled[enabled.length - 1];
-    } else {
-      return;
-    }
-    event.preventDefault();
-    this.activateContent(target.content);
-    const focusIndex = this.visibleContents().findIndex(
-      (rc) => rc.content.slug === target!.content.slug,
+  /** index of `effectiveActiveSlug()` within `visibleContents()`, for `<mat-tab-group>`'s own
+   *  `[selectedIndex]` — mat-tab-group's keyboard handling (roving tabindex, Home/End, disabled-tab
+   *  skipping) replaces the old hand-rolled `onTablistKeydown`. */
+  protected readonly selectedTabIndex = computed(() => {
+    const index = this.visibleContents().findIndex(
+      (rc) => rc.content.slug === this.effectiveActiveSlug(),
     );
-    this.tabButtons()[focusIndex]?.nativeElement.focus();
+    return index >= 0 ? index : 0;
+  });
+
+  protected onSelectedTabIndexChange(index: number): void {
+    const rc = this.visibleContents()[index];
+    if (rc && !rc.disabled) this.activateContent(rc.content);
   }
 
   // outputs wiring for dynamically-hosted `componentParams.component` instances —
@@ -424,12 +335,6 @@ export class ContentsViewComponent implements OnInit {
           }
         }
       });
-    });
-
-    effect(() => {
-      const slug = this.effectiveActiveSlug();
-      if (this.everActivatedSlugs().has(slug)) return;
-      this.everActivatedSlugs.update((set) => new Set(set).add(slug));
     });
   }
 

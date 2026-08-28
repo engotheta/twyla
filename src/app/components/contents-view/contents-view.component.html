@@ -1,24 +1,18 @@
 @if (params().showContentsInTabs) {
-  <div [class]="tabsStructureClass()">
-    <div
-      [class]="tablistClass()"
-      role="tablist"
-      [attr.aria-orientation]="tabsOrientation()"
-      (keydown)="onTablistKeydown($event)"
-    >
-      @for (rc of visibleContents(); track trackContent($index, rc)) {
-        <button
-          #tabButton
-          type="button"
-          role="tab"
-          [id]="tabId(rc, $index)"
-          [attr.aria-selected]="rc.content.slug === effectiveActiveSlug()"
-          [attr.aria-controls]="panelId(rc, $index)"
-          [attr.tabindex]="rc.content.slug === effectiveActiveSlug() ? 0 : -1"
-          [disabled]="rc.disabled"
-          [class]="tabButtonClass(rc)"
-          (click)="onTabClick(rc)"
-        >
+  <mat-tab-group
+    slidingTabIndicator
+    [tabHeaderClass]="tablistClass()"
+    class="contents-view-tab-group"
+    [class.contents-view-tabs-vertical]="tabsOrientation() === 'vertical'"
+    [class.h-full]="fitIntoView()"
+    [class.min-h-0]="fitIntoView()"
+    [preserveContent]="params().preserveInactiveContent ?? true"
+    [selectedIndex]="selectedTabIndex()"
+    (selectedIndexChange)="onSelectedTabIndexChange($event)"
+  >
+    @for (rc of visibleContents(); track trackContent($index, rc)) {
+      <mat-tab [disabled]="rc.disabled">
+        <ng-template mat-tab-label>
           @if (rc.content.icon) {
             <mat-icon class="!text-base" aria-hidden="true">{{ rc.content.icon }}</mat-icon>
           }
@@ -28,34 +22,21 @@
           @if (rc.badge !== undefined && rc.badge !== null && rc.badge !== '') {
             <span class="ml-1 rounded-full bg-black/10 px-1.5 text-xs">{{ rc.badge }}</span>
           }
-        </button>
-      }
-    </div>
+        </ng-template>
 
-    <div [class]="panelsClass()">
-      @for (rc of visibleContents(); track trackContent($index, rc)) {
-        @if (isPanelMounted(rc)) {
-          <div
-            role="tabpanel"
-            [id]="panelId(rc, $index)"
-            [attr.aria-labelledby]="tabId(rc, $index)"
-            tabindex="0"
-            [hidden]="rc.content.slug !== effectiveActiveSlug()"
-            [class]="panelItemClass(rc)"
-          >
-            <ng-container
-              [ngTemplateOutlet]="header"
-              [ngTemplateOutletContext]="{ $implicit: rc }"
-            />
-            <ng-container
-              [ngTemplateOutlet]="contentBody"
-              [ngTemplateOutletContext]="{ $implicit: rc }"
-            />
-          </div>
-        }
-      }
-    </div>
-  </div>
+        <div [class]="listItemClass(rc)">
+          <ng-container
+            [ngTemplateOutlet]="header"
+            [ngTemplateOutletContext]="{ $implicit: rc }"
+          />
+          <ng-container
+            [ngTemplateOutlet]="contentBody"
+            [ngTemplateOutletContext]="{ $implicit: rc }"
+          />
+        </div>
+      </mat-tab>
+    }
+  </mat-tab-group>
 } @else {
   <div [class]="contentsContainerClass()">
     @for (rc of visibleContents(); track trackContent($index, rc)) {
@@ -81,9 +62,9 @@
           <mat-icon class="!text-base" aria-hidden="true">{{ rc.content.icon }}</mat-icon>
         }
         <span>{{ rc.content.label }}</span>
-      }
-      @if (rc.badge !== undefined && rc.badge !== null && rc.badge !== '') {
-        <span class="ml-1 rounded-full bg-black/10 px-1.5 text-xs">{{ rc.badge }}</span>
+        @if (rc.badge !== undefined && rc.badge !== null && rc.badge !== '') {
+          <span class="ml-1 rounded-full bg-black/10 px-1.5 text-xs">{{ rc.badge }}</span>
+        }
       }
       @if (rc.content.actionButtons) {
         <action-buttons

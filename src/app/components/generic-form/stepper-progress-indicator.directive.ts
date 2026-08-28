@@ -10,6 +10,13 @@ import {
 import { MatStepper } from '@angular/material/stepper';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
+import {
+  claimPersistedSelectionKey,
+  normalizeLabel,
+  readPersistedSelection,
+  releasePersistedSelectionKey,
+  writePersistedSelection,
+} from '../contents-view/persisted-selection.util';
 
 @Directive({
   selector: '[stepperProgressIndicator]',
@@ -26,10 +33,12 @@ export class StepperProgressIndicatorDirective implements AfterViewInit, OnDestr
   private bar!: HTMLElement;
   private observer?: MutationObserver;
   private pending = false;
-  private groupKey!: string;
+  private persistKey?: string;
 
   ngAfterViewInit() {
-    this.setInitialActive();
+    // restoring must happen inside the Angular zone (unlike the bar/RAF work below) so setting
+    // `stepper.selectedIndex` actually triggers change detection and Material re-renders the step
+    this.restoreActiveStep();
 
     this.ngZone.runOutsideAngular(() => {
       this.createBar();
@@ -42,35 +51,37 @@ export class StepperProgressIndicatorDirective implements AfterViewInit, OnDestr
     this.destroy$.next();
     this.destroy$.complete();
     this.observer?.disconnect();
+    if (this.persistKey) releasePersistedSelectionKey(this.persistKey);
   }
 
-  private setInitialActive() {
-    // const headers = Array.from(
-    //   this.el.nativeElement.querySelectorAll('.mat-horizontal-stepper-header'),
-    // ) as HTMLElement[];
-    // if (!headers.length) return;
-    // const url = this.router.url;
-    // let groupKey = url.split('/').pop() ?? 'stepper';
-    // headers.forEach((h) => {
-    //   groupKey += `-${slugify(h.textContent?.trim() || '')}`;
-    // });
-    // this.groupKey = groupKey;
-    // const info = this.vs.getLocationInfo(url);
-    // const activeLabel = info?.variables?.[this.groupKey];
-    // if (!activeLabel) return;
-    // headers.forEach((header, index) => {
-    //   if (!header.textContent?.trim().includes(activeLabel)) return;
-    //   this.stepper.selectedIndex = index;
-    // });
+  private headerElements(): HTMLElement[] {
+    return Array.from(
+      this.el.nativeElement.querySelectorAll('.mat-horizontal-stepper-header'),
+    ) as HTMLElement[];
+  }
+
+  private restoreActiveStep() {
+    const headers = this.headerElements();
+    if (!headers.length) return;
+
+    this.persistKey = claimPersistedSelectionKey(
+      'stepper',
+      this.router.url,
+      headers.map((h) => h.textContent ?? ''),
+    );
+
+    const saved = readPersistedSelection(this.persistKey);
+    if (!saved) return;
+
+    const index = headers.findIndex((h) => normalizeLabel(h.textContent) === saved);
+    if (index >= 0) this.stepper.selectedIndex = index;
   }
 
   private recordActive(index: number) {
-    // const headers = Array.from(
-    //   this.el.nativeElement.querySelectorAll('.mat-horizontal-stepper-header'),
-    // ) as HTMLElement[];
-    // const active = headers[index];
-    // if (!active) return;
-    // this.vs.setLocInfo('variables', { [this.groupKey]: active.textContent.trim() });
+    if (!this.persistKey) return;
+    const headers = this.headerElements();
+    const active = headers[index];
+    if (active) writePersistedSelection(this.persistKey, normalizeLabel(active.textContent));
   }
 
   // ------------------------------------
@@ -133,9 +144,7 @@ export class StepperProgressIndicatorDirective implements AfterViewInit, OnDestr
   // ------------------------------------
 
   private update() {
-    const headers = Array.from(
-      this.el.nativeElement.querySelectorAll('.mat-horizontal-stepper-header'),
-    ) as HTMLElement[];
+    const headers = this.headerElements();
 
     if (!headers.length) return;
 

@@ -36,7 +36,8 @@
     <!-- stepperAppearance has no matching Material input on mat-stepper; exposed as a class
          hook only, for apps that want to style it themselves -->
     <mat-stepper
-      class="app-form-stepper-{{ p.stepperAppearance ?? 'default' }}"
+      stepperProgressIndicator
+      class="mat-horizontal-stepper-wrapper app-form-stepper-{{ p.stepperAppearance ?? 'default' }}"
       [linear]="p.linearSteppers ?? false"
       [orientation]="p.stepperOrientation ?? 'horizontal'"
       [labelPosition]="p.stepperLabelPosition ?? 'end'"

@@ -62,7 +62,7 @@ export const contentsParameter: ContentsParameter = {
           badge: 'Live',
           gridParams: gridParameter,
           // keeps its icon/label/badge visible above the grid even while active as a tab
-          showFullHeaderInTabs: true,
+          header: 'full',
         },
         {
           type: 'table',

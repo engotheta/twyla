@@ -25,6 +25,7 @@ import { FormEngineService, FormInstance } from './form-engine.service';
 import { FormField, isStepField, isValueField } from './interfaces/form-field.interface';
 import { FormParameter } from './interfaces/form-parameter.interface';
 import { StepState } from './interfaces/form-state.interface';
+import { StepperProgressIndicatorDirective } from './stepper-progress-indicator.directive';
 
 /** one rendered step: either a real StepField, or the synthetic step collecting non-step outer
  *  fields when the form mixes steps and plain fields (SPEC §5) */
@@ -56,6 +57,7 @@ interface DisplayStep {
     MatIconModule,
     MatDialogModule,
     MatStepperModule,
+    StepperProgressIndicatorDirective,
     FieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

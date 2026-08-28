@@ -4,6 +4,16 @@
 // Learn more about theming and how to use it for your application's
 // custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
+// Design tokens the two overrides below consume — loaded first so they're defined before anything
+// reads them (custom-property resolution doesn't actually require declaration order, but this
+// reads better).
+// Global (not component-scoped) on purpose — Angular's view encapsulation can't reach into
+// Angular Material's own internal DOM (.mat-mdc-tab-header, .mat-horizontal-stepper-header-container,
+// ...) from a `styleUrl` scoped to the consuming component, same reasoning as `.hide-subscript` below.
+@use './app/components/contents-view/variables';
+@use './app/components/contents-view/material-tabs-group';
+@use './app/components/generic-form/material-stepper';
+@use './app/components/generic-form/material-form-field';
 
 html {
   height: 100%;
@@ -13,14 +23,16 @@ html {
   // stay inflated, and show a page-level scrollbar, even once every element below body genuinely
   // fits. All real scrolling here happens in those nested regions, so the root never needs to.
   overflow: hidden;
-  @include mat.theme((
-    color: (
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
+  @include mat.theme(
+    (
+      color: ( 
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
 }
 
 body {
@@ -50,13 +62,3 @@ app-root {
   height: 100%;
 }
 /* You can add global styles to this file, and also import other style files */
-
-// generic-form: FormParameter.showSubscript / FormField.showSubscript (default true) — hides
-// a mat-form-field's reserved bottom hint/error strip. There's no Material API to remove this
-// element (only `subscriptSizing`, which just changes whether it reserves fixed vs. dynamic
-// height — it's never removed from the DOM), so this has to be a raw CSS toggle. Global (not
-// component-scoped) because Angular's view encapsulation can't reach into Material's own
-// internal `.mat-mdc-form-field-subscript-wrapper` markup from a consuming component's styles.
-.hide-subscript .mat-mdc-form-field-subscript-wrapper {
-  display: none;
-}

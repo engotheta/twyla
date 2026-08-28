@@ -1,3 +1,11 @@
+:root {
+  --mat-tab-container-height: 42px;
+  --mat-tab-pagination-icon-color: var(--color-black);
+  --mat-tab-active-label-text-color: var(--color-white_);
+  --mat-tab-inactive-label-text-color: var(--color-white_);
+  --mat-tab-container-height: 42px;
+}
+
 // mat tabs
 .mat-mdc-tab-group {
   .mat-mdc-tab-header {
@@ -15,11 +23,26 @@
 
   .mat-mdc-tab-body-wrapper {
     flex-grow: 1;
+    min-height: 0;
   }
 
   .mat-mdc-tab-body-content {
     display: flex;
     flex-direction: column;
+  }
+
+  // Fit mode — contents-view puts `h-full` on the group (see contents-view.component.html).
+  // Whatever fills a tab panel (a `.contents-view-body` scroll region, or an embedded
+  // `<data-grid>` with its own internal scroller) owns vertical scrolling. Material defaults
+  // `.mat-mdc-tab-body-active` to `overflow-y: auto`, which otherwise surfaces a second,
+  // outer scrollbar — and holds a stale `scrollHeight` after a tab switch. Clip the tab
+  // shell so only the inner region scrolls. Non-fit mode keeps Material's `auto` (the whole
+  // page scrolls as one unit).
+  &.h-full {
+    .mat-mdc-tab-body,
+    .mat-mdc-tab-body-content {
+      overflow: hidden;
+    }
   }
 
   .mat-mdc-tab-header-pagination {
@@ -57,12 +80,12 @@
     }
 
     &.mdc-tab--active:hover .mdc-tab__text-label {
-      color: var(--color-white_);
+      color: var(--color-white);
     }
 
     &.mdc-tab--active {
       .mdc-tab__text-label {
-        color: var(--color-white_) !important;
+        color: var(--color-white) !important;
       }
 
       .mdc-tab-indicator__content--underline {
@@ -74,6 +97,36 @@
           width 300ms var(--ease-in-out);
       }
     }
+  }
+}
+
+// tabsOrientation: 'vertical' — mat-tab-group has no built-in vertical mode, so this fakes it by
+// turning the group into a row (header on the left, body filling the rest) and stacking the
+// label list into a column. Not an officially-supported Material layout: pagination controls
+// still assume horizontal scrolling and are hidden here rather than fixed up for a column.
+.mat-mdc-tab-group.contents-view-tabs-vertical {
+  flex-direction: row;
+  align-items: stretch;
+
+  > .mat-mdc-tab-header {
+    flex-direction: column;
+    border-right: 1px solid var(--color-neutral);
+    border-bottom: none;
+
+    .mat-mdc-tab-header-pagination {
+      display: none;
+    }
+
+    .mat-mdc-tab-label-container,
+    .mat-mdc-tab-list,
+    .mat-mdc-tab-labels {
+      flex-direction: column;
+    }
+  }
+
+  > .mat-mdc-tab-body-wrapper {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 }
 

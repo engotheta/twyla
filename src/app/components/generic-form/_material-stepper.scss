@@ -1,3 +1,9 @@
+:root {
+  --mat-stepper-header-height: 42px;
+  --mat-stepper-container-color: none;
+  --mat-stepper-header-selected-state-label-text-color: var(--color-dark);
+}
+
 .mat-horizontal-stepper-wrapper {
   display: flex;
   flex-direction: column;
@@ -21,7 +27,7 @@
       margin: auto;
       left: 0;
       right: 0;
-      height: calc(ar(--mat-stepper-header-height) + 6px);
+      height: calc(var(--mat-stepper-header-height) + 6px);
       border: 1px solid var(--color-black-very-faded);
       width: calc(100% - 10px);
       border-radius: 999px; // var(--border-radius);

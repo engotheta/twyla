@@ -7,9 +7,32 @@
   min-height: 0;
 }
 
-th[style*='sticky'],
+// Sticky column headers — the header row(s) stay visible while the body scrolls vertically
+// inside the grid's own `overflow-auto` wrapper (see data-grid.component.html). `top` is set
+// inline per header row (`headerRowTop`) so grouped rows stack instead of overlapping.
+// An opaque background is required or scrolled-under body rows show through.
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fff;
+}
+
+// A border-collapse bottom border can visually drop out mid-scroll; a shadow on the last
+// header row is a reliable divider between the frozen header and the scrolling body.
+thead tr:last-child th {
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+}
+
+// Pinned (horizontally sticky) cells keep their edge shadow. A pinned header cell matches
+// the rule above too; give it both shadows so it reads as frozen on both axes.
 td[style*='sticky'] {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+thead th[style*='sticky'] {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12);
 }
 
 tbody tr:focus-within {
