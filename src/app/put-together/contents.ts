@@ -5,6 +5,7 @@ import { gridParameter } from './data-grid';
 import { gridParameterFetch } from './data-grid-fetch';
 import { detailsParameter } from './details';
 import { getFormParameter } from './form';
+import { userDetails } from './support/data';
 
 const profileActionButtons: ActionButton<ContentView>[] = [
   {
@@ -21,8 +22,14 @@ const profileActionButtons: ActionButton<ContentView>[] = [
   },
 ];
 
+let { users, permissions, tags, ...details } = userDetails;
+
 export const contentsParameter: ContentsParameter = {
   showContentsInTabs: false,
+  contentsFit: 'cover',
+  // drag any gutter to retune the split — width between the two outer panes, height between the
+  // stacked panels inside the left one; cascades to every nested level, persists across reloads
+  resizable: true,
 
   // root-level cascade seed — combines with every nested level's own contentsClass
   // contentsClass: 'ring-1 ring-black/5',
@@ -31,17 +38,41 @@ export const contentsParameter: ContentsParameter = {
     {
       type: 'group',
       slug: 'profile',
-
+      // a single vertical column — `resizable` (inherited from the root) puts a height gutter
+      // between the two stacked panels; no width gutter, since there's only one column
+      contentsContainerClass: 'grid grid-cols-1 lg:grid-cols-1 gap-3',
       contents: [
+        // {
+        //   type: 'details',
+        //   slug: 'profile',
+        //   label: 'Profile',
+        //   icon: 'person',
+        //   badge: 3,
+
+        //   actionButtons: profileActionButtons,
+        //   detailsParams: detailsParameter,
+        // },
         {
           type: 'details',
           slug: 'profile',
           label: 'Profile',
           icon: 'person',
           badge: 3,
-
+          header: 'none',
+          class: 'bg-white rounded-lg',
           actionButtons: profileActionButtons,
-          detailsParams: detailsParameter,
+          detailsParams: { entity: details },
+        },
+
+        {
+          type: 'details',
+          slug: 'other',
+          label: 'Other',
+          icon: 'cart',
+          header: 'none',
+          class: 'bg-white rounded-lg',
+          actionButtons: profileActionButtons,
+          detailsParams: { entity: { users } },
         },
       ],
     },

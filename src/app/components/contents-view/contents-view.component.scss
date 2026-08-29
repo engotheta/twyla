@@ -1,0 +1,72 @@
+// Draggable gutter between resizable panes (ContentsLayout.resizable). One <div> per interior
+// boundary of the grid the container actually rendered, carrying the `panelResize` directive
+// (which adds `.cv-gutter`, `role="separator"`, `tabindex="0"` and `aria-orientation`). The
+// gutters are an absolute overlay on the container (`.relative` when resizing) — they do NOT
+// occupy grid tracks, so the consumer's own `gap` is left intact. The component sets the exact
+// px offset along the varying axis (`left` for a column gutter, `top` for a row gutter); the
+// 50% here is only the pre-measurement fallback. The visible strip is 12px; the ::after pseudo
+// widens the pointer/touch target past it.
+.cv-gutter {
+  position: absolute;
+  z-index: 3;
+  background-color: transparent;
+  transition: background-color 120ms ease;
+
+  &[aria-orientation='vertical'] {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 12px;
+    transform: translateX(-50%);
+    cursor: col-resize;
+    z-index: 4; // wins the crossing with a horizontal gutter → the corner resizes columns
+  }
+  &[aria-orientation='horizontal'] {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 12px;
+    transform: translateY(-50%);
+    cursor: row-resize;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-primary, #2563eb);
+    outline-offset: -1px;
+  }
+
+  // centred grip pill
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.25);
+    border-radius: 9999px;
+  }
+  &[aria-orientation='vertical']::before {
+    width: 3px;
+    height: 24px;
+  }
+  &[aria-orientation='horizontal']::before {
+    width: 24px;
+    height: 3px;
+  }
+
+  // enlarged hit area (does not affect layout)
+  &::after {
+    content: '';
+    position: absolute;
+  }
+  &[aria-orientation='vertical']::after {
+    inset: 0 -4px;
+  }
+  &[aria-orientation='horizontal']::after {
+    inset: -4px 0;
+  }
+}

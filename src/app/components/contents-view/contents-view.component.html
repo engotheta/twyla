@@ -4,8 +4,8 @@
     [tabHeaderClass]="tablistClass()"
     class="contents-view-tab-group"
     [class.contents-view-tabs-vertical]="tabsOrientation() === 'vertical'"
-    [class.h-full]="fitIntoView()"
-    [class.min-h-0]="fitIntoView()"
+    [class.h-full]="isCover()"
+    [class.min-h-0]="isCover()"
     [preserveContent]="params().preserveInactiveContent ?? true"
     [selectedIndex]="selectedTabIndex()"
     (selectedIndexChange)="onSelectedTabIndexChange($event)"
@@ -38,9 +38,15 @@
     }
   </mat-tab-group>
 } @else {
-  <div [class]="contentsContainerClass()">
+  <div
+    #gridContainer
+    [class]="contentsContainerClass()"
+    [class.relative]="resizeActive()"
+    [style.grid-template-columns]="resizeActive() ? gridTemplateColumns() : null"
+    [style.grid-template-rows]="resizeActive() ? gridTemplateRows() : null"
+  >
     @for (rc of visibleContents(); track trackContent($index, rc)) {
-      <div [class]="listItemClass(rc)">
+      <div #cvItem [class]="listItemClass(rc)">
         <!-- HEADER -->
         <ng-container [ngTemplateOutlet]="header" [ngTemplateOutletContext]="{ $implicit: rc }" />
 
@@ -50,6 +56,35 @@
           [ngTemplateOutletContext]="{ $implicit: rc }"
         />
       </div>
+    }
+
+    <!-- Draggable gutters — an absolute overlay (see SCSS); one per interior boundary of the
+         grid the container actually rendered, on each axis that has more than one track. -->
+    @if (resizeReady()) {
+      @for (g of colGutterIndices(); track g) {
+        <div
+          panelResize
+          axis="x"
+          ariaLabel="Resize columns"
+          [valueNow]="colPercent(g)"
+          [style.left.px]="colGutterPos(g)"
+          (resizeStart)="onGutterStart('x', g)"
+          (resize)="onColResize(g, $event)"
+          (resizeEnd)="onGutterEnd()"
+        ></div>
+      }
+      @for (g of rowGutterIndices(); track g) {
+        <div
+          panelResize
+          axis="y"
+          ariaLabel="Resize rows"
+          [valueNow]="rowPercent(g)"
+          [style.top.px]="rowGutterPos(g)"
+          (resizeStart)="onGutterStart('y', g)"
+          (resize)="onRowResize(g, $event)"
+          (resizeEnd)="onGutterEnd()"
+        ></div>
+      }
     }
   </div>
 }
@@ -78,7 +113,7 @@
 </ng-template>
 
 <ng-template #contentBody let-rc>
-  <div [class]="bodyClass(rc)" [attr.tabindex]="fitIntoView() ? 0 : null">
+  <div [class]="bodyClass(rc)" [attr.tabindex]="isCover() ? 0 : null">
     @switch (rc.content.type) {
       @case ('table') {
         <data-grid [params]="rc.content.gridParams" />

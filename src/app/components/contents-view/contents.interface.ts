@@ -40,14 +40,55 @@ export interface ContentsLayout {
   tabsOrientation?: 'horizontal' | 'vertical';
   /** default false */
   showContentsInTabs?: boolean;
-  /** default true: contents fit into the available view and scroll internally;
-   *  false: contents grow as needed and the whole page scrolls */
-  fitContentsIntoView?: boolean;
+  /** How this level's contents use vertical space. Default `'auto'`. Independent per nesting
+   *  level — NOT cascaded (see `nestedParameter`).
+   *  - `'cover'`: contents fit the available bounded height; each content's own body scrolls
+   *    internally (its header/toolbar/paginator stay pinned). The nested-scroll-region model.
+   *  - `'flow'`: contents grow to their natural height and the nearest scrollable ancestor
+   *    scrolls instead — usually the page, unless this mount is nested inside another level's
+   *    `'cover'` body-scroll region. NOTE: needs an ancestor that can actually scroll; provide
+   *    one (the bare app shell here does not).
+   *  - `'auto'`: resolves to `'cover'` at viewport width ≥ Tailwind's `lg` (64rem / 1024px)
+   *    and `'flow'` below, re-resolved live via `matchMedia` — so a multi-pane dashboard fits
+   *    the viewport on desktop but becomes an ordinary scrolling stack on phones/small tablets. */
+  contentsFit?: 'auto' | 'cover' | 'flow';
+  /** default false. When true, and this level lays its contents out as a list/grid (not tabs)
+   *  in the resolved `'cover'` fit with more than one visible content, a draggable gutter appears
+   *  between every adjacent pair of panes — one per interior column boundary AND one per interior
+   *  row boundary of whatever grid `contentsContainerClass` actually renders (MEASURED at
+   *  runtime, never assumed, and never overridden): a single-column stack gets height gutters, a
+   *  two-column grid gets a width gutter, a wrapped grid gets both. Drag or arrow-key a gutter to
+   *  retune how that space is shared. No effect in tabs mode, `'flow'` fit, or with a single
+   *  content. Assumes a CSS-grid container; a non-grid `contentsContainerClass` is best-effort.
+   *  CASCADES to nested levels — set it once on an ancestor and every nested list/grid level is
+   *  resizable too (each still only shows gutters when its own measured layout has >1 track); set
+   *  `resizable: false` on a child to opt that subtree out. See `initialSizes` / `onSizesChange`
+   *  / `persistSizes` and `ContentsViewInstance.sizes`. */
+  resizable?: boolean;
+  /** default true. When `resizable` is on, the dragged pane sizes for this level are persisted
+   *  to `localStorage` (keyed by route + content slugs) and restored on the next visit with no
+   *  wiring. Set false to keep resizing in-memory only for the session. Cascades to nested
+   *  levels like `resizable` (a child sets its own value to override). */
+  persistSizes?: boolean;
   /** default true: an inactive tab's content (esp. a live `formParams`/`gridParams`
    *  embed) stays mounted rather than being destroyed on tab switch — set false to
    *  free resources for a rarely-revisited or expensive tab instead. Only relevant
    *  when `showContentsInTabs` is true. */
   preserveInactiveContent?: boolean;
+}
+
+/**
+ * A persisted/seeded pane-size distribution for a `resizable` contents layout. Each array is a
+ * list of *fractions* — relative weights, e.g. `[1.4, 0.6]` means the first pane gets 70% — not
+ * pixels or percentages. An array is applied only when its length equals that axis' current
+ * measured track count; a layout whose shape changed since it was saved (viewport crossed a
+ * breakpoint, contents added/removed) safely falls back to an equal split for that axis.
+ */
+export interface ContentsSizes {
+  /** column weights, left → right. Length must equal the measured column count. */
+  columns?: number[];
+  /** row-height weights, top → bottom. Length must equal the measured row count. */
+  rows?: number[];
 }
 
 interface ContentViewBase extends ContentsLayout {
@@ -137,7 +178,7 @@ export type ContentView =
  * form, html, component), shown as tabs or a list, recursively nestable via
  * `ContentView.contents` (a `'group'` node's children can themselves be laid out as
  * tabs or a list, independently of their parent). Takes the full available viewport
- * height/width; see `ContentsLayout.fitContentsIntoView` for scroll behavior.
+ * height/width; see `ContentsLayout.contentsFit` for scroll behavior.
  *
  * By default (not in tabs), children render as a two-column list unless overridden
  * via `contentsContainerClass` — likely single-column on mobile via that same class's
@@ -157,6 +198,17 @@ export interface ContentsParameter extends ContentsLayout {
 
   /** fires when the active content changes (tabs mode only) */
   onContentChange?: (content: ContentView | undefined, contents: ContentView[]) => void;
+
+  /** seed a previously-saved pane-size distribution for a `resizable` layout — the counterpart
+   *  to `GridParameter.initialColumnState`. Only the ROOT mount reads this; nested
+   *  `<contents-view>` levels restore from `localStorage` instead (they can't carry a callback).
+   *  A stored `localStorage` value, when present and shape-compatible, wins over this. */
+  initialSizes?: ContentsSizes;
+  /** fires (drag end / arrow-key nudge / `setSizes` / `resetSizes`, never the initial seed)
+   *  with the new pane-size distribution — the counterpart to `GridParameter.onColumnStateChange`.
+   *  Wire your own persistence here if the built-in `localStorage` (`persistSizes`) isn't enough.
+   *  Root mount only. */
+  onSizesChange?: (sizes: ContentsSizes) => void;
 }
 
 /**
@@ -180,4 +232,15 @@ export interface ContentsViewInstance {
   /** activates the content with this slug, among this mount's own top-level siblings;
    *  no-op if not found or not eligible (hidden/disabled) */
   selectContent(slug: string): void;
+
+  /** THIS mount's current pane-size distribution as fraction arrays (`resizable` layouts only;
+   *  an axis is empty when it has no gutter). Mirrors `GridInstance.columnState`. */
+  sizes(): ContentsSizes;
+  /** overwrite the distribution — each axis array is applied only if its length matches the
+   *  current column / row count, otherwise ignored. Persists and fires `onSizesChange`.
+   *  Mirrors `GridInstance.setColumnWidth`. */
+  setSizes(sizes: ContentsSizes): void;
+  /** restore an equal split on both axes. Persists and fires `onSizesChange`.
+   *  Mirrors `GridInstance.resetColumnState`. */
+  resetSizes(): void;
 }
