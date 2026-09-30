@@ -3,14 +3,14 @@ import { RouterOutlet } from '@angular/router';
 import { ActionButtonsComponent } from './components/action-buttons/action-buttons.component';
 import { DataGridComponent } from './components/data-grid';
 import { ContentsViewComponent } from './components/contents-view';
-import { contentsParameter } from './put-together/contents';
+import { getContentsParameter } from './put-together/contents';
 import { gridParameter } from './put-together/data-grid';
 import { getFormParameter } from './put-together/form';
 import { GenericFormComponent } from './components/generic-form';
 import { DetailsComponent } from './components/details/details.component';
 import { detailsParameter } from './put-together/details';
 import { actionButtons } from './put-together/buttons';
-import { gridParameterFetch } from './put-together/data-grid-fetch';
+import { FetchDemoComponent } from './put-together/fetch-demo';
 
 export const applog = signal('');
 
@@ -23,6 +23,7 @@ export const applog = signal('');
     DataGridComponent,
     GenericFormComponent,
     DetailsComponent,
+    FetchDemoComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -33,13 +34,11 @@ export class App {
 
   gridParameter = gridParameter;
 
-  gridParameterFetch = gridParameterFetch;
-
   formParameter = getFormParameter();
 
   detailsParameter = detailsParameter;
 
-  contentsParameter = contentsParameter;
+  contentsParameter = getContentsParameter();
 
   actionButtons = actionButtons;
 }
