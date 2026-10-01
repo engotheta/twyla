@@ -50,8 +50,10 @@ export class FieldValueComponent {
     () => ATTACHMENT_ICONS[this.field().labelIcon as string] ?? 'attach_file',
   );
 
+  /** 0–100 — a number, or a numeric string with a trailing `%` (e.g. `"45%"`, via `parseFloat`) */
   protected readonly percentage = computed(() => {
-    const value = Number(this.field().value);
+    const raw = this.field().value;
+    const value = typeof raw === 'string' ? parseFloat(raw) : Number(raw);
     return Number.isNaN(value) ? 0 : Math.min(100, Math.max(0, value));
   });
 

@@ -70,3 +70,105 @@
     inset: -4px 0;
   }
 }
+
+// ── pane controls (ContentsLayout.collapsible) ──
+
+// collapse / full-screen buttons — compact (32px) round icon buttons, so they fit a header row
+// without growing it; still well over WCAG 2.5.8's 24px minimum target
+.cv-pane-control {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-primary, #2563eb);
+    outline-offset: 1px;
+  }
+
+  mat-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    font-size: 1.25rem;
+  }
+
+  // the last expanded pane's collapse (`keepOneExpanded`) — only the icon dims, so the focus ring
+  // keeps its full contrast
+  &[aria-disabled='true'] {
+    cursor: default;
+
+    &:hover {
+      background-color: transparent;
+    }
+    mat-icon {
+      opacity: 0.38;
+    }
+  }
+}
+
+// a collapsed pane: one button restoring it — a thin row strip, or a narrow column strip whose
+// label runs top to bottom
+.cv-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  // a surface of its own, so the strip reads as a control even on a pane with no background
+  background-color: #fff;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-primary, #2563eb);
+    outline-offset: -2px;
+  }
+}
+.cv-strip-row {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  text-align: start;
+
+  .cv-strip-restore {
+    margin-inline-start: auto;
+  }
+}
+.cv-strip-column {
+  flex-direction: column;
+  width: 2.5rem;
+  height: 100%;
+  padding: 0.75rem 0;
+
+  .cv-strip-label {
+    writing-mode: vertical-rl;
+  }
+  .cv-strip-restore {
+    margin-block-start: auto;
+  }
+}
+.cv-strip-icon,
+.cv-strip-restore {
+  flex: none;
+}
+.cv-strip-label {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

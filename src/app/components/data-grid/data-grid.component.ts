@@ -26,7 +26,6 @@ import {
 } from '@angular/cdk/drag-drop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -34,6 +33,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActionButtonsComponent } from '../action-buttons/action-buttons.component';
 import { mergeClasses } from '../details/util/class-name/class-name.helpers';
+import { ViewService } from '../view';
 import { ColumnResizeDirective } from './column-resize.directive';
 import { GridCellComponent } from './grid-cell/grid-cell.component';
 import { GridRow } from './interfaces/grid-cell.interface';
@@ -54,7 +54,7 @@ import { GridParameter } from './interfaces/grid-parameter.interface';
 import { getCellValue } from './helpers/grid-row.helpers';
 import { GridRowDetailComponent } from './grid-row-detail/grid-row-detail.component';
 import { GridToolbarComponent } from './grid-toolbar/grid-toolbar.component';
-import { ROW_DETAILS_COMPONENT, RowDetailsDialogData } from './row-details.token';
+import { ROW_DETAILS_COMPONENT, RowDetailsParams } from './row-details.token';
 
 const DEFAULT_SIZE_OPTIONS = [10, 25, 50, 100, 200, 500, 1000];
 /** Fallback for pinned-column sticky-offset math (`parseWidthPx`) when a column has no explicit
@@ -133,7 +133,7 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
 
   private readonly engine = inject(GridEngineService);
   private readonly injector = inject(Injector);
-  private readonly dialog = inject(MatDialog);
+  private readonly view = inject(ViewService);
   private readonly rowDetailsComponent = inject(ROW_DETAILS_COMPONENT, { optional: true });
 
   protected instance!: GridInstance<RowType>;
@@ -411,9 +411,10 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
 
     this.clickCounts.set(id, 0);
 
-    this.dialog.open(this.rowDetailsComponent, {
-      data: { entity: row } satisfies RowDetailsDialogData<RowType>,
+    this.view.open(this.rowDetailsComponent, {
+      title: 'Details',
       width: '640px',
+      inputs: { params: { entity: row } satisfies RowDetailsParams<RowType> },
     });
   }
 

@@ -45,8 +45,9 @@ export type CrossValidator =
     });
 
 export interface FormParameter<T = Record<string, unknown>> {
-  /** if launched from a modal: title of the modal dialog */
+  /** opened with `ViewService.openModal(GenericFormComponent, params)`: the dialog's title bar */
   title?: string;
+  /** opened with `ViewService.openModal(GenericFormComponent, params)`: the title bar's icon */
   icon?: string;
 
   model?: T;
@@ -113,7 +114,7 @@ export interface FormParameter<T = Record<string, unknown>> {
   /** debounce (ms) applied to `onChange` emissions off `form.valueChanges`; undefined = no debounce */
   changeDebounce?: number;
 
-  // ── modal integration ──
+  // ── modal integration (the form is a `ViewService` dialog's content, see `dialogRef`) ──
   /** emissions close the dialog when the form is rendered in a modal */
   closeAction$?: Observable<unknown> | Subject<unknown> | BehaviorSubject<unknown>;
   /** called after the modal closes (user cancel, closeAction$, or submit) */

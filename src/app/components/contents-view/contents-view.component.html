@@ -11,6 +11,7 @@
     (selectedIndexChange)="onSelectedTabIndexChange($event)"
   >
     @for (rc of visibleContents(); track trackContent($index, rc)) {
+      @let key = contentKey(rc, $index);
       <mat-tab [disabled]="rc.disabled">
         <ng-template mat-tab-label>
           @if (rc.content.icon) {
@@ -24,14 +25,14 @@
           }
         </ng-template>
 
-        <div [class]="listItemClass(rc)">
+        <div #cvPanel [class]="listItemClass(rc, key)">
           <ng-container
             [ngTemplateOutlet]="header"
-            [ngTemplateOutletContext]="{ $implicit: rc }"
+            [ngTemplateOutletContext]="{ $implicit: rc, key, item: cvPanel }"
           />
           <ng-container
             [ngTemplateOutlet]="contentBody"
-            [ngTemplateOutletContext]="{ $implicit: rc }"
+            [ngTemplateOutletContext]="{ $implicit: rc, key }"
           />
         </div>
       </mat-tab>
@@ -42,18 +43,31 @@
     #gridContainer
     [class]="contentsContainerClass()"
     [class.relative]="resizeActive()"
-    [style.grid-template-columns]="resizeActive() ? gridTemplateColumns() : null"
-    [style.grid-template-rows]="resizeActive() ? gridTemplateRows() : null"
+    [style.grid-template-columns]="gridTemplateColumns()"
+    [style.grid-template-rows]="gridTemplateRows()"
+    [style.justify-content]="packedAxis().cols ? 'start' : null"
+    [style.align-content]="packedAxis().rows ? 'start' : null"
   >
     @for (rc of visibleContents(); track trackContent($index, rc)) {
-      <div #cvItem [class]="listItemClass(rc)">
-        <!-- HEADER -->
-        <ng-container [ngTemplateOutlet]="header" [ngTemplateOutletContext]="{ $implicit: rc }" />
+      @let key = contentKey(rc, $index);
+      <div #cvItem [class]="listItemClass(rc, key)">
+        <!-- HEADER — or, collapsed, the strip that restores it -->
+        @if (isCollapsed(key)) {
+          <ng-container
+            [ngTemplateOutlet]="strip"
+            [ngTemplateOutletContext]="{ $implicit: rc, key }"
+          />
+        } @else {
+          <ng-container
+            [ngTemplateOutlet]="header"
+            [ngTemplateOutletContext]="{ $implicit: rc, key, item: cvItem }"
+          />
+        }
 
         <!-- CONTENT BODY -->
         <ng-container
           [ngTemplateOutlet]="contentBody"
-          [ngTemplateOutletContext]="{ $implicit: rc }"
+          [ngTemplateOutletContext]="{ $implicit: rc, key }"
         />
       </div>
     }
@@ -89,16 +103,19 @@
   </div>
 }
 
-<ng-template #header let-rc>
+<!-- HEADER ROW — heading, action buttons, pane controls; shown whenever any of them is there -->
+<ng-template #header let-rc let-key="key" let-item="item">
   @if (showsHeader(rc)) {
     <div [class]="headerClass(rc)">
-      @if (showHeaderLabelIcon(rc.content)) {
-        @if (rc.content.icon) {
-          <mat-icon class="!text-base" aria-hidden="true">{{ rc.content.icon }}</mat-icon>
+      @if (headingOf(rc); as heading) {
+        @if (heading.icon) {
+          <mat-icon class="!text-base" aria-hidden="true">{{ heading.icon }}</mat-icon>
         }
-        <span>{{ rc.content.label }}</span>
-        @if (rc.badge !== undefined && rc.badge !== null && rc.badge !== '') {
-          <span class="ml-1 rounded-full bg-black/10 px-1.5 text-xs">{{ rc.badge }}</span>
+        @if (heading.text) {
+          <span>{{ heading.text }}</span>
+        }
+        @if (heading.badge !== undefined) {
+          <span class="ml-1 rounded-full bg-black/10 px-1.5 text-xs">{{ heading.badge }}</span>
         }
       }
       @if (rc.content.actionButtons) {
@@ -108,12 +125,81 @@
           class="ml-1 inline-flex"
         />
       }
+      @if (hasControls()) {
+        <span class="ms-auto inline-flex items-center">
+          <ng-container
+            [ngTemplateOutlet]="paneControls"
+            [ngTemplateOutletContext]="{ $implicit: rc, key, item }"
+          />
+        </span>
+      }
     </div>
   }
 </ng-template>
 
-<ng-template #contentBody let-rc>
-  <div [class]="bodyClass(rc)" [attr.tabindex]="isCover() ? 0 : null">
+<!-- collapse + full screen — ContentsLayout.collapsible / fullscreenable -->
+<ng-template #paneControls let-rc let-key="key" let-item="item">
+  @if (collapseOffered() && !isFullscreen(key)) {
+    <!-- the last expanded pane's stays focusable while disabled, so its tooltip can say why -->
+    <button
+      type="button"
+      class="cv-pane-control"
+      [id]="controlId('collapse', key)"
+      [attr.aria-label]="'Collapse ' + paneLabel(rc)"
+      aria-expanded="true"
+      [attr.aria-controls]="bodyId(key)"
+      [attr.aria-disabled]="collapseLocked(key) || null"
+      [matTooltip]="collapseLocked(key) ? 'At least one pane stays expanded' : 'Collapse'"
+      (click)="setCollapsed(key, true)"
+    >
+      <mat-icon aria-hidden="true">{{
+        collapseAxis() === 'column' ? 'chevron_left' : 'expand_less'
+      }}</mat-icon>
+    </button>
+  }
+  @if (fullscreenOffered()) {
+    <button
+      type="button"
+      class="cv-pane-control"
+      [attr.aria-label]="(isFullscreen(key) ? 'Exit full screen: ' : 'Full screen: ') + paneLabel(rc)"
+      [matTooltip]="isFullscreen(key) ? 'Exit full screen' : 'Full screen'"
+      (click)="toggleFullscreen(key, item)"
+    >
+      <mat-icon aria-hidden="true">{{ isFullscreen(key) ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+    </button>
+  }
+</ng-template>
+
+<!-- a collapsed pane: one button — icon + label (turned 90° in a column strip) — that restores it -->
+<ng-template #strip let-rc let-key="key">
+  <button
+    type="button"
+    class="cv-strip"
+    [class.cv-strip-row]="collapseAxis() === 'row'"
+    [class.cv-strip-column]="collapseAxis() === 'column'"
+    [id]="controlId('strip', key)"
+    [attr.aria-label]="'Restore ' + paneLabel(rc)"
+    aria-expanded="false"
+    [attr.aria-controls]="bodyId(key)"
+    (click)="setCollapsed(key, false)"
+  >
+    @if (rc.content.icon) {
+      <mat-icon class="cv-strip-icon" aria-hidden="true">{{ rc.content.icon }}</mat-icon>
+    }
+    <span class="cv-strip-label">{{ paneLabel(rc) }}</span>
+    <mat-icon class="cv-strip-restore" aria-hidden="true">{{
+      collapseAxis() === 'column' ? 'chevron_right' : 'expand_more'
+    }}</mat-icon>
+  </button>
+</ng-template>
+
+<ng-template #contentBody let-rc let-key="key">
+  <div
+    [class]="bodyClass(rc, key)"
+    [id]="bodyId(key)"
+    [hidden]="isCollapsed(key)"
+    [attr.tabindex]="bodyScrolls(key) ? 0 : null"
+  >
     @switch (rc.content.type) {
       @case ('table') {
         <data-grid [params]="rc.content.gridParams" />

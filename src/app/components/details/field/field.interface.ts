@@ -82,6 +82,9 @@ export interface Field {
   valueClass?: DynamicValue<string, any>;
   valueIcon?: DynamicValue<string, any>;
   truncate?: number; // if set, value will be truncated to this length and an ellipsis will be added
+  // makes the value a button: gets the entity (or array item) the field belongs to and the
+  // evaluated field (`value`, `key`, `path`, ...); on an object field it replaces the dialog
+  click?: (data: any, field: FieldData) => unknown;
 
   // Icon
   icon?: DynamicValue<string, any>;

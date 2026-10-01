@@ -9,7 +9,9 @@
 
   @switch (instance.renderMode()) {
     @case ('table') {
-      <div class="overflow-auto min-h-0 grow bg-white">
+      <!-- tabindex: a scroll region stays keyboard-reachable even when its rows hold nothing
+           focusable (WCAG 2.1.1 / AXE scrollable-region-focusable) — likewise list/cards below -->
+      <div class="overflow-auto min-h-0 grow bg-white" tabindex="0">
         <table
           class="w-full text-sm border-collapse"
           [class.table-fixed]="isFixedLayout()"
@@ -258,6 +260,7 @@
     @case ('list') {
       <div
         class="flex flex-col gap-2 py-2 grow min-h-0 overflow-auto"
+        tabindex="0"
         cdkDropList
         [cdkDropListData]="instance.rows()"
         [cdkDropListDisabled]="!instance.params().rowsDraggable"
@@ -398,6 +401,7 @@
     @case ('cards') {
       <div
         class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 py-2 grow min-h-0 overflow-auto"
+        tabindex="0"
       >
         @for (row of instance.rows(); track instance.rowId(row); let ri = $index) {
           <div

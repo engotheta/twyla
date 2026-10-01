@@ -1,9 +1,15 @@
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { ANIMATION_MODULE_TYPE, Component, EventEmitter, Input, Output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { BehaviorSubject } from 'rxjs';
 import { FieldType } from '../generic-form';
-import { ContentsViewComponent, redistributePx } from './contents-view.component';
+import {
+  axisTemplate,
+  ContentsViewComponent,
+  redistributePx,
+  refitFractions,
+} from './contents-view.component';
 import {
   ContentsSizes,
   ContentsViewInstance,
@@ -19,6 +25,40 @@ describe('redistributePx', () => {
   it('clamps both sides to the minimum', () => {
     expect(redistributePx(300, 300, 1000, 80)).toEqual([520, 80]);
     expect(redistributePx(300, 300, -1000, 80)).toEqual([80, 520]);
+  });
+});
+
+describe('axisTemplate', () => {
+  it('imposes nothing with fewer than two tracks, or with nothing collapsed and no fractions', () => {
+    expect(axisTemplate(1, [1], [true])).toBeNull();
+    expect(axisTemplate(2, [], [])).toBeNull();
+    expect(axisTemplate(3, [1, 1], [])).toBeNull(); // stale length
+  });
+  it('enforces fractions, rescaled to average 1', () => {
+    expect(axisTemplate(2, [3, 1], [])).toBe('minmax(0, 1.5fr) minmax(0, 0.5fr)');
+    // weights summing below 1 would otherwise leave part of the axis unfilled
+    expect(axisTemplate(2, [0.375, 0.125], [])).toBe('minmax(0, 1.5fr) minmax(0, 0.5fr)');
+  });
+  it('sizes a collapsed track to its strip, the rest by fraction or equally', () => {
+    expect(axisTemplate(3, [], [false, true, false])).toBe('minmax(0, 1fr) auto minmax(0, 1fr)');
+    expect(axisTemplate(2, [3, 1], [true, false])).toBe('auto minmax(0, 1fr)');
+  });
+  it("hands a larger collapsed pane's space to the smaller open ones", () => {
+    // a 20/80 split with the 80% pane collapsed — `0.4fr` alone would fill only 40% of the axis
+    expect(axisTemplate(2, [0.4, 1.6], [false, true])).toBe('minmax(0, 1fr) auto');
+    // the open panes keep their split among themselves
+    expect(axisTemplate(3, [0.2, 0.6, 2.2], [false, false, true])).toBe(
+      'minmax(0, 0.5fr) minmax(0, 1.5fr) auto',
+    );
+  });
+});
+
+describe('refitFractions', () => {
+  it('is normalizeFractions(nextPx) with nothing collapsed', () => {
+    expect(refitFractions([1, 1], [300, 100], [])).toEqual([1.5, 0.5]);
+  });
+  it("keeps a collapsed track's fraction and splits the open tracks' total by their px", () => {
+    expect(refitFractions([2, 1, 1], [40, 300, 100], [true, false, false])).toEqual([2, 1.5, 0.5]);
   });
 });
 
@@ -302,28 +342,78 @@ describe('ContentsViewComponent', () => {
     expect(panel2?.querySelector('action-buttons')).toBeTruthy();
   });
 
-  it("header: 'none' hides the whole header (label, badge, actionButtons) in list mode", async () => {
+  it("header: 'none' shows no heading — the header row appears only to hold actionButtons", async () => {
     const contents: ContentView[] = [
       {
         type: 'html',
         slug: 'a',
-        label: 'Hidden Header',
+        label: 'Hidden Label',
+        title: 'Hidden Title',
         html: 'body-a',
         badge: 'NEW',
         actionButtons: [{ label: 'Go' }],
         header: 'none',
       },
+      { type: 'html', slug: 'b', label: 'Bare', html: 'body-b', header: 'none' },
     ];
     const fixture = mount({ contents });
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    const el = fixture.nativeElement as HTMLElement;
+    const text = el.textContent ?? '';
     expect(text).toContain('body-a');
-    expect(text).not.toContain('Hidden Header');
+    expect(text).not.toContain('Hidden Label');
+    expect(text).not.toContain('Hidden Title');
     expect(text).not.toContain('NEW');
-    expect((fixture.nativeElement as HTMLElement).querySelector('action-buttons')).toBeNull();
+    const [a, b] = Array.from(el.querySelectorAll('.contents-view-item'));
+    expect(a.firstElementChild!.querySelector('action-buttons')).toBeTruthy(); // its header row
+    // no heading and no buttons — nothing above the body
+    expect(b.firstElementChild!.classList).toContain('contents-view-body');
+  });
+
+  it("title heads the header in place of the label; without one only header: 'full' uses the label", async () => {
+    const contents: ContentView[] = [
+      { type: 'html', slug: 'a', label: 'Label A', title: 'Title A', icon: 'home', badge: 7, html: 'a' },
+      { type: 'html', slug: 'b', label: 'Label B', html: 'b' },
+      { type: 'html', slug: 'c', label: 'Label C', html: 'c', header: 'full' },
+      { type: 'html', slug: 'd', label: 'Label D', title: 'Title D', html: 'd', header: 'full' },
+    ];
+    const fixture = mount({ contents });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const firstRow = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.contents-view-item'),
+    ).map((item) => item.firstElementChild as HTMLElement);
+    expect(firstRow[0].textContent).toContain('Title A');
+    expect(firstRow[0].textContent).not.toContain('Label A');
+    // in list mode the icon and badge ride along with the title
+    expect(firstRow[0].querySelector('mat-icon')?.textContent).toBe('home');
+    expect(firstRow[0].textContent).toContain('7');
+    // no title, no buttons: no header row at all — the label only names a tab / collapsed strip
+    expect(firstRow[1].classList).toContain('contents-view-body');
+    expect(firstRow[2].textContent).toContain('Label C');
+    expect(firstRow[3].textContent).toContain('Title D');
+    expect(firstRow[3].textContent).not.toContain('Label D');
+  });
+
+  it('a title shows alone in a tab panel header — the tab button carries icon, label and badge', async () => {
+    const contents: ContentView[] = [
+      { type: 'html', slug: 'a', label: 'Tab A', title: 'Panel title', icon: 'home', badge: 7, html: 'a' },
+    ];
+    const fixture = mount({ contents, showContentsInTabs: true });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const panel = (fixture.nativeElement as HTMLElement).querySelector('[role="tabpanel"]')!;
+    expect(panel.textContent).toContain('Panel title');
+    expect(panel.textContent).not.toContain('Tab A');
+    expect(panel.textContent).not.toContain('7');
+    expect(panel.querySelector('mat-icon')).toBeNull();
   });
 
   it("header: 'none' hides the panel header even in tabs mode", async () => {
@@ -416,6 +506,7 @@ describe('ContentsViewComponent', () => {
             type: 'html',
             slug: 'leaf',
             label: 'Leaf',
+            title: 'Leaf', // a heading, so there's a header row to carry the classes
             html: 'leaf-body',
             headerClass: 'own-header-class',
           },
@@ -573,13 +664,73 @@ describe('ContentsViewComponent', () => {
     listeners.forEach((l) => l({ matches: true } as MediaQueryListEvent));
     fixture.detectChanges();
     expect(coverClasses(fixture)).toContain('h-full'); // now cover
+  });
 
-    // explicit 'cover' ignores the breakpoint
-    const forced = mount({ contents, contentsFit: 'cover' });
-    forced.detectChanges();
-    await forced.whenStable();
-    forced.detectChanges();
-    expect(coverClasses(forced)).toContain('h-full');
+  it("below lg even 'cover' flows (flowOnSmallerView defaults on); flowOnSmallerView: false keeps it", async () => {
+    stubMatchMedia(false); // < lg
+    const contents: ContentView[] = [{ type: 'html', slug: 'a', label: 'A', html: 'a' }];
+
+    const flowing = await mountSettled({ contents, contentsFit: 'cover' });
+    expect(coverClasses(flowing)).not.toContain('h-full');
+
+    const kept = await mountSettled({ contents, contentsFit: 'cover', flowOnSmallerView: false });
+    expect(coverClasses(kept)).toContain('h-full');
+  });
+
+  it('flowOnSmallerView cascades to a nested level that never set it; a child can override it', async () => {
+    stubMatchMedia(false); // < lg
+    const group = (flowOnSmallerView?: boolean): ContentView => ({
+      type: 'group',
+      slug: 'g',
+      contentsFit: 'cover',
+      flowOnSmallerView,
+      contents: [{ type: 'html', slug: 'x', label: 'X', html: 'x' }],
+    });
+    const nestedIsCover = (fixture: ReturnType<typeof mount>): boolean => {
+      const nested = fixture.debugElement
+        .queryAll(By.directive(ContentsViewComponent))
+        .map((de) => de.componentInstance as ContentsViewComponent)
+        .find((c) => c !== fixture.componentInstance)!;
+      return (nested as unknown as { isCover(): boolean }).isCover();
+    };
+
+    const inherited = await mountSettled({ contents: [group()], flowOnSmallerView: false });
+    expect(nestedIsCover(inherited)).toBe(true); // inherited `false` → still cover below lg
+
+    const overridden = await mountSettled({ contents: [group(true)], flowOnSmallerView: false });
+    expect(nestedIsCover(overridden)).toBe(false); // the child's own `true` wins → flows
+  });
+
+  it('a flowing root host is the scroll container; a flowing nested host just grows', async () => {
+    stubMatchMedia(false); // < lg → flow
+    const fixture = await mountSettled({
+      contents: [
+        {
+          type: 'group',
+          slug: 'g',
+          label: 'G',
+          contents: [{ type: 'html', slug: 'x', label: 'X', html: 'x' }],
+        },
+      ],
+    });
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.className).toContain('h-full');
+    expect(root.className).toContain('overflow-y-auto');
+    expect(root.getAttribute('tabindex')).toBe('0'); // a scroll region is keyboard-reachable
+
+    const nested = root.querySelector<HTMLElement>('contents-view')!;
+    expect(nested.className).not.toContain('h-full');
+    expect(nested.className).not.toContain('overflow-y-auto');
+    expect(nested.getAttribute('tabindex')).toBeNull();
+  });
+
+  it('a covering root host fills its parent without becoming a scroll region itself', async () => {
+    const fixture = await mountSettled({ contents: [{ type: 'html', slug: 'a', html: 'a' }] });
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.className).toContain('h-full');
+    expect(root.className).not.toContain('overflow-y-auto');
+    expect(root.getAttribute('tabindex')).toBeNull();
   });
 
   // ── resizable gutters ──
@@ -849,7 +1000,350 @@ describe('ContentsViewComponent', () => {
     const container = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
       '.contents-view-default-grid',
     )!;
-    expect(container.style.gridTemplateRows).toBe('minmax(0, 3fr) minmax(0, 1fr)');
+    expect(container.style.gridTemplateRows).toBe('minmax(0, 1.5fr) minmax(0, 0.5fr)'); // 3 : 1
     expect(container.style.gridTemplateColumns).toBe(''); // single column — nothing imposed
+  });
+
+  // ── collapsible: collapse / restore / full screen ──
+
+  const byLabel = (fixture: ReturnType<typeof mount>, label: string) =>
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      `[aria-label="${label}"]`,
+    );
+  const gridContainer = (fixture: ReturnType<typeof mount>) =>
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      '.contents-view-default-grid',
+    )!;
+
+  it('renders pane controls only with collapsible, and no collapse on a tabs level', async () => {
+    const controls = (fixture: ReturnType<typeof mount>) =>
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.cv-pane-control').length;
+
+    expect(controls(await mountSettled({ contents: threeContents }))).toBe(0);
+    // jsdom has no element full screen, so only the collapse buttons — one per content
+    expect(controls(await mountSettled({ contents: threeContents, collapsible: true }))).toBe(3);
+    expect(
+      controls(
+        await mountSettled({ contents: threeContents, collapsible: true, showContentsInTabs: true }),
+      ),
+    ).toBe(0);
+  });
+
+  it('collapsing swaps the header for a restore strip and hides — but keeps — the body', async () => {
+    const fixture = await mountSettled({ contents: threeContents, collapsible: true });
+
+    const collapse = byLabel(fixture, 'Collapse A')!;
+    expect(collapse.getAttribute('aria-expanded')).toBe('true');
+    const bodyId = collapse.getAttribute('aria-controls')!;
+    const body = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      `[id="${bodyId}"]`,
+    )!;
+    expect(body.hidden).toBe(false);
+
+    collapse.click();
+    fixture.detectChanges();
+    const strip = byLabel(fixture, 'Restore A')!;
+    expect(strip.getAttribute('aria-expanded')).toBe('false');
+    expect(strip.getAttribute('aria-controls')).toBe(bodyId);
+    expect(byLabel(fixture, 'Collapse A')).toBeNull();
+    expect(body.hidden).toBe(true);
+    expect(body.textContent).toContain('a'); // still mounted
+
+    strip.click();
+    fixture.detectChanges();
+    expect(byLabel(fixture, 'Restore A')).toBeNull();
+    expect(byLabel(fixture, 'Collapse A')).toBeTruthy();
+    expect(body.hidden).toBe(false);
+  });
+
+  it('gives every pane a header row for its controls, heading or not', async () => {
+    const fixture = await mountSettled({
+      contents: [
+        { type: 'html', slug: 'a', label: 'A', html: 'a', header: 'none' },
+        { type: 'html', slug: 'b', label: 'B', html: 'b' }, // 'auto' with no title: no heading
+      ],
+      collapsible: true,
+    });
+    const [a, b] = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.contents-view-item'),
+    ).map((item) => item.firstElementChild!);
+    expect(a.querySelector('[aria-label="Collapse A"]')).toBeTruthy();
+    expect(b.querySelector('[aria-label="Collapse B"]')).toBeTruthy();
+  });
+
+  it('a measured single column collapses to a row strip and hands its row to the others', async () => {
+    const { fixture, instance } = await measuredLayout(
+      { contents: threeContents, collapsible: true },
+      1,
+      3,
+    );
+    instance.setCollapsed('a', true);
+    fixture.detectChanges();
+
+    expect(byLabel(fixture, 'Restore A')!.classList).toContain('cv-strip-row');
+    expect(gridContainer(fixture).style.gridTemplateRows).toBe(
+      'auto minmax(0, 1fr) minmax(0, 1fr)',
+    );
+    expect(gridContainer(fixture).style.gridTemplateColumns).toBe('');
+    expect(instance.collapsed()).toEqual(['a']);
+
+    instance.setCollapsed('a', false);
+    fixture.detectChanges();
+    expect(gridContainer(fixture).style.gridTemplateRows).toBe(''); // back to the class's own grid
+  });
+
+  it('a measured single row collapses to a column strip and hands its column to the others', async () => {
+    const { fixture, instance } = await measuredLayout(
+      { contents: threeContents, collapsible: true },
+      3,
+      1,
+    );
+    instance.setCollapsed('b', true);
+    fixture.detectChanges();
+
+    expect(byLabel(fixture, 'Restore B')!.classList).toContain('cv-strip-column');
+    expect(gridContainer(fixture).style.gridTemplateColumns).toBe(
+      'minmax(0, 1fr) auto minmax(0, 1fr)',
+    );
+    expect(gridContainer(fixture).style.gridTemplateRows).toBe('');
+  });
+
+  it('hides the gutters beside a collapsed track, and a drag keeps its share for the restore', async () => {
+    const { fixture, instance } = await measuredLayout(
+      { contents: threeContents, resizable: true, collapsible: true },
+      1,
+      3,
+    );
+    expect(gutterCounts(fixture)).toEqual({ vertical: 0, horizontal: 2 });
+
+    instance.setSizes({ rows: [2, 1, 1] });
+    instance.setCollapsed('a', true);
+    fixture.detectChanges();
+    expect(gutterCounts(fixture)).toEqual({ vertical: 0, horizontal: 1 }); // only b | c is left
+    expect(gridContainer(fixture).style.gridTemplateRows).toBe(
+      'auto minmax(0, 1fr) minmax(0, 1fr)',
+    );
+
+    gutters(fixture)[0].dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }),
+    );
+    fixture.detectChanges();
+    const rows = instance.sizes().rows!;
+    expect(rows[0]).toBe(2); // the collapsed pane's share, untouched by the drag
+    expect(rows[1]).toBeGreaterThan(rows[2]);
+
+    instance.setCollapsed('a', false);
+    fixture.detectChanges();
+    // 2 of the 4 total weight, over three tracks averaging 1
+    expect(gridContainer(fixture).style.gridTemplateRows.startsWith('minmax(0, 1.5fr)')).toBe(true);
+  });
+
+  it("keeps at least one pane expanded — the last one's collapse is disabled, and ignored", async () => {
+    let instance: ContentsViewInstance | undefined;
+    const fixture = mount({ contents: [threeContents[0], threeContents[1]], collapsible: true });
+    fixture.componentInstance.instanceChange.subscribe((i) => (instance = i));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(byLabel(fixture, 'Collapse B')!.hasAttribute('aria-disabled')).toBe(false);
+    byLabel(fixture, 'Collapse A')!.click();
+    fixture.detectChanges();
+
+    const lastOpen = byLabel(fixture, 'Collapse B')!;
+    expect(lastOpen.getAttribute('aria-disabled')).toBe('true'); // still focusable, not `disabled`
+    expect(lastOpen.disabled).toBe(false);
+    lastOpen.click();
+    instance!.setCollapsed('b', true);
+    fixture.detectChanges();
+    expect(byLabel(fixture, 'Restore B')).toBeNull();
+    expect(instance!.collapsed()).toEqual(['a']);
+
+    byLabel(fixture, 'Restore A')!.click();
+    fixture.detectChanges();
+    expect(byLabel(fixture, 'Collapse B')!.hasAttribute('aria-disabled')).toBe(false);
+  });
+
+  it('offers no collapse on a lone pane', async () => {
+    const fixture = await mountSettled({ contents: [threeContents[0]], collapsible: true });
+    // jsdom has no element full screen either, so no controls at all
+    expect((fixture.nativeElement as HTMLElement).querySelector('.cv-pane-control')).toBeNull();
+  });
+
+  it('reopens the first visible pane once the only expanded one is hidden', async () => {
+    const showA = new BehaviorSubject(true);
+    let instance: ContentsViewInstance | undefined;
+    const fixture = mount({
+      contents: [
+        { type: 'html', slug: 'a', label: 'A', html: 'a', visible: showA },
+        threeContents[1],
+        threeContents[2],
+      ],
+      collapsible: true,
+    });
+    fixture.componentInstance.instanceChange.subscribe((i) => (instance = i));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    instance!.setCollapsed('b', true);
+    instance!.setCollapsed('c', true);
+    fixture.detectChanges();
+    expect(instance!.collapsed()).toEqual(['b', 'c']);
+
+    showA.next(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(byLabel(fixture, 'Collapse B')).toBeTruthy();
+    expect(byLabel(fixture, 'Restore C')).toBeTruthy();
+    expect(instance!.collapsed()).toEqual(['c']);
+
+    // and B stays expanded once A is back
+    showA.next(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(instance!.collapsed()).toEqual(['c']);
+  });
+
+  it('keepOneExpanded: false lets every pane collapse, packing the strips to the start', async () => {
+    const { fixture, instance } = await measuredLayout(
+      { contents: [threeContents[0], threeContents[1]], collapsible: true, keepOneExpanded: false },
+      2,
+      1,
+    );
+    instance.setCollapsed('a', true);
+    instance.setCollapsed('b', true);
+    fixture.detectChanges();
+
+    expect(instance.collapsed()).toEqual(['a', 'b']);
+    expect(gridContainer(fixture).style.gridTemplateColumns).toBe('auto auto');
+    expect(gridContainer(fixture).style.justifyContent).toBe('start');
+
+    instance.setCollapsed('a', false);
+    fixture.detectChanges();
+    expect(gridContainer(fixture).style.justifyContent).toBe('');
+  });
+
+  describe('full screen', () => {
+    let fullscreenElement: Element | null;
+    const changed = () => document.dispatchEvent(new Event('fullscreenchange'));
+    const request = vi.fn(function (this: Element) {
+      fullscreenElement = this;
+      changed();
+      return Promise.resolve();
+    });
+    const exit = vi.fn(() => {
+      fullscreenElement = null;
+      changed();
+      return Promise.resolve();
+    });
+
+    beforeEach(() => {
+      fullscreenElement = null;
+      request.mockClear();
+      exit.mockClear();
+      // jsdom implements no Fullscreen API — stand in for it
+      Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
+      Object.defineProperty(document, 'fullscreenElement', {
+        configurable: true,
+        get: () => fullscreenElement,
+      });
+      Object.defineProperty(document, 'exitFullscreen', { configurable: true, value: exit });
+      Object.defineProperty(Element.prototype, 'requestFullscreen', {
+        configurable: true,
+        value: request,
+      });
+    });
+
+    afterEach(() => {
+      for (const key of ['fullscreenEnabled', 'fullscreenElement', 'exitFullscreen']) {
+        delete (document as unknown as Record<string, unknown>)[key];
+      }
+      delete (Element.prototype as unknown as Record<string, unknown>)['requestFullscreen'];
+    });
+
+    it('puts the pane in full screen and follows the browser back out (Esc)', async () => {
+      let instance: ContentsViewInstance | undefined;
+      const fixture = mount({ contents: threeContents, collapsible: true, fullscreenable: true });
+      fixture.componentInstance.instanceChange.subscribe((i) => (instance = i));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      byLabel(fixture, 'Full screen: A')!.click();
+      fixture.detectChanges();
+      expect(request).toHaveBeenCalledTimes(1);
+      const pane = fullscreenElement as HTMLElement;
+      expect(pane.classList).toContain('contents-view-item');
+      expect(instance!.fullscreenSlug()).toBe('a');
+      expect(byLabel(fixture, 'Exit full screen: A')).toBeTruthy();
+      expect(byLabel(fixture, 'Collapse A')).toBeNull(); // no collapsing a full-screen pane
+      expect(pane.querySelector('.contents-view-body')!.className).toContain('overflow-y-auto');
+      // overlays (dialogs, menus, toasts) opened now must live inside the full-screen pane —
+      // the browser makes everything outside it inert
+      const overlays = TestBed.inject(OverlayContainer).getContainerElement();
+      expect(overlays.parentElement).toBe(pane);
+
+      // the browser's own Esc
+      fullscreenElement = null;
+      changed();
+      fixture.detectChanges();
+      expect(instance!.fullscreenSlug()).toBeUndefined();
+      expect(byLabel(fixture, 'Full screen: A')).toBeTruthy();
+      expect(overlays.parentElement).toBe(document.body);
+
+      // and the pane's own button leaves it too
+      byLabel(fixture, 'Full screen: B')!.click();
+      fixture.detectChanges();
+      byLabel(fixture, 'Exit full screen: B')!.click();
+      fixture.detectChanges();
+      expect(exit).toHaveBeenCalledTimes(1);
+      expect(instance!.fullscreenSlug()).toBeUndefined();
+    });
+
+    it('offers full screen — and only full screen — on a tabs level', async () => {
+      const fixture = await mountSettled({
+        contents: threeContents,
+        collapsible: true,
+        fullscreenable: true,
+        showContentsInTabs: true,
+      });
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('[aria-label="Full screen: A"]')).toBeTruthy(); // active panel
+      expect(el.querySelector('[aria-label^="Collapse"]')).toBeNull();
+    });
+
+    it('is a switch of its own — collapsible alone offers no full screen, fullscreenable no collapse', async () => {
+      const collapseOnly = (await mountSettled({ contents: threeContents, collapsible: true }))
+        .nativeElement as HTMLElement;
+      expect(collapseOnly.querySelector('[aria-label="Collapse A"]')).toBeTruthy();
+      expect(collapseOnly.querySelector('[aria-label^="Full screen"]')).toBeNull();
+
+      const fullscreenOnly = (await mountSettled({ contents: threeContents, fullscreenable: true }))
+        .nativeElement as HTMLElement;
+      expect(fullscreenOnly.querySelectorAll('[aria-label^="Full screen"]').length).toBe(3);
+      expect(fullscreenOnly.querySelector('[aria-label^="Collapse"]')).toBeNull();
+    });
+
+    it('cascades to nested levels; a child opts its subtree out with fullscreenable: false', async () => {
+      const group = (fullscreenable?: boolean): ContentView => ({
+        type: 'group',
+        slug: 'g',
+        label: 'G',
+        fullscreenable,
+        contents: [{ type: 'html', slug: 'leaf', label: 'Leaf', html: 'leaf' }],
+      });
+
+      const inherited = (await mountSettled({ contents: [group()], fullscreenable: true }))
+        .nativeElement as HTMLElement;
+      expect(inherited.querySelector('[aria-label="Full screen: Leaf"]')).toBeTruthy();
+
+      const optedOut = (await mountSettled({ contents: [group(false)], fullscreenable: true }))
+        .nativeElement as HTMLElement;
+      expect(optedOut.querySelector('[aria-label="Full screen: Leaf"]')).toBeNull();
+      expect(optedOut.querySelector('[aria-label="Full screen: G"]')).toBeTruthy(); // root level's own
+    });
   });
 });

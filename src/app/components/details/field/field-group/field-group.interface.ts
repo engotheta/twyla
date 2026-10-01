@@ -18,12 +18,6 @@ export interface FieldGroupParameter<D = unknown> {
   animation?: string;
 }
 
-/** Data shape for opening a `FieldGroupComponent` directly via `MatDialog.open(FieldGroupComponent, { data })`. */
-export interface FieldGroupDialogData<D = unknown> extends FieldGroupParameter<D> {
-  title?: string;
-  icon?: string;
-}
-
 export interface FieldRowViewModel {
   class?: string;
   outerClass?: string;

@@ -32,7 +32,7 @@ export interface FetchConfig {
 
 export const DEFAULT_FETCH_CONFIG: FetchConfig = {
   apiBaseUrl: '',
-  graphqlUrl: 'graphql',
+  graphqlUrl: 'https://countries.trevorblades.com',
   isSuccess: (res) => (res as { success?: unknown } | null | undefined)?.success !== false,
   retryDelay: (attempt) => Math.min(500 * 2 ** (attempt - 1), 8000),
   messages: {

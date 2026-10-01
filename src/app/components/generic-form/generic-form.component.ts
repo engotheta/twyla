@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatStepperModule } from '@angular/material/stepper';
 import { Observable, Subscription, firstValueFrom, isObservable } from 'rxjs';
@@ -55,7 +55,6 @@ interface DisplayStep {
     NgTemplateOutlet,
     MatButtonModule,
     MatIconModule,
-    MatDialogModule,
     MatStepperModule,
     StepperProgressIndicatorDirective,
     FieldComponent,
@@ -69,10 +68,23 @@ export class GenericFormComponent implements OnInit, OnDestroy {
    *  embedding <generic-form> call instance.form.reset()/.submit()/.formState() directly */
   readonly instanceChange = output<FormInstance>();
 
+  /** set when this form is the content of a dialog — `ViewService.open()`/`openModal()` bind it
+   *  on the form they host (and only that one, never a form nested deeper inside the content).
+   *  Adds the Cancel button, and lets submit / `closeAction$` close that dialog. */
+  readonly dialogRef = input<MatDialogRef<unknown>>();
+
+  /** in a dialog the footer sticks to the bottom of the scrolling content, keeping Submit in reach */
+  protected readonly footerClass = computed(() =>
+    [
+      'mt-4 flex items-center justify-end gap-2',
+      this.dialogRef() ? 'sticky bottom-0 z-10 bg-white py-2' : '',
+      this.params().footerClass ?? '',
+    ]
+      .filter(Boolean)
+      .join(' '),
+  );
+
   private readonly engine = inject(FormEngineService);
-  // picks up the ref of whichever ancestor was opened via MatDialog.open() — works whether the
-  // form itself was passed to .open() or is just embedded inside a dialog-hosted component
-  protected readonly dialogRef = inject(MatDialogRef, { optional: true });
   // ngOnInit is NOT a valid injection context (only the constructor/field initializers are) —
   // `controlStatus()` needs one (it calls `toObservable()`), so `buildSteps()`/`makeBannerSignal()`
   // run through `runInInjectionContext` using this, captured here where DI is actually available.
@@ -220,7 +232,7 @@ export class GenericFormComponent implements OnInit, OnDestroy {
   }
 
   private closeModal(data?: unknown): void {
-    this.dialogRef?.close(data);
+    this.dialogRef()?.close(data);
     const params = this.params();
     (params.onClose ?? params.onModalClose ?? params.onCloseAction)?.(data);
   }

@@ -9,9 +9,9 @@ import {
   Signal,
 } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
-import { Toast, ToastType } from './toast.interface';
+import { NotificationType, Toast } from './notification.interface';
 
-/** What `ToastStackComponent` needs from whoever mounts it — `ToastService`. */
+/** What `ToastStackComponent` needs from whoever mounts it — `NotificationService`. */
 export interface ToastStackHost {
   readonly toasts: Signal<readonly Toast[]>;
   dismiss(id: number): void;
@@ -20,14 +20,19 @@ export interface ToastStackHost {
   resume(): void;
 }
 
-/** Provided by `ToastService` when it mounts the stack, so this file never imports the service. */
+/** Provided by `NotificationService` when it mounts the stack, so this file never imports the service. */
 export const TOAST_STACK_HOST = new InjectionToken<ToastStackHost>('TOAST_STACK_HOST');
 
-const ICONS: Record<ToastType, string> = { success: 'check_circle', error: 'error', info: 'info' };
+const ICONS: Record<NotificationType, string> = {
+  success: 'check_circle',
+  error: 'error',
+  info: 'info',
+  warning: 'warning',
+};
 
 /**
- * Renders `ToastService`'s toasts. Screen-reader announcements go through `LiveAnnouncer` in the
- * service, so toasts carry no live-region roles of their own (that would read them twice).
+ * Renders `NotificationService`'s toasts. Screen-reader announcements go through `LiveAnnouncer`
+ * in the service, so toasts carry no live-region roles of their own (that would read them twice).
  */
 @Component({
   selector: 'toast-stack',
@@ -93,6 +98,12 @@ const ICONS: Record<ToastType, string> = { success: 'check_circle', error: 'erro
     .toast-error {
       background: var(--mat-sys-error-container);
       color: var(--mat-sys-on-error-container);
+    }
+
+    /* Material has no warning role — amber-100 / amber-900, ~11:1 contrast */
+    .toast-warning {
+      background: #fef3c7;
+      color: #78350f;
     }
 
     .toast-message {

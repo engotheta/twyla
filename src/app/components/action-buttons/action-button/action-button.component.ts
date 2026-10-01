@@ -11,7 +11,6 @@ import {
 } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -27,8 +26,8 @@ import {
 } from '../action-button.interface';
 import { resolveDynamicValue$ } from '../dynamic-value.util';
 import { ButtonLoadingDirective } from '../button-loading.directive';
-import { ConfirmDialogComponent } from '../confirm-dialogue/confirm-dialog.component';
 import { ConfirmDialog } from '../confirm-dialogue/confirm-dialog.interface';
+import { ViewService } from '../../view';
 
 interface ActionButtonViewModel {
   label?: string;
@@ -80,7 +79,7 @@ const ICON_ONLY_TYPES: ReadonlySet<ButtonType> = new Set(['icon', 'mini-icon', '
 export class ActionButtonComponent<D = unknown> implements OnDestroy {
   readonly button = input.required<ActionButton<D>>();
   readonly parentData = input<D>();
-  private readonly dialog = inject(MatDialog);
+  private readonly view = inject(ViewService);
 
   protected readonly data = computed(() => (this.button().data ?? this.parentData()) as D);
   protected readonly type = computed<ButtonType>(() => this.button().type ?? 'button');
@@ -161,14 +160,8 @@ export class ActionButtonComponent<D = unknown> implements OnDestroy {
     }
 
     if (vm.confirmMessage || vm.confirmConfig) {
-      let data = { ...vm.confirmConfig, message: vm.confirmConfig?.message ?? vm.confirmMessage };
-
-      this.subs.add(
-        this.dialog
-          .open(ConfirmDialogComponent, { data })
-          .afterClosed()
-          .subscribe((confirmed) => confirmed && this.button().click?.(this.data())),
-      );
+      const config = { ...vm.confirmConfig, message: vm.confirmConfig?.message ?? vm.confirmMessage };
+      void this.view.confirm(config).then((ok) => ok && this.button().click?.(this.data()));
       return;
     }
 

@@ -163,6 +163,7 @@ export class FetchService {
             return of(this.deliver(p, request, cached.data, false));
           })
         : EMPTY;
+
       const network$ =
         cached && policy === 'cache-first'
           ? EMPTY
@@ -204,6 +205,7 @@ export class FetchService {
     concurrency: Concurrency,
   ): Observable<TRes> {
     const attempt$ = defer(() => request.send());
+
     const source$ =
       retries > 0
         ? attempt$.pipe(
@@ -214,6 +216,7 @@ export class FetchService {
             }),
           )
         : attempt$;
+
     if (concurrency !== 'share') return source$;
 
     const entry = this.cache.get(request.key);
@@ -223,6 +226,7 @@ export class FetchService {
       finalize(() => this.clearInFlight(request.key, inFlight$)),
       share(),
     );
+
     this.cache.set(request.key, { createdAt: Date.now(), expiresAt: 0, ...entry, inFlight$ });
     return inFlight$;
   }
@@ -237,8 +241,10 @@ export class FetchService {
 
     if (!this.config.isSuccess(res)) {
       p.failedFn?.(res);
+
       const message =
         resolveMessage(p.errorMessage, res) ?? responseMessage(res) ?? this.config.messages.failed;
+
       if (shouldNotify(p.notify, 'error', request.write)) this.notifier.error(message);
       throw new FetchFailedError(res, message);
     }
@@ -275,7 +281,10 @@ export class FetchService {
     err: unknown,
   ): Observable<never> {
     const error = toHttpError(err, request.url);
-    const handled = p.notify?.handleException !== false && this.config.onException?.(error) === true;
+
+    const handled =
+      p.notify?.handleException !== false && this.config.onException?.(error) === true;
+
     p.exceptionFn?.(error);
 
     if (!handled && shouldNotify(p.notify, 'error', request.write)) {
@@ -296,9 +305,11 @@ export class FetchService {
       const method = p.method ?? (p.variables === undefined ? 'GET' : 'POST');
       const url = resolveUrl(this.config.apiBaseUrl, p.url);
       const inQuery = method === 'GET' || method === 'DELETE';
+
       const params = inQuery
         ? appendQueryParams(toHttpParams(p.params), p.variables)
         : toHttpParams(p.params);
+
       const body = inQuery ? null : (p.variables ?? null);
       const headers = p.headers;
       const operation = `${method} ${url}`;
@@ -315,7 +326,11 @@ export class FetchService {
     if (isGraphql(p)) {
       const kind = p.mutation !== undefined ? 'mutation' : 'query';
       const source = graphqlSource(p.mutation ?? p.query);
-      const query = p.fieldSelection?.length ? applyFieldSelection(source, p.fieldSelection) : source;
+
+      const query = p.fieldSelection?.length
+        ? applyFieldSelection(source, p.fieldSelection)
+        : source;
+
       const url = resolveUrl(this.config.apiBaseUrl, this.config.graphqlUrl);
       const body = { query, variables: p.variables ?? {} };
       const operation = `${kind} ${query}`;
@@ -355,6 +370,7 @@ export class FetchService {
       this.clearCache(key);
       return undefined;
     }
+
     return { data: entry.data as TRes };
   }
 
@@ -408,16 +424,19 @@ export class FetchService {
 
   private lowerFlag(flag: LoadingFlag): void {
     const count = (this.flagCounts.get(flag) ?? 0) - 1;
+
     if (count > 0) {
       this.flagCounts.set(flag, count);
       return;
     }
+
     this.flagCounts.delete(flag);
     setFlag(flag, false);
   }
 
   private fnId(fn: object): number {
     let id = this.fnIds.get(fn);
+
     if (id === undefined) {
       id = ++this.nextFnId;
       this.fnIds.set(fn, id);

@@ -1,6 +1,6 @@
-// toast barrel — import everything from '.../toast'
+// notification barrel — import everything from '.../notification'
 
-export * from './toast.interface';
-export * from './toast-config.token';
+export * from './notification.interface';
+export * from './notification-config.token';
 export * from './toast-stack.component';
-export * from './toast.service';
+export * from './notification.service';

@@ -73,7 +73,25 @@ export class FetchDemoComponent {
   }
 
   /** A write: POST by default (variables given), toasts on success, double clicks are ignored. */
-  protected addUser(): void {
+  protected async addUser(): Promise<void> {
+    let x = await this.api.fetch({
+      fieldSelection: ['name', 'continent {code}'],
+      loading: { on: 'users-card' },
+      query: `query {
+        countries{
+          capital
+          name
+          continent{
+          name
+          code
+          }
+        }
+      }
+      `,
+    });
+
+    console.log(x);
+
     void this.api.fetch({
       url: 'users/add',
       variables: { firstName: 'Ada', lastName: 'Lovelace', email: 'ada@example.com' },

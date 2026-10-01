@@ -1,33 +1,12 @@
 @let p = params();
 
 <div [class]="p.outerClass ?? ''">
-  @if (dialogRef && p.title) {
-    <h2 mat-dialog-title class="flex items-center gap-2">
-      @if (p.icon) {
-        <mat-icon aria-hidden="true">{{ p.icon }}</mat-icon>
-      }
-      {{ p.title }}
-    </h2>
-  }
-
-  @if (dialogRef) {
-    <mat-dialog-content>
-      <ng-container [ngTemplateOutlet]="fieldsBodyTpl" />
-    </mat-dialog-content>
-  } @else {
-    <ng-container [ngTemplateOutlet]="fieldsBodyTpl" />
-  }
+  <ng-container [ngTemplateOutlet]="fieldsBodyTpl" />
 
   @if (!hasSteps && p.showFooter !== false) {
-    @if (dialogRef) {
-      <mat-dialog-actions [class]="p.footerClass ?? ''" align="end">
-        <ng-container [ngTemplateOutlet]="actionsTpl" />
-      </mat-dialog-actions>
-    } @else {
-      <div class="mt-4 flex items-center justify-end gap-2 {{ p.footerClass ?? '' }}">
-        <ng-container [ngTemplateOutlet]="actionsTpl" />
-      </div>
-    }
+    <div [class]="footerClass()">
+      <ng-container [ngTemplateOutlet]="actionsTpl" />
+    </div>
   }
 </div>
 
@@ -55,7 +34,7 @@
           @if (steps.length > 1) {
             <div class="mt-4 flex items-center justify-between gap-2">
               @if ($index === 0) {
-                @if (dialogRef) {
+                @if (dialogRef()) {
                   <button mat-button type="button" (click)="cancel()">
                     {{ p.cancelButtonLabel ?? 'Cancel' }}
                   </button>
@@ -110,7 +89,7 @@
   @if (banner(); as bannerMessage) {
     <div class="me-auto text-sm text-red-600" role="alert">{{ bannerMessage }}</div>
   }
-  @if (dialogRef) {
+  @if (dialogRef()) {
     <button mat-button type="button" (click)="cancel()">{{ p.cancelButtonLabel ?? 'Cancel' }}</button>
   }
   @if (p.addSubmitButton !== false) {

@@ -8,12 +8,18 @@ import { GridSort } from '../interfaces/grid-state.interface';
 
 const DEFAULT_IDENTIFIER_KEY = ['id'];
 
-/** Stable identity string for a row, built from `identifierKey` paths (default `['id']`). */
+/**
+ * Stable identity string for a row, built from `identifierKey` paths (default `['id']`).
+ * A row lacking every key (e.g. an API with no `id` and no `identifierKey` configured) falls
+ * back to the row object itself — otherwise all such rows would share one `undefined` identity,
+ * producing duplicate `@for` track keys and selecting/expanding every row at once.
+ */
 export function getRowId<RowType = any>(
   row: RowType,
   identifierKey: string[] = DEFAULT_IDENTIFIER_KEY,
 ): unknown {
   const values = identifierKey.map((path) => getPathValue(row, path));
+  if (values.every((v) => v === undefined || v === null)) return row;
   return values.length === 1 ? values[0] : JSON.stringify(values);
 }
 

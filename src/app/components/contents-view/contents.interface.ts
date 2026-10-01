@@ -32,26 +32,30 @@ export interface ContentsLayout {
    *  `contentsClass`, which targets a content's whole container (header + body) rather than just
    *  the body. */
   bodiesClass?: string;
-  /** Applied to every child content's own HEADER (the label/icon/badge/actionButtons row above
-   *  its body) from this level down through all nested levels, merged with each nested level's
-   *  own `headersClass` — and, at each content itself, further merged with that content's own
-   *  `headerClass`. The header-level analog of `bodiesClass`. */
+  /** Applied to every child content's own HEADER (the heading / actionButtons / pane-controls row
+   *  above its body) from this level down through all nested levels, merged with each nested
+   *  level's own `headersClass` — and, at each content itself, further merged with that content's
+   *  own `headerClass`. The header-level analog of `bodiesClass`. */
   headersClass?: string;
   tabsOrientation?: 'horizontal' | 'vertical';
   /** default false */
   showContentsInTabs?: boolean;
-  /** How this level's contents use vertical space. Default `'auto'`. Independent per nesting
-   *  level — NOT cascaded (see `nestedParameter`).
-   *  - `'cover'`: contents fit the available bounded height; each content's own body scrolls
-   *    internally (its header/toolbar/paginator stay pinned). The nested-scroll-region model.
+  /** How this level's contents use vertical space at viewport width ≥ Tailwind's `lg` (64rem /
+   *  1024px) — below that, `flowOnSmallerView` (default on) makes every level `'flow'`. Default
+   *  `'auto'`. Independent per nesting level — NOT cascaded (see `nestedParameter`).
+   *  - `'cover'` / `'auto'` (the same): contents fit the available bounded height; each
+   *    content's own body scrolls internally (its header/toolbar/paginator stay pinned). The
+   *    nested-scroll-region model.
    *  - `'flow'`: contents grow to their natural height and the nearest scrollable ancestor
-   *    scrolls instead — usually the page, unless this mount is nested inside another level's
-   *    `'cover'` body-scroll region. NOTE: needs an ancestor that can actually scroll; provide
-   *    one (the bare app shell here does not).
-   *  - `'auto'`: resolves to `'cover'` at viewport width ≥ Tailwind's `lg` (64rem / 1024px)
-   *    and `'flow'` below, re-resolved live via `matchMedia` — so a multi-pane dashboard fits
-   *    the viewport on desktop but becomes an ordinary scrolling stack on phones/small tablets. */
+   *    scrolls instead — another level's `'cover'` body-scroll region when nested, or, at the
+   *    root, the contents-view itself once its parent bounds its height (the root host becomes
+   *    the scroll container), else the page. */
   contentsFit?: 'auto' | 'cover' | 'flow';
+  /** default true: below Tailwind's `lg` (64rem / 1024px) this level flows — natural heights,
+   *  one scrolling stack, no fitting into the viewport — whatever its `contentsFit`; re-resolved
+   *  live via `matchMedia`. Set false to keep `'cover'` on small screens too. CASCADES to nested
+   *  levels like `resizable` (a child sets its own value to override). */
+  flowOnSmallerView?: boolean;
   /** default false. When true, and this level lays its contents out as a list/grid (not tabs)
    *  in the resolved `'cover'` fit with more than one visible content, a draggable gutter appears
    *  between every adjacent pair of panes — one per interior column boundary AND one per interior
@@ -70,6 +74,34 @@ export interface ContentsLayout {
    *  wiring. Set false to keep resizing in-memory only for the session. Cascades to nested
    *  levels like `resizable` (a child sets its own value to override). */
   persistSizes?: boolean;
+  /** default false. Adds a collapse button to every content at this level (list/grid levels
+   *  only — a tab panel is already one-at-a-time), at the end of its header row (which then
+   *  always shows — see `ContentViewBase.header`). Collapsing shrinks the pane to a strip showing
+   *  just its icon and label — a thin ROW strip when this level's contents are stacked in rows, a
+   *  narrow COLUMN strip (label turned 90°) when they sit side by side in one row. A grid track
+   *  holding only collapsed panes shrinks to fit the strip and the rest share the space; clicking
+   *  the strip restores it (a `resizable` split comes back as it was). At least one pane per level
+   *  stays expanded (see `keepOneExpanded`). The collapsed pane stays mounted, so a grid's or
+   *  form's state survives. Session-only, not persisted. CASCADES to nested levels like
+   *  `resizable`; set `collapsible: false` on a child to opt its subtree out. See
+   *  `ContentsViewInstance.collapsed` / `setCollapsed`. */
+  collapsible?: boolean;
+  /** default true. With `collapsible`, at least one pane per level stays expanded: the last
+   *  expanded pane's collapse button is disabled (its tooltip says why) and `setCollapsed` leaves
+   *  it be, a lone pane gets no collapse button at all, and a level whose visible panes all end
+   *  up collapsed anyway (the open one hidden since) reopens its first. Set false to let every
+   *  pane collapse — the strips then pack to the start of the level. Cascades to nested levels
+   *  like `collapsible` (a child sets its own value to override). */
+  keepOneExpanded?: boolean;
+  /** default false. Adds a full-screen button to every content at this level (list and tabs
+   *  levels, where the browser supports element full screen), at the end of its header row
+   *  (which then always shows — see `ContentViewBase.header`): the pane goes browser full screen
+   *  via the Fullscreen API; its button, or Esc, restores it. Dialogs, menus and notifications
+   *  opened meanwhile show — and work — inside it (the CDK overlay container moves in with it,
+   *  since the browser makes the rest of the page inert). CASCADES to nested levels like
+   *  `collapsible`; set `fullscreenable: false` on a child to opt its subtree out. See
+   *  `ContentsViewInstance.fullscreenSlug` / `exitFullscreen`. */
+  fullscreenable?: boolean;
   /** default true: an inactive tab's content (esp. a live `formParams`/`gridParams`
    *  embed) stays mounted rather than being destroyed on tab switch — set false to
    *  free resources for a rarely-revisited or expensive tab instead. Only relevant
@@ -96,15 +128,18 @@ interface ContentViewBase extends ContentsLayout {
   /** stable identity — used for tracking, `initialActive`/active-selection, and the
    *  payload of `onActive`/`onContentChange`/`ContentsViewInstance.selectContent` */
   slug?: string;
+  /** names this content on its tab and its collapsed strip (and in its controls' accessible
+   *  names) — and heads its header only under `header: 'full'` with no `title` */
   label?: string;
+  /** the heading of this content's header row, in place of `label` — see `header` */
+  title?: string;
   /** a short value/count shown as a badge on the content's tab (if shown in tabs),
    *  ahead of the label */
   badge?: string | number | Observable<string | number>;
 
-  /** action buttons rendered in this content's own header, alongside label/icon/badge — reuses
-   *  `ActionButtonsComponent` verbatim (data passed to each button is this `ContentView`). Under
-   *  `header: 'auto'` in tabs mode these are the ONLY thing that makes the panel header appear
-   *  (label/icon/badge are suppressed there); only `header: 'none'` hides them outright. */
+  /** action buttons rendered in this content's own header row, after its heading — reuses
+   *  `ActionButtonsComponent` verbatim (data passed to each button is this `ContentView`). They
+   *  always show: having any makes the header row appear, whatever `header` says. */
   actionButtons?: DynamicValue<ActionButton<ContentView>[], ContentView>;
 
   /** hides this content (and its tab, if shown in tabs) entirely; default true */
@@ -122,9 +157,9 @@ interface ContentViewBase extends ContentsLayout {
    *  holding its rendered table/details/form/html/component) — merged with the cascaded
    *  `bodiesClass` from ancestor levels, see `ContentsLayout.bodiesClass` */
   bodyClass?: string;
-  /** styling class for this content's own HEADER only (the label/icon/badge/actionButtons row
-   *  above its body) — merged with the cascaded `headersClass` from ancestor levels, see
-   *  `ContentsLayout.headersClass` */
+  /** styling class for this content's own HEADER only (the heading / actionButtons /
+   *  pane-controls row above its body) — merged with the cascaded `headersClass` from ancestor
+   *  levels, see `ContentsLayout.headersClass` */
   headerClass?: string;
 
   /** default false; whether this is the initially active content among its siblings
@@ -134,14 +169,15 @@ interface ContentViewBase extends ContentsLayout {
   /** fires when this content is activated (tabs mode only) */
   onActive?: (content: ContentView, siblings: ContentView[]) => void;
 
-  /** controls this content's own header row (the label/icon/badge/actionButtons strip above its
-   *  body). Default `'auto'`.
-   *  - `'auto'`: list mode shows the full header; while shown as a tab the panel header appears
-   *    ONLY when the content has `actionButtons` — label/icon/badge are suppressed there since
-   *    the tab toggle button right above already shows them.
-   *  - `'full'`: always show the full header (label+icon+badge+actionButtons), even while active
-   *    as a tab.
-   *  - `'none'`: render nothing above the body, in both tabs and list mode. */
+  /** this content's HEADING — the start of its header row, ahead of its `actionButtons` and pane
+   *  controls (collapse / full screen: `collapsible` / `fullscreenable`). The row shows whenever
+   *  it has a heading or any of those buttons; with neither, nothing renders above the body.
+   *  Default `'auto'`.
+   *  - `'auto'`: the `title`, when there is one — with icon and badge in list mode, alone while
+   *    shown as a tab (the tab toggle button above already carries those). No `title`, no
+   *    heading: the `label` then only names the tab / collapsed strip.
+   *  - `'full'`: always the full heading — icon, `title` (else `label`), badge — even as a tab.
+   *  - `'none'`: never a heading; the row still shows to hold the buttons. */
   header?: 'auto' | 'full' | 'none';
 
   /** child contents — always available, on every variant, not just `'group'`. A node
@@ -243,4 +279,17 @@ export interface ContentsViewInstance {
   /** restore an equal split on both axes. Persists and fires `onSizesChange`.
    *  Mirrors `GridInstance.resetColumnState`. */
   resetSizes(): void;
+
+  /** keys of THIS mount's collapsed contents (`collapsible` layouts) — each content's `slug`, or
+   *  `#<index>` for one without a slug */
+  collapsed(): string[];
+  /** collapse (`true`) or restore (`false`) the content with this key (see `collapsed`).
+   *  Collapsing the last expanded pane is ignored while `keepOneExpanded` is on (the default). */
+  setCollapsed(slug: string, collapsed: boolean): void;
+  /** key of THIS mount's content currently in browser full screen (`fullscreenable` layouts),
+   *  if any */
+  fullscreenSlug(): string | undefined;
+  /** leave full screen, if one of THIS mount's contents is in it. (Entering needs a user
+   *  gesture, so it has no programmatic counterpart — use the pane's own button.) */
+  exitFullscreen(): void;
 }

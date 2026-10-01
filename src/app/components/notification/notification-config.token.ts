@@ -1,27 +1,27 @@
 import { InjectionToken, Provider } from '@angular/core';
-import { ToastConfig, ToastType } from './toast.interface';
+import { NotificationConfig, NotificationType } from './notification.interface';
 
-export const DEFAULT_TOAST_CONFIG: ToastConfig = {
-  duration: { success: 4000, info: 4000, error: 8000 },
+export const DEFAULT_NOTIFICATION_CONFIG: NotificationConfig = {
+  duration: { success: 4000, info: 4000, warning: 6000, error: 8000 },
   maxVisible: 4,
 };
 
-export const TOAST_CONFIG = new InjectionToken<ToastConfig>('TOAST_CONFIG', {
+export const NOTIFICATION_CONFIG = new InjectionToken<NotificationConfig>('NOTIFICATION_CONFIG', {
   providedIn: 'root',
-  factory: () => DEFAULT_TOAST_CONFIG,
+  factory: () => DEFAULT_NOTIFICATION_CONFIG,
 });
 
-/** Overrides part of the toast config, e.g. `provideToastConfig({ duration: { error: 0 } })`. */
-export function provideToastConfig(config: {
-  duration?: Partial<Record<ToastType, number>>;
+/** Overrides part of the notification config, e.g. `provideNotificationConfig({ duration: { error: 0 } })`. */
+export function provideNotificationConfig(config: {
+  duration?: Partial<Record<NotificationType, number>>;
   maxVisible?: number;
 }): Provider {
   return {
-    provide: TOAST_CONFIG,
+    provide: NOTIFICATION_CONFIG,
     useValue: {
-      ...DEFAULT_TOAST_CONFIG,
+      ...DEFAULT_NOTIFICATION_CONFIG,
       ...config,
-      duration: { ...DEFAULT_TOAST_CONFIG.duration, ...config.duration },
+      duration: { ...DEFAULT_NOTIFICATION_CONFIG.duration, ...config.duration },
     },
   };
 }

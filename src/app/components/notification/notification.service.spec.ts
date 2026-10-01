@@ -1,21 +1,21 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { effect, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideToastConfig } from './toast-config.token';
-import { ToastService } from './toast.service';
+import { provideNotificationConfig } from './notification-config.token';
+import { NotificationService } from './notification.service';
 
-describe('ToastService', () => {
-  let toasts: ToastService;
+describe('NotificationService', () => {
+  let toasts: NotificationService;
   let announce: ReturnType<typeof vi.fn>;
 
   const messages = () => toasts.toasts().map((toast) => toast.message);
 
   beforeEach(() => {
     vi.useFakeTimers();
-    TestBed.configureTestingModule({ providers: [provideToastConfig({ maxVisible: 3 })] });
+    TestBed.configureTestingModule({ providers: [provideNotificationConfig({ maxVisible: 3 })] });
     announce = vi.fn().mockResolvedValue(undefined);
     TestBed.overrideProvider(LiveAnnouncer, { useValue: { announce } });
-    toasts = TestBed.inject(ToastService);
+    toasts = TestBed.inject(NotificationService);
   });
 
   afterEach(() => {
@@ -31,6 +31,16 @@ describe('ToastService', () => {
     expect(messages()).toEqual(['Failed']);
 
     vi.advanceTimersByTime(4000);
+    expect(messages()).toEqual([]);
+  });
+
+  it('warn() shows a warning that outlasts info but not error', () => {
+    toasts.warn('Low disk');
+    expect(toasts.toasts()[0].type).toBe('warning');
+
+    vi.advanceTimersByTime(5999);
+    expect(messages()).toEqual(['Low disk']);
+    vi.advanceTimersByTime(1);
     expect(messages()).toEqual([]);
   });
 

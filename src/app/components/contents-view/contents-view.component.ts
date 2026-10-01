@@ -1,14 +1,19 @@
 import { NgComponentOutlet, NgTemplateOutlet } from '@angular/common';
+import { FocusTrap, FocusTrapFactory } from '@angular/cdk/a11y';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
+  DOCUMENT,
   effect,
   ElementRef,
   inject,
+  Injector,
   input,
+  linkedSignal,
   OnInit,
   output,
   signal,
@@ -19,6 +24,7 @@ import {
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { combineLatest, isObservable, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
@@ -43,7 +49,7 @@ import {
 } from './persisted-selection.util';
 import { SlidingTabIndicatorDirective } from './sliding-tab-indicator.directive';
 import { LG_UP_QUERY, mediaQuerySignal } from './viewport.util';
-import { clusterEdges, GridAxis } from './grid-metrics.util';
+import { clusterEdges, GridAxis, trackIndex } from './grid-metrics.util';
 
 /** one resolved content, ready to render — `visible`/`disabled`/`badge`/`html`
  *  (DynamicValue/Observable-driven) already settled into plain current values */
@@ -53,6 +59,13 @@ interface ResolvedContent {
   disabled: boolean;
   badge: string | number | undefined;
   html: string | undefined;
+}
+
+/** what a content's header row shows ahead of its buttons — see `headingOf` */
+interface ContentHeading {
+  text?: string;
+  icon?: string;
+  badge?: string | number;
 }
 
 /** Recursively flattens a ContentView tree (including every nested `.contents`) into a
@@ -90,12 +103,55 @@ function normalizeFractions(arr: number[]): number[] {
   return sum > 0 ? arr.map((v) => (v / sum) * arr.length) : arr;
 }
 
-/** an axis' fraction weights → an explicit `grid-template-*` value, or `null` when there are
- *  fewer than two tracks to enforce so the consumer's own grid is left untouched. `minmax(0, …)`
- *  not bare `fr`: a bare `fr` keeps an `auto` minimum that lets a wide `<data-grid>` child refuse
- *  to shrink so the drag "sticks". */
-function trackTemplate(fractions: number[]): string | null {
-  return fractions.length >= 2 ? fractions.map((fr) => `minmax(0, ${fr}fr)`).join(' ') : null;
+/** the fractions after a drag left the tracks at `nextPx`: with nothing collapsed, just
+ *  `normalizeFractions(nextPx)`. A collapsed track's px is only its strip, so it keeps its
+ *  `before` fraction (restoring it brings its share back) and the open tracks split the open
+ *  tracks' former total by their new px. Pure/exported for unit testing. */
+export function refitFractions(
+  before: readonly number[],
+  nextPx: readonly number[],
+  collapsed: readonly boolean[],
+): number[] {
+  if (!collapsed.some(Boolean) || before.length !== nextPx.length) {
+    return normalizeFractions([...nextPx]);
+  }
+  const open = nextPx.map((_, i) => i).filter((i) => !collapsed[i]);
+  const openFr = open.reduce((sum, i) => sum + before[i], 0);
+  const openPx = open.reduce((sum, i) => sum + nextPx[i], 0);
+  return before.map((fr, i) => (collapsed[i] || openPx <= 0 ? fr : (nextPx[i] / openPx) * openFr));
+}
+
+/** an axis' explicit `grid-template-*` value — a collapsed track sized to its strip (`auto`), the
+ *  rest sharing what's left by `fractions` (all equal when there are no fractions to enforce) —
+ *  or `null` when there's nothing to enforce, so the consumer's own grid is left untouched: fewer
+ *  than two tracks, or nothing collapsed and no matching fractions. The open tracks' shares are
+ *  rescaled to average 1: `fr` tracks whose factors sum below 1 take only that part of the free
+ *  space, and the `auto` strips stretch over the rest — a 20/80 split (`[0.4, 1.6]`) with its 80%
+ *  pane collapsed must become `1fr auto`, not `0.4fr auto`. `minmax(0, …)` not bare `fr`: a bare
+ *  `fr` keeps an `auto` minimum that lets a wide `<data-grid>` child refuse to shrink so the drag
+ *  "sticks". Pure/exported for unit testing. */
+export function axisTemplate(
+  count: number,
+  fractions: readonly number[],
+  collapsed: readonly boolean[],
+): string | null {
+  const sized = fractions.length === count;
+  if (count < 2 || (!sized && !collapsed.some(Boolean))) return null;
+  const open = Array.from({ length: count }, (_, i) => i).filter((i) => !collapsed[i]);
+  const shares = normalizeFractions(open.map((i) => (sized ? fractions[i] : 1)));
+  const tracks: string[] = Array(count).fill('auto');
+  // 4 decimals: the same layout, a readable inline style
+  open.forEach((track, j) => (tracks[track] = `minmax(0, ${+shares[j].toFixed(4)}fr)`));
+  return tracks.join(' ');
+}
+
+/** `keys` held to "at least one pane expanded" (`keepOneExpanded`): when every visible pane's key
+ *  is in it, the first visible pane's is dropped. Pure. */
+function keepFirstOpen(keys: ReadonlySet<string>, visible: readonly string[]): ReadonlySet<string> {
+  if (!visible.length || visible.some((key) => !keys.has(key))) return keys;
+  const next = new Set(keys);
+  next.delete(visible[0]);
+  return next;
 }
 
 /** first-pane share of the pair on either side of gutter `g`, as an integer 0–100 */
@@ -103,6 +159,39 @@ function pairPercent(fractions: number[], g: number): number | undefined {
   const a = fractions[g];
   const b = fractions[g + 1];
   return a == null || b == null ? undefined : Math.round((100 * a) / (a + b));
+}
+
+/** `[0 … count-2]`, minus each gutter with a collapsed track on either side */
+function gutterIndices(count: number, collapsed: readonly boolean[]): number[] {
+  return Array.from({ length: Math.max(0, count - 1) }, (_, g) => g).filter(
+    (g) => !collapsed[g] && !collapsed[g + 1],
+  );
+}
+
+/** per-mount id prefix for the pane controls' `id` / `aria-controls` pairs */
+let nextMountId = 0;
+
+/** a content's stable key within its mount — its `slug`, else its position */
+function contentKey(rc: ResolvedContent, index: number): string {
+  return rc.content.slug ?? `#${index}`;
+}
+
+/**
+ * Keeps the CDK overlay container (dialogs, menus, tooltips, the notification stack) inside the
+ * full-screen pane: the browser makes everything outside the full-screen element inert, so an
+ * overlay left under `<body>` would still paint on top (CDK shows it as a top-layer popover) yet
+ * ignore every click and never take focus. Same move as CDK's `FullscreenOverlayContainer`, done
+ * here so apps need no provider — but only for a contents-view pane: a foreign full-screen
+ * element (a `<video>`) is left alone. Idempotent, so every mount can run it on every change.
+ */
+function syncOverlayContainer(doc: Document, container: HTMLElement): void {
+  const fullscreen = doc.fullscreenElement;
+  const parent = !fullscreen
+    ? doc.body
+    : fullscreen.classList.contains('contents-view-item')
+      ? fullscreen
+      : null;
+  if (parent && container.parentElement !== parent) parent.appendChild(container);
 }
 
 /**
@@ -119,6 +208,7 @@ function pairPercent(fractions: number[], g: number): number | undefined {
     NgTemplateOutlet,
     MatIconModule,
     MatTabsModule,
+    MatTooltipModule,
     SlidingTabIndicatorDirective,
     PanelResizeDirective,
     ActionButtonsComponent,
@@ -132,6 +222,7 @@ function pairPercent(fractions: number[], g: number): number | undefined {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[class]': 'hostClass()',
+    '[attr.tabindex]': 'hostTabindex()',
   },
 })
 export class ContentsViewComponent implements OnInit {
@@ -142,8 +233,16 @@ export class ContentsViewComponent implements OnInit {
 
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly document = inject(DOCUMENT);
+  private readonly focusTrapFactory = inject(FocusTrapFactory);
+  private readonly overlayContainer = inject(OverlayContainer);
 
-  /** live `true` while the viewport is ≥ Tailwind's `lg` (64rem) — drives `contentsFit: 'auto'`
+  /** the ROOT mount has no contents-view ancestor — a nested one is rendered inside its parent's
+   *  template, so the parent is on its element-injector path */
+  private readonly isRoot = !inject(ContentsViewComponent, { optional: true, skipSelf: true });
+
+  /** live `true` while the viewport is ≥ Tailwind's `lg` (64rem) — drives `flowOnSmallerView`
    *  and the one-vs-two-column decision. Static `false` where `matchMedia` is unavailable
    *  (jsdom): tests that need a definite answer stub `window.matchMedia`. */
   private readonly lgUp = mediaQuerySignal(LG_UP_QUERY);
@@ -153,10 +252,11 @@ export class ContentsViewComponent implements OnInit {
     () => this.params().contentsFit ?? 'auto',
   );
 
-  /** `contentsFit` with `'auto'` resolved against the current viewport. */
+  /** below lg, `'flow'` unless `flowOnSmallerView: false`; otherwise `contentsFit` (`'auto'` is
+   *  `'cover'`) — see `ContentsLayout.contentsFit` / `flowOnSmallerView`. */
   protected readonly resolvedFit = computed<'cover' | 'flow'>(() => {
-    const fit = this.contentsFit();
-    return fit === 'auto' ? (this.lgUp() ? 'cover' : 'flow') : fit;
+    if (!this.lgUp() && this.params().flowOnSmallerView !== false) return 'flow';
+    return this.contentsFit() === 'flow' ? 'flow' : 'cover';
   });
 
   /** whether this level is in the bounded, internally-scrolling layout (`resolvedFit() === 'cover'`)
@@ -166,13 +266,24 @@ export class ContentsViewComponent implements OnInit {
 
   /** reactive `:host` sizing, replacing the old static `:host { height: 100%; width: 100% }` SCSS
    *  rule — same `host: { '[class]': ... }` pattern `grid-cell.component.ts` already uses for a
-   *  reactive host class. `min-h-0` only under `fitIntoView()`: lets THIS element shrink below its
-   *  content's natural height when it's itself a flex/grid item of a bounded ancestor (mounted
-   *  recursively inside another level's body-scroll-region, or at the top level inside a bounded
-   *  flex parent). With fitIntoView() false, omitting it preserves "grow to natural height". */
-  protected readonly hostClass = computed(() =>
-    ['block h-full w-full', this.isCover() ? 'min-h-0' : ''].filter(Boolean).join(' '),
-  );
+   *  reactive host class.
+   *  - cover: `min-h-0` lets THIS element shrink below its content's natural height when it's
+   *    itself a flex/grid item of a bounded ancestor (mounted recursively inside another level's
+   *    body-scroll-region, or at the top level inside a bounded flex parent).
+   *  - flow, root: `h-full overflow-y-auto` — once the parent bounds its height (an app shell,
+   *    a card), the root itself scrolls the flowing contents; under an unbounded parent `h-full`
+   *    resolves to `auto` and the page scrolls instead. Without it, flowing content just spilled
+   *    out of a bounded shell with nothing able to scroll it.
+   *  - flow, nested: no height at all — it grows to its natural height inside its parent level's
+   *    body, which (or whose ancestor) does the scrolling. */
+  protected readonly hostClass = computed(() => {
+    if (this.isCover()) return 'block h-full w-full min-h-0';
+    return this.isRoot ? 'block h-full w-full overflow-y-auto' : 'block w-full';
+  });
+
+  /** the flow root is a scroll region — keyboard-reachable per WCAG/AXE's
+   *  `scrollable-region-focusable`, like each cover body (see `bodyClass`) */
+  protected readonly hostTabindex = computed(() => (!this.isCover() && this.isRoot ? 0 : null));
 
   /** per-content reactive resolution of visible/disabled/badge/html — mirrors
    *  grid-cell.component.ts's toObservable→switchMap→combineLatest→toSignal pattern,
@@ -273,12 +384,19 @@ export class ContentsViewComponent implements OnInit {
 
   /** every content's full wrapper class list — `itemBaseClass` merged with the cascaded
    *  `contentsClass`, then this content's own `class` (still wins conflicts last). Shared by both
-   *  list items and tab panels (see `panelItemClass`). */
-  protected listItemClass(rc: ResolvedContent): string {
-    return mergeClasses(
+   *  list items and tab panels. In full screen it becomes the "pinned header + scrollable body"
+   *  column filling the screen; a collapsed row strip drops `h-full` and aligns to the top of its
+   *  track, so a row whose other panes are still open doesn't stretch it back to full height. */
+  protected listItemClass(rc: ResolvedContent, key: string): string {
+    const own = mergeClasses(
       mergeClasses(this.itemBaseClass(), this.params().contentsClass ?? ''),
       rc.content.class ?? '',
     );
+    if (this.isFullscreen(key)) return mergeClasses(own, 'flex flex-col bg-white p-3 rounded-none');
+    if (this.isCollapsed(key) && this.collapseAxis() === 'row') {
+      return mergeClasses(own, 'h-auto self-start');
+    }
+    return own;
   }
 
   /** every content's own body-scroll region (see the `#contentBody` template) — wraps the
@@ -289,11 +407,12 @@ export class ContentsViewComponent implements OnInit {
    *  actual scrolling happens; the template also binds `[attr.tabindex]` here so this region is
    *  keyboard-reachable per WCAG/AXE's `scrollable-region-focusable` whenever it might scroll.
    *  Structural classes merged with the cascaded `bodiesClass`, then this content's own
-   *  `bodyClass` (still wins conflicts last) — the body-level analog of `listItemClass`. */
-  protected bodyClass(rc: ResolvedContent): string {
+   *  `bodyClass` (still wins conflicts last) — the body-level analog of `listItemClass`. A
+   *  full-screen pane's body scrolls the same way in either fit. */
+  protected bodyClass(rc: ResolvedContent, key: string): string {
     const structural = [
       'contents-view-body min-w-0',
-      this.isCover() ? 'flex flex-1 flex-col min-h-0 overflow-y-auto' : '',
+      this.bodyScrolls(key) ? 'flex flex-1 flex-col min-h-0 overflow-y-auto' : '',
     ]
       .filter(Boolean)
       .join(' ');
@@ -301,6 +420,11 @@ export class ContentsViewComponent implements OnInit {
       mergeClasses(structural, this.params().bodiesClass ?? ''),
       rc.content.bodyClass ?? '',
     );
+  }
+
+  /** whether a content's body is a bounded scroll region (cover, or full screen) */
+  protected bodyScrolls(key: string): boolean {
+    return this.isCover() || this.isFullscreen(key);
   }
 
   /** every content's own header (see the `#header` template) — structural label/icon/badge/
@@ -375,11 +499,26 @@ export class ContentsViewComponent implements OnInit {
       this.visibleContents().length > 1,
   );
 
+  /** the grid gets measured: a list/grid level with >1 visible content that either resizes or
+   *  collapses (collapse needs the measured shape — its axis, and which tracks to shrink — in
+   *  either fit) */
+  private readonly measureActive = computed(
+    () =>
+      !this.params().showContentsInTabs &&
+      this.visibleContents().length > 1 &&
+      (this.resizeActive() || this.collapsible()),
+  );
+
   // ── measured grid geometry ──
   // `null` until measured, and permanently so in jsdom / SSR (no layout) — every consumer below
   // then falls back to the responsive shape the built-in grid uses.
 
-  private readonly gridMetrics = signal<{ cols: GridAxis; rows: GridAxis } | null>(null);
+  /** the measured tracks per axis, plus each visible content's `(col, row)` track, in order */
+  private readonly gridMetrics = signal<{
+    cols: GridAxis;
+    rows: GridAxis;
+    items: { col: number; row: number }[];
+  } | null>(null);
   private gridResizeObserver?: ResizeObserver;
   private measureScheduled = false;
 
@@ -389,12 +528,18 @@ export class ContentsViewComponent implements OnInit {
    *  cleared once drag-end has re-measured the final layout. */
   private readonly activeDrag = signal<{ axis: 'x' | 'y'; g: number; shiftPx: number } | null>(null);
 
+  /** measurement is frozen during a drag (see `activeDrag`) and while a pane is full screen — the
+   *  full-screen element leaves the grid's flow, so a re-measure would see a different shape */
+  private measureFrozen(): boolean {
+    return !!this.activeDrag() || this.fullscreenKey() !== undefined;
+  }
+
   private scheduleMeasure(): void {
     if (this.measureScheduled) return;
     this.measureScheduled = true;
     requestAnimationFrame(() => {
       this.measureScheduled = false;
-      if (!this.activeDrag()) this.measureGrid();
+      if (!this.measureFrozen()) this.measureGrid();
     });
   }
 
@@ -402,8 +547,9 @@ export class ContentsViewComponent implements OnInit {
     const el = this.gridContainerRef()?.nativeElement;
     const items = this.itemEls();
     const cRect = el?.getBoundingClientRect();
-    // bail (→ the fallback shape) with too few items, or no layout at all (jsdom / SSR / hidden)
-    if (!el || items.length < 2 || !cRect?.width || !cRect.height) {
+    // bail (→ the fallback shape) when not needed, with too few items, or no layout at all
+    // (jsdom / SSR / hidden)
+    if (!this.measureActive() || !el || items.length < 2 || !cRect?.width || !cRect.height) {
       this.gridMetrics.set(null);
       return;
     }
@@ -417,7 +563,16 @@ export class ContentsViewComponent implements OnInit {
       xSpans.push({ start: r.left - originX, end: r.right - originX });
       ySpans.push({ start: r.top - originY, end: r.bottom - originY });
     }
-    this.gridMetrics.set({ cols: clusterEdges(xSpans), rows: clusterEdges(ySpans) });
+    const cols = clusterEdges(xSpans);
+    const rows = clusterEdges(ySpans);
+    this.gridMetrics.set({
+      cols,
+      rows,
+      items: xSpans.map((x, i) => ({
+        col: trackIndex(cols, x.start),
+        row: trackIndex(rows, ySpans[i].start),
+      })),
+    });
   }
 
   /** live once the grid has actually been measured — gutters render only then, so the
@@ -453,12 +608,13 @@ export class ContentsViewComponent implements OnInit {
     return base != null && d?.axis === axis && d.g === g ? base + d.shiftPx : base;
   }
 
-  /** `[0 … count-2]` — one gutter per interior boundary on each axis */
+  /** `[0 … count-2]` — one gutter per interior boundary on each axis, minus any gutter beside a
+   *  collapsed track (a strip has no size to trade) */
   protected readonly colGutterIndices = computed(() =>
-    Array.from({ length: Math.max(0, this.colCount() - 1) }, (_, g) => g),
+    gutterIndices(this.colCount(), this.collapsedTracks().cols),
   );
   protected readonly rowGutterIndices = computed(() =>
-    Array.from({ length: Math.max(0, this.rowCount() - 1) }, (_, g) => g),
+    gutterIndices(this.rowCount(), this.collapsedTracks().rows),
   );
 
   /** per-axis relative weights; length tracks `colCount()` / `rowCount()` via the reconcile
@@ -472,17 +628,27 @@ export class ContentsViewComponent implements OnInit {
   private persistKey?: string;
 
   /** explicit `grid-template-columns` / `-rows`, applied inline over the class's own tracks — but
-   *  ONLY once we've measured the real grid and this axis has a matching 2+-track distribution to
-   *  enforce. `null` beforehand, so the consumer's own grid stands untouched (no first-frame flash
-   *  from the pre-measurement fallback count guessing wrong). */
+   *  ONLY once we've measured the real grid and this axis has something to enforce: a matching
+   *  2+-track `resizable` distribution, and/or a collapsed track (sized to its strip, the rest
+   *  sharing the space — see `axisTemplate`). `null` otherwise, so the consumer's own grid stands
+   *  untouched (no first-frame flash from the pre-measurement fallback count guessing wrong).
+   *  Rows only in cover: flowing rows already size to their content. */
   protected readonly gridTemplateColumns = computed(() =>
-    this.gridMetrics() && this.colFractions().length === this.colCount()
-      ? trackTemplate(this.colFractions())
+    this.gridMetrics()
+      ? axisTemplate(
+          this.colCount(),
+          this.resizeActive() ? this.colFractions() : [],
+          this.collapsedTracks().cols,
+        )
       : null,
   );
   protected readonly gridTemplateRows = computed(() =>
-    this.gridMetrics() && this.rowFractions().length === this.rowCount()
-      ? trackTemplate(this.rowFractions())
+    this.gridMetrics() && this.isCover()
+      ? axisTemplate(
+          this.rowCount(),
+          this.resizeActive() ? this.rowFractions() : [],
+          this.collapsedTracks().rows,
+        )
       : null,
   );
 
@@ -494,12 +660,15 @@ export class ContentsViewComponent implements OnInit {
 
   /** content-track pixel sizes for the dragged axis, captured from the measurement at drag start */
   private trackStartPx: number[] = [];
+  /** the dragged axis' fractions at drag start — collapsed tracks keep theirs (`refitFractions`) */
+  private fractionsAtStart: number[] = [];
   private rafPending = false;
   private pendingApply: (() => void) | null = null;
 
   protected onGutterStart(axis: 'x' | 'y', g: number): void {
     const m = this.gridMetrics();
     this.trackStartPx = (axis === 'x' ? m?.cols.tracks : m?.rows.tracks)?.map((t) => t.size) ?? [];
+    this.fractionsAtStart = axis === 'x' ? this.colFractions() : this.rowFractions();
     this.activeDrag.set({ axis, g, shiftPx: 0 });
   }
 
@@ -526,7 +695,8 @@ export class ContentsViewComponent implements OnInit {
     if (!isFinite(a) || !isFinite(b)) return;
     [next[g], next[g + 1]] = redistributePx(a, b, deltaPx, minPx);
     this.activeDrag.set({ axis, g, shiftPx: next[g] - this.trackStartPx[g] });
-    this.scheduleApply(() => target.set(normalizeFractions(next)));
+    const collapsed = axis === 'x' ? this.collapsedTracks().cols : this.collapsedTracks().rows;
+    this.scheduleApply(() => target.set(refitFractions(this.fractionsAtStart, next, collapsed)));
   }
 
   /** coalesce live-drag updates to one signal commit (→ one CD pass) per animation frame —
@@ -628,29 +798,212 @@ export class ContentsViewComponent implements OnInit {
     }
   }
 
-  /** whether THIS content's own header should show its label/icon/badge — suppressed by default
-   *  while shown as a tab (the tab toggle button already shows label/icon/badge), unless
-   *  `header: 'full'`. */
-  protected showHeaderLabelIcon(content: ContentView): boolean {
-    if (content.header === 'full') return true;
-    return !this.params().showContentsInTabs;
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Pane controls — collapse / restore (ContentsLayout.collapsible, list/grid levels) and browser
+  // full screen (ContentsLayout.fullscreenable, list and tabs levels), at the end of each
+  // content's header row.
+  //
+  // Collapsing swaps a pane's header for a strip button (icon + label) and hides — but keeps
+  // mounted — its body. Which way it collapses follows the MEASURED grid: panes stacked in rows
+  // become thin row strips, panes side by side in one row become narrow column strips. A track
+  // whose panes are all collapsed is sized to the strip (`axisTemplate`), so the others take its
+  // space; at least one pane stays expanded unless `keepOneExpanded: false`. Full screen uses the
+  // Fullscreen API on the pane itself; the state follows the document's `fullscreenchange`, so
+  // the browser's own Esc works too.
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  protected readonly collapsible = computed(() => this.params().collapsible === true);
+  /** collapse is offered in list/grid layout only — a tab panel is already one-at-a-time */
+  protected readonly canCollapse = computed(
+    () => this.collapsible() && !this.params().showContentsInTabs,
+  );
+  /** default on — at least one of this level's panes stays expanded */
+  private readonly keepOneExpanded = computed(() => this.params().keepOneExpanded !== false);
+  /** the collapse button shows — but not on a lone pane that has to stay expanded anyway */
+  protected readonly collapseOffered = computed(
+    () => this.canCollapse() && (!this.keepOneExpanded() || this.visibleContents().length > 1),
+  );
+  /** element full screen is available — not on iPhone Safari, nor in an iframe without
+   *  `allow="fullscreen"`, nor in jsdom */
+  private readonly fullscreenSupported = !!this.document.fullscreenEnabled;
+  /** the full-screen button shows: opted in (list and tabs levels alike), and supported */
+  protected readonly fullscreenOffered = computed(
+    () => this.params().fullscreenable === true && this.fullscreenSupported,
+  );
+  /** every content at this level has a pane control — so a header row to hold it */
+  protected readonly hasControls = computed(
+    () => this.collapseOffered() || this.fullscreenOffered(),
+  );
+
+  /** the visible panes' keys, in order */
+  private readonly visibleKeys = computed(() =>
+    this.visibleContents().map((rc, i) => contentKey(rc, i)),
+  );
+
+  /** the collapsed panes' keys — written by `setCollapsed`, and re-checked whenever the visible
+   *  panes change: with `keepOneExpanded`, a level whose visible panes all end up collapsed (the
+   *  open one hidden since) reopens its first */
+  private readonly collapsedKeys = linkedSignal<
+    { visible: string[]; keepOne: boolean },
+    ReadonlySet<string>
+  >({
+    source: () => ({ visible: this.visibleKeys(), keepOne: this.keepOneExpanded() }),
+    computation: ({ visible, keepOne }, previous) => {
+      const keys = previous?.value ?? new Set<string>();
+      return keepOne ? keepFirstOpen(keys, visible) : keys;
+    },
+  });
+  /** the visible panes still expanded */
+  private readonly openKeys = computed(() =>
+    this.visibleKeys().filter((key) => !this.collapsedKeys().has(key)),
+  );
+  private readonly fullscreenKey = signal<string | undefined>(undefined);
+  /** the pane asked to go full screen — matched against `document.fullscreenElement` */
+  private fullscreenTarget?: { key: string; el: HTMLElement };
+  private fullscreenTrap?: FocusTrap;
+  private readonly mountId = `cv${++nextMountId}`;
+
+  protected readonly contentKey = contentKey;
+
+  /** `'column'` when this level's contents sit side by side in one row, else `'row'` */
+  protected readonly collapseAxis = computed<'row' | 'column'>(() =>
+    this.rowCount() === 1 && this.colCount() > 1 ? 'column' : 'row',
+  );
+
+  /** per axis, which tracks hold nothing but collapsed panes (along `collapseAxis`) — those
+   *  shrink to their strip. Empty until measured. */
+  private readonly collapsedTracks = computed<{ cols: boolean[]; rows: boolean[] }>(() => {
+    const m = this.gridMetrics();
+    const list = this.visibleContents();
+    const keys = this.collapsedKeys();
+    if (!m || !this.canCollapse() || m.items.length !== list.length) return { cols: [], rows: [] };
+
+    const byRow = this.collapseAxis() === 'row';
+    const count = byRow ? m.rows.tracks.length : m.cols.tracks.length;
+    const shut = Array<boolean>(count).fill(false);
+    const open = Array<boolean>(count).fill(false);
+    list.forEach((rc, i) => {
+      const track = byRow ? m.items[i].row : m.items[i].col;
+      if (keys.has(contentKey(rc, i))) shut[track] = true;
+      else open[track] = true;
+    });
+    const tracks = shut.map((isShut, t) => isShut && !open[t]);
+    return byRow ? { cols: [], rows: tracks } : { cols: tracks, rows: [] };
+  });
+
+  /** an axis whose tracks are ALL collapsed (only with `keepOneExpanded: false`) packs its strips
+   *  to the start — nothing is left to take their space, and under the default content
+   *  distribution `auto` tracks would stretch across it */
+  protected readonly packedAxis = computed(() => {
+    const { cols, rows } = this.collapsedTracks();
+    return {
+      cols: cols.length > 0 && cols.every(Boolean),
+      rows: rows.length > 0 && rows.every(Boolean),
+    };
+  });
+
+  protected isCollapsed(key: string): boolean {
+    return this.canCollapse() && this.collapsedKeys().has(key);
   }
 
-  /** whether THIS content renders a header row at all.
-   *  - `header: 'none'` → never.
-   *  - `'auto'` while shown as a tab → only when there are `actionButtons`; the tab toggle
-   *    button already carries label/icon/badge, so a panel header with just those is redundant.
-   *  - otherwise (`'full'`, or `'auto'` in list mode) → whenever there's a label, icon, badge
-   *    or actionButtons to show. */
+  /** with `keepOneExpanded`, the last expanded pane can't collapse — its button stays, disabled
+   *  but focusable, its tooltip saying why */
+  protected collapseLocked(key: string): boolean {
+    const open = this.openKeys();
+    return this.keepOneExpanded() && open.length === 1 && open[0] === key;
+  }
+
+  protected isFullscreen(key: string): boolean {
+    return this.fullscreenKey() === key;
+  }
+
+  protected paneLabel(rc: ResolvedContent): string {
+    return rc.content.label ?? rc.content.title ?? rc.content.slug ?? 'panel';
+  }
+
+  protected bodyId(key: string): string {
+    return `${this.mountId}-body-${key}`;
+  }
+
+  protected controlId(control: 'collapse' | 'strip', key: string): string {
+    return `${this.mountId}-${control}-${key}`;
+  }
+
+  /** collapse / restore — focus follows to the control that replaces the one clicked (the strip,
+   *  or the collapse button back in the header), so keyboard users never lose their place. The
+   *  last expanded pane stays expanded (`collapseLocked`). */
+  protected setCollapsed(key: string, collapsed: boolean): void {
+    if (collapsed && this.collapseLocked(key)) return;
+    this.collapsedKeys.update((keys) => {
+      const next = new Set(keys);
+      if (collapsed) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+    const focusId = this.controlId(collapsed ? 'strip' : 'collapse', key);
+    afterNextRender(() => this.document.getElementById(focusId)?.focus(), {
+      injector: this.injector,
+    });
+  }
+
+  protected toggleFullscreen(key: string, el: HTMLElement): void {
+    if (this.document.fullscreenElement === el) {
+      void this.document.exitFullscreen();
+      return;
+    }
+    this.fullscreenTarget = { key, el };
+    // rejected without a user gesture, or when the element can't go full screen — stay put
+    el.requestFullscreen().catch(() => (this.fullscreenTarget = undefined));
+  }
+
+  private exitFullscreen(): void {
+    const target = this.fullscreenTarget;
+    if (target && this.document.fullscreenElement === target.el) {
+      void this.document.exitFullscreen();
+    }
+  }
+
+  /** mirrors the browser's full-screen state — entered via our button, left via it or Esc. The
+   *  pane stays "full screen" while a pane nested inside it is full screen on top of it (the
+   *  browser's full-screen stack returns to it when that one exits). While full screen, Tab is
+   *  trapped inside the pane — Chrome already makes the rest of the page inert; the trap covers
+   *  browsers that don't — and the overlay container moves in with it (`syncOverlayContainer`). */
+  private readonly onFullscreenChange = (): void => {
+    syncOverlayContainer(this.document, this.overlayContainer.getContainerElement());
+
+    const target = this.fullscreenTarget;
+    const current = this.document.fullscreenElement;
+    const active = !!target && !!current && target.el.contains(current);
+    if (!active) this.fullscreenTarget = undefined;
+    if (this.fullscreenKey() === (active ? target.key : undefined)) return;
+
+    this.fullscreenTrap?.destroy();
+    this.fullscreenTrap = active ? this.focusTrapFactory.create(target.el) : undefined;
+    this.fullscreenKey.set(active ? target.key : undefined);
+    // back in the grid's flow — measure what was frozen while full screen
+    if (!active) this.scheduleMeasure();
+  };
+
+  /** the heading at the start of THIS content's header row (see `ContentViewBase.header`):
+   *  - `'full'` → icon, `title` (else `label`) and badge.
+   *  - `'auto'` → only with a `title`: icon, title and badge in list mode; the title alone while
+   *    shown as a tab, whose toggle button above already carries icon, label and badge.
+   *  - `'none'` → none. */
+  protected headingOf(rc: ResolvedContent): ContentHeading | undefined {
+    const { header, title, label, icon } = rc.content;
+    const badge = rc.badge === undefined || rc.badge === null || rc.badge === '' ? undefined : rc.badge;
+    if (header === 'full') {
+      const text = title || label;
+      return text || icon || badge !== undefined ? { text, icon, badge } : undefined;
+    }
+    if (header === 'none' || !title) return undefined;
+    return this.params().showContentsInTabs ? { text: title } : { text: title, icon, badge };
+  }
+
+  /** whether THIS content renders a header row at all — whenever there's a heading, any
+   *  `actionButtons`, or pane controls to hold; else nothing renders above the body */
   protected showsHeader(rc: ResolvedContent): boolean {
-    const content = rc.content;
-    if (content.header === 'none') return false;
-
-    const hasActionButtons = !!content.actionButtons;
-    if (content.header !== 'full' && this.params().showContentsInTabs) return hasActionButtons;
-
-    const hasBadge = rc.badge !== undefined && rc.badge !== null && rc.badge !== '';
-    return !!(content.label || content.icon) || hasBadge || hasActionButtons;
+    return !!this.headingOf(rc) || !!rc.content.actionButtons || this.hasControls();
   }
 
   /** index of `effectiveActiveSlug()` within `visibleContents()`, for `<mat-tab-group>`'s own
@@ -709,13 +1062,17 @@ export class ContentsViewComponent implements OnInit {
         const persisted = this.persistedSizes();
         const initial = this.params().initialSizes;
         const m = this.gridMetrics();
+        // a collapsed track measures only its strip — never seed a share from that
+        const shut = this.collapsedTracks();
+        const measuredCols = shut.cols.some(Boolean) ? undefined : m?.cols.tracks;
+        const measuredRows = shut.rows.some(Boolean) ? undefined : m?.rows.tracks;
         if (this.colFractions().length !== cols) {
           this.colFractions.set(
             this.seedFractions(
               cols,
               persisted?.columns,
               initial?.columns,
-              m?.cols.tracks.map((t) => t.size),
+              measuredCols?.map((t) => t.size),
               this.colFractions(),
             ),
           );
@@ -726,7 +1083,7 @@ export class ContentsViewComponent implements OnInit {
               rows,
               persisted?.rows,
               initial?.rows,
-              m?.rows.tracks.map((t) => t.size),
+              measuredRows?.map((t) => t.size),
               this.rowFractions(),
             ),
           );
@@ -742,22 +1099,34 @@ export class ContentsViewComponent implements OnInit {
       const el = this.gridContainerRef()?.nativeElement;
       if (!el || typeof ResizeObserver === 'undefined') return;
       this.gridResizeObserver = new ResizeObserver(() => {
-        if (!this.activeDrag()) this.measureGrid();
+        if (!this.measureFrozen()) this.measureGrid();
       });
       this.gridResizeObserver.observe(el);
     });
     this.destroyRef.onDestroy(() => this.gridResizeObserver?.disconnect());
 
     effect(() => {
-      if (!this.resizeActive()) {
+      if (!this.measureActive()) {
         untracked(() => this.gridMetrics.set(null));
         return;
       }
       this.visibleContents(); // tracked so a boundary-moving change reschedules a measure:
       this.lgUp(); //           contents added/removed, the viewport crossing the breakpoint,
-      this.colFractions(); //   or the split itself changing (drag commit / setSizes / restore)
-      this.rowFractions();
+      this.colFractions(); //   the split itself changing (drag commit / setSizes / restore),
+      this.rowFractions(); //   a pane collapsing / restoring, or the fit flipping
+      this.collapsedKeys();
+      this.resolvedFit();
       untracked(() => this.scheduleMeasure());
+    });
+
+    this.document.addEventListener('fullscreenchange', this.onFullscreenChange);
+    this.destroyRef.onDestroy(() => {
+      this.document.removeEventListener('fullscreenchange', this.onFullscreenChange);
+      this.fullscreenTrap?.destroy();
+      // don't strand the overlay container in a pane that's leaving the DOM
+      const container = this.overlayContainer.getContainerElement();
+      if (this.fullscreenTarget?.el.contains(container)) this.document.body.appendChild(container);
+      this.exitFullscreen();
     });
   }
 
@@ -784,6 +1153,10 @@ export class ContentsViewComponent implements OnInit {
         this.persistSizes();
         this.params().onSizesChange?.(this.currentSizes());
       },
+      collapsed: () => [...this.collapsedKeys()],
+      setCollapsed: (slug, collapsed) => this.setCollapsed(slug, collapsed),
+      fullscreenSlug: () => this.fullscreenKey(),
+      exitFullscreen: () => this.exitFullscreen(),
     };
     this.instanceChange.emit(instance);
   }
@@ -825,30 +1198,36 @@ export class ContentsViewComponent implements OnInit {
       // section inside a 'cover' dashboard); each level defaults to 'auto' and consumes its own
       // value (see `resolvedFit` / `nestedContentsClass` / `resizeActive`).
       contentsFit: content.contentsFit,
-      // `resizable` / `persistSizes` DO cascade — turn resizing on once on an ancestor and every
-      // nested list/grid level is resizable too (each still only shows gutters when its own
-      // measured layout has >1 row/column); a child sets `resizable: false` to opt its subtree
+      // `flowOnSmallerView` / `resizable` / `persistSizes` / `collapsible` / `keepOneExpanded` /
+      // `fullscreenable` DO cascade — set once on an ancestor and every nested level follows (a
+      // resizable level still only shows gutters when its own measured layout has >1
+      // row/column); a child sets its own value (e.g. `resizable: false`) to opt its subtree
       // out. `initialSizes` / `onSizesChange` stay root-only (a nested level persists via
       // localStorage instead).
+      flowOnSmallerView: content.flowOnSmallerView ?? this.params().flowOnSmallerView,
       resizable: content.resizable ?? this.params().resizable,
       persistSizes: content.persistSizes ?? this.params().persistSizes,
+      collapsible: content.collapsible ?? this.params().collapsible,
+      keepOneExpanded: content.keepOneExpanded ?? this.params().keepOneExpanded,
+      fullscreenable: content.fullscreenable ?? this.params().fullscreenable,
       preserveInactiveContent: content.preserveInactiveContent,
     };
   }
 
   /** wraps the recursively-nested `<contents-view>` mount (see the `#contentBody` template).
-   *  `flex-1 min-h-0` only when the CHILD's own resolved fit is `'cover'` — its `contentsFit`
-   *  (independent default `'auto'`, NOT cascaded/merged — see `nestedParameter` above), with
-   *  `'auto'` resolved here against THIS mount's `lgUp()` (the child re-resolves it identically
-   *  once mounted). `'cover'`: lets it share `bodyClass`'s flex column with any preceding
-   *  switch-output sibling (e.g. a `'table'` node that also has nested `.contents`) and shrink,
-   *  so ITS OWN internal min-h-0 chain owns the scrolling — instead of a literal `h-full`, which
-   *  would either overflow (with a sibling present) or add an inert extra scroll boundary (as the
-   *  sole child). `'flow'`: no class — it grows to its natural height and this mount's own
-   *  `overflow-y-auto` body-scroll region scrolls it. */
+   *  `flex-1 min-h-0` only when the CHILD's own resolved fit is `'cover'` — resolved here the way
+   *  the child will (`resolvedFit`) from its own `contentsFit` (NOT cascaded) and its effective,
+   *  cascaded `flowOnSmallerView`, against THIS mount's `lgUp()`. `'cover'`: lets it share
+   *  `bodyClass`'s flex column with any preceding switch-output sibling (e.g. a `'table'` node
+   *  that also has nested `.contents`) and shrink, so ITS OWN internal min-h-0 chain owns the
+   *  scrolling — instead of a literal `h-full`, which would either overflow (with a sibling
+   *  present) or add an inert extra scroll boundary (as the sole child). `'flow'`: no class — it
+   *  grows to its natural height and this mount's own `overflow-y-auto` body-scroll region
+   *  scrolls it. */
   protected nestedContentsClass(content: ContentView): string {
-    const fit = content.contentsFit ?? 'auto';
-    const childCover = fit === 'auto' ? this.lgUp() : fit === 'cover';
+    const flowOnSmaller = content.flowOnSmallerView ?? this.params().flowOnSmallerView ?? true;
+    const childCover =
+      (this.lgUp() || !flowOnSmaller) && (content.contentsFit ?? 'auto') !== 'flow';
     return childCover ? 'flex-1 min-h-0' : '';
   }
 

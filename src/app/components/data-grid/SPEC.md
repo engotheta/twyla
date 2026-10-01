@@ -357,23 +357,22 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
 - `DataGridComponent.onRowClick` counts clicks per row (keyed by
   `instance.rowId(row)`, accumulated for the life of the grid instance —
   not reset by a timeout) and, once the count reaches
-  `GridParameter.viewDetailsClicks`, opens whatever component is provided
+  `GridParameter.viewDetailsClicks`, hosts whatever component is provided
   for the `ROW_DETAILS_COMPONENT` injection token (`row-details.token.ts`)
-  — `dialog.open(this.rowDetailsComponent, { data: { entity: row } })` —
-  then resets that row's count to 0; if nothing is provided for the token,
-  the click-counting is skipped entirely. `DetailsComponent` is the
+  in a `ViewService` dialog —
+  `view.open(this.rowDetailsComponent, { title: 'Details', inputs: { params: { entity: row } } })`
+  — then resets that row's count to 0; if nothing is provided for the
+  token, the click-counting is skipped entirely. `DetailsComponent` is the
   intended component for this (app-wide via
   `{ provide: ROW_DETAILS_COMPONENT, useValue: DetailsComponent }`, see
   `app.config.ts`), but data-grid never imports it directly — `field-group`
   (a `details` descendant) renders `<data-grid>` for tabular array columns,
   so a direct import back to `details.component` would form a
   `data-grid -> details -> data-grid` circular standalone-component
-  dependency. `DetailsComponent` is dual-mode (mirrors `FieldGroupComponent`'s
-  own dual-mode pattern), detecting `MAT_DIALOG_DATA` via an optional inject
-  and adding its own dialog chrome (a "Details" title — or `dialogData.title`
-  if the caller set one — plus a Close button) only when opened that way;
-  used as a plain embeddable child (`[parameter]`) elsewhere, it renders
-  with no chrome, unchanged. With no `visibleFields`/`fieldGroups` passed,
+  dependency. The dialog shell (`view/view-dialog.component.ts`) supplies
+  the title bar and close button, so `DetailsComponent` has no dialog mode
+  of its own — it just receives `{ entity: row }` on its `params` input,
+  exactly as when embedded. With no `visibleFields`/`fieldGroups` passed,
   `resolveDetailGroups`/`getAllFields` derive fields directly from the row
   object itself: every own field is shown, with no per-grid setup required.
 - Default is 7 when `viewDetailsClicks` is left unset — a deliberate,

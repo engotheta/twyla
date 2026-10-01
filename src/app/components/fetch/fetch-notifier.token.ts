@@ -1,5 +1,5 @@
 import { inject, InjectionToken } from '@angular/core';
-import { ToastService } from '../toast';
+import { NotificationService } from '../notification';
 
 /** Where `FetchService` sends its success and error messages. */
 export interface FetchNotifier {
@@ -7,14 +7,14 @@ export interface FetchNotifier {
   error(message: string): void;
 }
 
-/** Defaults to the app's `ToastService`; provide your own to route messages elsewhere. */
+/** Defaults to the app's `NotificationService`; provide your own to route messages elsewhere. */
 export const FETCH_NOTIFIER = new InjectionToken<FetchNotifier>('FETCH_NOTIFIER', {
   providedIn: 'root',
   factory: () => {
-    const toasts = inject(ToastService);
+    const notify = inject(NotificationService);
     return {
-      success: (message) => toasts.success(message),
-      error: (message) => toasts.error(message),
+      success: (message) => notify.success(message),
+      error: (message) => notify.error(message),
     };
   },
 });

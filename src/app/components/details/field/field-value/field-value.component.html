@@ -26,11 +26,11 @@
     }
   }
 
-  <!-- percentage: number + progress bar -->
+  <!-- percentage: number + progress bar (decorative — the number beside it is the accessible value) -->
   @case ('percentage') {
     <div class="flex items-center gap-2 min-w-32">
       <span class="text-sm tabular-nums">{{ percentage() }}%</span>
-      <div class="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+      <div class="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden" aria-hidden="true">
         <div class="h-full bg-primary" [style.width.%]="percentage()"></div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { clusterEdges } from './grid-metrics.util';
+import { clusterEdges, trackIndex } from './grid-metrics.util';
 
 describe('clusterEdges', () => {
   it('is empty for no spans', () => {
@@ -61,5 +61,23 @@ describe('clusterEdges', () => {
       { start: 120, end: 220 },
     ]);
     expect(a.tracks.map((t) => t.start)).toEqual([0, 120, 240]);
+  });
+});
+
+describe('trackIndex', () => {
+  const axis = clusterEdges([
+    { start: 0, end: 100 },
+    { start: 120, end: 220 },
+    { start: 240, end: 340 },
+  ]);
+
+  it("finds the track an item's leading edge belongs to", () => {
+    expect(trackIndex(axis, 0)).toBe(0);
+    expect(trackIndex(axis, 120)).toBe(1);
+    expect(trackIndex(axis, 241.3)).toBe(2); // sub-pixel off its grid line
+  });
+
+  it('is -1 for an axis with no tracks', () => {
+    expect(trackIndex(clusterEdges([]), 0)).toBe(-1);
   });
 });

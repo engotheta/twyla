@@ -187,8 +187,8 @@ export interface GridParameter<RowType = any> {
   /** CSV/Excel/PDF export */
   export?: GridExportConfig<RowType>;
 
-  // number of clicks on a row to open an all-details modal for that row (DetailsComponent's own
-  // dual-mode dialog support, opened directly), showing every field of the row with no extra
-  // config needed. Default is 7; set to 0 to disable.
+  // number of clicks on a row to open an all-details modal for that row (the `ROW_DETAILS_COMPONENT`
+  // hosted in a `ViewService` dialog), showing every field of the row with no extra config
+  // needed. Default is 7; set to 0 to disable.
   viewDetailsClicks?: number;
 }

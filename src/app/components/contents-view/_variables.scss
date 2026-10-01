@@ -23,9 +23,9 @@
   --color-pale: #f3f4f6;
   --color-black-very-faded: rgba(0, 0, 0, 0.08);
 
-  // brand/accent — active tab pill, active step icon/text
-  --color-primary: #2563eb;
-  --color-primary-500: #3b82f6;
+  // brand/accent — active tab pill, active step icon/text: `--color-primary` /
+  // `--color-primary-500` are declared in `src/tailwind.css`'s `@theme`, not here, so the same
+  // tokens also back Tailwind's `bg-primary` / `text-primary` / ... utilities.
 
   // shape
   --border-radius: 15px;

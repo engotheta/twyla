@@ -53,3 +53,15 @@ export function clusterEdges(
   const boundaries = tracks.slice(1).map((track, i) => (tracks[i].end + track.start) / 2);
   return { tracks, boundaries };
 }
+
+/** Index of the track (from `clusterEdges`) an item whose leading edge sits at `start` belongs
+ *  to — the track with the nearest leading edge. `-1` for an axis with no tracks. */
+export function trackIndex(axis: GridAxis, start: number): number {
+  let best = -1;
+  axis.tracks.forEach((track, i) => {
+    if (best < 0 || Math.abs(track.start - start) < Math.abs(axis.tracks[best].start - start)) {
+      best = i;
+    }
+  });
+  return best;
+}

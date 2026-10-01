@@ -4,19 +4,13 @@ import {
   computed,
   inject,
   input,
+  linkedSignal,
   signal,
   TemplateRef,
 } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, map, Observable, of, switchMap } from 'rxjs';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
-import { MatButtonModule } from '@angular/material/button';
-import {
-  MAT_DIALOG_DATA,
-  MatDialog,
-  MatDialogModule,
-  MatDialogRef,
-} from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -28,6 +22,7 @@ import { DataGridComponent, GridColumn_, GridParameter } from '../../../data-gri
 import { BgIconMarkComponent } from '../../bg-icon-mark/bg-icon-mark.component';
 import { mergeClasses } from '../../util/class-name/class-name.helpers';
 import { MergeClassesPipe } from '../../util/class-name/merge-classes.pipe';
+import { ViewService } from '../../../view';
 import { FieldValueComponent } from '../field-value/field-value.component';
 import { FieldGroupData } from '../field-group.interface';
 import { FieldData, FieldLayout, FieldType } from '../field.interface';
@@ -39,7 +34,6 @@ import {
   mergeFieldConfig,
 } from './field-group.constants';
 import {
-  FieldGroupDialogData,
   FieldGroupParameter,
   FieldRow,
   FieldRowViewModel,
@@ -47,13 +41,12 @@ import {
 } from './field-group.interface';
 
 /**
- * Renders a resolved `FieldGroupData` — as a plain embeddable component (bind `[group]`
- * and friends, or a single `[parameter]` bundling them — handy when recursing, see
- * `childParameter`), or as a dialog (`dialog.open(FieldGroupComponent, { data: {...} })`,
- * matching `FieldGroupDialogData`). It detects dialog mode via `MAT_DIALOG_DATA` and adds its
- * own dialog chrome (title/close button) only when opened that way.
+ * Renders a resolved `FieldGroupData` — bind `[group]` and friends, or a single `[parameter]`
+ * bundling them (handy when recursing, see `childParameter`). An object field's value opens its
+ * nested fields in a dialog via `ViewService.open(FieldGroupComponent, { inputs: { parameter } })`
+ * — the shell supplies the title bar, so this component has no dialog mode of its own.
  *
- * Resolution priority for every setting: dialog data > `parameter` > the individual `@Input`.
+ * Resolution priority for every setting: `parameter` > the individual input.
  */
 @Component({
   selector: 'field-group',
@@ -65,8 +58,6 @@ import {
     MatPaginatorModule,
     MatTabsModule,
     MatTooltipModule,
-    MatButtonModule,
-    MatDialogModule,
     ActionButtonsComponent,
     DataGridComponent,
     BgIconMarkComponent,
@@ -96,66 +87,47 @@ export class FieldGroupComponent<D = unknown> {
   readonly showBgIconMark = input(false);
   readonly showGroupsInTabs = input(false);
 
-  private readonly dialog = inject(MatDialog);
+  private readonly view = inject(ViewService);
 
-  private readonly injectedDialogData = inject<FieldGroupDialogData<D>>(MAT_DIALOG_DATA, {
-    optional: true,
-  });
-  protected readonly dialogRef = inject(MatDialogRef<FieldGroupComponent<D>>, { optional: true });
+  protected readonly resolvedGroup = computed(() => this.parameter()?.group ?? this.group() ?? {});
 
-  // `MAT_DIALOG_DATA`/`MatDialogRef` are ambient DI tokens: every descendant rendered inside a
-  // dialog inherits them too (e.g. the recursive `<field-group>` children below), not just the
-  // component `MatDialog.open()` actually instantiated. Comparing `componentInstance` — only
-  // populated once Angular Material finishes creating the dialog's root component — tells apart
-  // "I am that root component" from "I merely live inside one", so nested field-groups don't
-  // also render dialog chrome on top of their ancestor's.
-  protected readonly dialogData = computed(() =>
-    this.dialogRef?.componentInstance === this ? this.injectedDialogData : undefined,
-  );
+  protected readonly resolvedLayout = computed(() => this.parameter()?.layout ?? this.layout());
 
-  protected readonly resolvedGroup = computed(
-    () => this.dialogData()?.group ?? this.parameter()?.group ?? this.group() ?? {},
-  );
-
-  protected readonly resolvedLayout = computed(
-    () => this.dialogData()?.layout ?? this.parameter()?.layout ?? this.layout(),
-  );
-
-  protected readonly resolvedData = computed(
-    () => this.dialogData()?.data ?? this.parameter()?.data ?? this.data(),
-  );
+  protected readonly resolvedData = computed(() => this.parameter()?.data ?? this.data());
 
   protected readonly resolvedAnimation = computed(
-    () => this.dialogData()?.animation ?? this.parameter()?.animation ?? this.animation(),
+    () => this.parameter()?.animation ?? this.animation(),
   );
 
   protected readonly resolvedIsArrayItem = computed(
-    () => this.dialogData()?.isArrayItem ?? this.parameter()?.isArrayItem ?? this.isArrayItem(),
+    () => this.parameter()?.isArrayItem ?? this.isArrayItem(),
   );
 
   private readonly resolvedExpanded = computed(
-    () => this.dialogData()?.expanded ?? this.parameter()?.expanded ?? this.expanded(),
+    () => this.parameter()?.expanded ?? this.expanded(),
   );
 
-  // Only the *initial* state comes from `resolvedExpanded` — once open, a manual toggle
-  // shouldn't get clobbered if the parent happens to re-render with the same input.
-  protected readonly isOpen = signal(this.resolvedExpanded());
+  // Follows `resolvedExpanded` (a `linkedSignal`, not `signal(this.resolvedExpanded())`: inputs
+  // aren't bound yet while field initializers run, so a one-off read here always saw the default
+  // and `expanded` never took effect). A manual toggle holds until the resolved value itself
+  // changes — a parent re-render with the same `expanded` doesn't clobber it.
+  protected readonly isOpen = linkedSignal(() => this.resolvedExpanded());
   protected readonly bodyId = `field-group-body-${Math.random().toString(36).slice(2)}`;
 
   // The caller's *raw* override — kept undiluted by any layout preset, because this is exactly
-  // what gets propagated to children (via `childParameter`/dialog data), and each nesting level
-  // may resolve a different layout and must apply its own preset fresh. See `effectiveFieldConfig`
-  // for the version actually used to render this instance.
+  // what gets propagated to children (via `childParameter`), and each nesting level may resolve a
+  // different layout and must apply its own preset fresh. See `effectiveFieldConfig` for the
+  // version actually used to render this instance.
   protected readonly resolvedFieldConfig = computed(
-    () => this.dialogData()?.fieldConfig ?? this.parameter()?.fieldConfig ?? this.fieldConfig(),
+    () => this.parameter()?.fieldConfig ?? this.fieldConfig(),
   );
 
   protected readonly resolvedGroupConfig = computed(
-    () => this.dialogData()?.groupConfig ?? this.parameter()?.groupConfig ?? this.groupConfig(),
+    () => this.parameter()?.groupConfig ?? this.groupConfig(),
   );
 
   protected readonly resolvedArrayConfig = computed(
-    () => this.dialogData()?.arrayConfig ?? this.parameter()?.arrayConfig ?? this.arrayConfig(),
+    () => this.parameter()?.arrayConfig ?? this.arrayConfig(),
   );
 
   // This instance's resolved layout's preset, merged with the caller's raw override — what
@@ -177,15 +149,11 @@ export class FieldGroupComponent<D = unknown> {
   }
 
   protected readonly resolvedShowBgIconMark = computed(
-    () =>
-      this.dialogData()?.showBgIconMark ?? this.parameter()?.showBgIconMark ?? this.showBgIconMark(),
+    () => this.parameter()?.showBgIconMark ?? this.showBgIconMark(),
   );
 
   protected readonly resolvedShowGroupsInTabs = computed(
-    () =>
-      this.dialogData()?.showGroupsInTabs ??
-      this.parameter()?.showGroupsInTabs ??
-      this.showGroupsInTabs(),
+    () => this.parameter()?.showGroupsInTabs ?? this.showGroupsInTabs(),
   );
 
   // Bundles this instance's resolved cross-cutting settings (everything but `group`, which is
@@ -373,21 +341,33 @@ export class FieldGroupComponent<D = unknown> {
     return f.layout ?? this.resolvedLayout();
   }
 
+  /** A field with its own `click` runs it (for an object field, instead of the dialog below). */
+  protected onFieldClick(field: FieldData): void {
+    field.click?.(this.resolvedData(), field);
+  }
+
+  /** A tabular-array cell's `click` gets the row's own item, not this group's data. */
+  protected onCellClick(field: FieldData, row: FieldGroupData): void {
+    field.click?.(row.object ?? this.resolvedData(), field);
+  }
+
+  /** An object field's nested fields, shown in a dialog — or its `click`, when it has one. */
   protected openObjectDialog(row: FieldRow): void {
     const f = row.field;
+    if (f.click) return this.onFieldClick(f);
     if (!f.fields?.length) return;
 
-    this.dialog.open<FieldGroupComponent<D>, FieldGroupDialogData<D>>(FieldGroupComponent, {
-      autoFocus: false,
-      maxWidth: '90vw',
+    this.view.open(FieldGroupComponent, {
+      title: f.label,
+      icon: row.vm.icon || row.vm.labelIcon,
       width: '32rem',
-      data: {
-        ...this.childParameter(),
-        title: f.label,
-        icon: row.vm.icon || row.vm.labelIcon,
-        group: { fields: f.fields },
-        layout: this.nestedLayout(f),
-      } satisfies FieldGroupDialogData<D>,
+      inputs: {
+        parameter: {
+          ...this.childParameter(),
+          group: { fields: f.fields },
+          layout: this.nestedLayout(f),
+        } satisfies FieldGroupParameter<D>,
+      },
     });
   }
 
