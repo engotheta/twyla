@@ -1,0 +1,51 @@
+// Mechanics only — every visual default is a Tailwind class in the component, where a consumer's
+// `TabNavClasses` can override it.
+
+// the scrolling window onto the toggles, scrollbar hidden: touch, trackpad and the arrows scroll it
+.cv-tab-nav-viewport {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+:host([data-orientation='vertical']) .cv-tab-nav-viewport {
+  overflow: hidden auto;
+}
+
+// the tablist — positioning context for the indicator, so it scrolls along with the toggles
+.cv-tab-nav-list {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  width: max-content;
+}
+
+:host([data-orientation='vertical']) .cv-tab-nav-list {
+  flex-direction: column;
+  width: 100%;
+}
+
+// behind the active toggle — its offset and size are classes reading the `--cv-tab-*` box the
+// component measures, so they stay overridable
+.cv-tab-nav-indicator {
+  position: absolute;
+  pointer-events: none;
+}
+
+// toggles paint above the indicator
+.cv-tab-nav-tab {
+  position: relative;
+}
+
+.cv-tab-nav-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

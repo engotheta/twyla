@@ -1,43 +1,46 @@
 @if (params().showContentsInTabs) {
-  <mat-tab-group
-    slidingTabIndicator
-    [tabHeaderClass]="tablistClass()"
-    class="contents-view-tab-group"
-    [class.contents-view-tabs-vertical]="tabsOrientation() === 'vertical'"
-    [class.h-full]="isCover()"
-    [class.min-h-0]="isCover()"
-    [preserveContent]="params().preserveInactiveContent ?? true"
-    [selectedIndex]="selectedTabIndex()"
-    (selectedIndexChange)="onSelectedTabIndexChange($event)"
-  >
-    @for (rc of visibleContents(); track trackContent($index, rc)) {
-      @let key = contentKey(rc, $index);
-      <mat-tab [disabled]="rc.disabled">
-        <ng-template mat-tab-label>
-          @if (rc.content.icon) {
-            <mat-icon class="!text-base" aria-hidden="true">{{ rc.content.icon }}</mat-icon>
-          }
-
-          <span>{{ rc.content.label }}</span>
-
-          @if (rc.badge !== undefined && rc.badge !== null && rc.badge !== '') {
-            <span class="ml-1 rounded-full bg-black/10 px-1.5 text-xs">{{ rc.badge }}</span>
-          }
-        </ng-template>
-
-        <div #cvPanel [class]="listItemClass(rc, key)">
-          <ng-container
-            [ngTemplateOutlet]="header"
-            [ngTemplateOutletContext]="{ $implicit: rc, key, item: cvPanel }"
-          />
-          <ng-container
-            [ngTemplateOutlet]="contentBody"
-            [ngTemplateOutletContext]="{ $implicit: rc, key }"
-          />
-        </div>
-      </mat-tab>
+  <!-- TABS — the panels, one shown at a time. Their toggles live with the content owning these
+       tabs (in its header, or beside its body); only the root, owned by nothing, shows its own. -->
+  <div [class]="tabsLayoutClass()">
+    @if (!tabsHost() && navState.tabs().length) {
+      <div [class]="ownNavCardClass()">
+        <contents-tab-nav
+          [tabs]="navState.tabs()"
+          [activeKey]="effectiveActiveKey()"
+          [orientation]="ownNavSide() ? 'vertical' : 'horizontal'"
+          [classes]="navState.classes()"
+          (tabSelect)="navState.select($event)"
+        />
+      </div>
     }
-  </mat-tab-group>
+
+    <div [class]="panelsClass()">
+      @for (rc of visibleContents(); track trackContent($index, rc)) {
+        @let key = contentKey(rc, $index);
+        <!-- always present (an `aria-controls` target); its content renders once first shown -->
+        <div
+          role="tabpanel"
+          [id]="panelId(key)"
+          [attr.aria-labelledby]="tabId(key)"
+          [hidden]="key !== effectiveActiveKey()"
+          [class]="panelClass()"
+        >
+          @if (rendersPanel(key)) {
+            <div #cvPanel [class]="listItemClass(rc, key)">
+              <ng-container
+                [ngTemplateOutlet]="header"
+                [ngTemplateOutletContext]="{ $implicit: rc, key, item: cvPanel }"
+              />
+              <ng-container
+                [ngTemplateOutlet]="contentArea"
+                [ngTemplateOutletContext]="{ $implicit: rc, key }"
+              />
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
 } @else {
   <div
     #gridContainer
@@ -64,9 +67,9 @@
           />
         }
 
-        <!-- CONTENT BODY -->
+        <!-- CONTENT AREA -->
         <ng-container
-          [ngTemplateOutlet]="contentBody"
+          [ngTemplateOutlet]="contentArea"
           [ngTemplateOutletContext]="{ $implicit: rc, key }"
         />
       </div>
@@ -103,35 +106,52 @@
   </div>
 }
 
-<!-- HEADER ROW — heading, action buttons, pane controls; shown whenever any of them is there -->
+<!-- HEADER — a card: its top row (heading, action buttons, pane controls), then, for a content
+     whose own contents are horizontal tabs, a faded rule and their toggles -->
 <ng-template #header let-rc let-key="key" let-item="item">
-  @if (showsHeader(rc)) {
+  @if (showsHeader(rc, key)) {
     <div [class]="headerClass(rc)">
-      @if (headingOf(rc); as heading) {
-        @if (heading.icon) {
-          <mat-icon class="!text-base" aria-hidden="true">{{ heading.icon }}</mat-icon>
-        }
-        @if (heading.text) {
-          <span>{{ heading.text }}</span>
-        }
-        @if (heading.badge !== undefined) {
-          <span class="ml-1 rounded-full bg-black/10 px-1.5 text-xs">{{ heading.badge }}</span>
-        }
+      @if (showsHeaderRow(rc)) {
+        <div class="flex items-center gap-1 font-medium">
+          @if (headingOf(rc); as heading) {
+            @if (heading.icon) {
+              <mat-icon class="!text-base" aria-hidden="true">{{ heading.icon }}</mat-icon>
+            }
+            @if (heading.text) {
+              <span>{{ heading.text }}</span>
+            }
+            @if (heading.badge !== undefined) {
+              <span class="ml-1 rounded-full bg-black/10 px-1.5 text-xs">{{ heading.badge }}</span>
+            }
+          }
+          @if (rc.content.actionButtons) {
+            <action-buttons
+              [data]="rc.content"
+              [buttons]="rc.content.actionButtons"
+              class="ml-1 inline-flex"
+            />
+          }
+          @if (hasControls()) {
+            <span class="ms-auto inline-flex items-center">
+              <ng-container
+                [ngTemplateOutlet]="paneControls"
+                [ngTemplateOutletContext]="{ $implicit: rc, key, item }"
+              />
+            </span>
+          }
+        </div>
       }
-      @if (rc.content.actionButtons) {
-        <action-buttons
-          [data]="rc.content"
-          [buttons]="rc.content.actionButtons"
-          class="ml-1 inline-flex"
+      @if (headerNav(rc, key); as nav) {
+        @if (showsHeaderRow(rc)) {
+          <div class="cv-tab-rule" aria-hidden="true"></div>
+        }
+        <contents-tab-nav
+          [tabs]="nav.tabs()"
+          [activeKey]="nav.activeKey()"
+          [classes]="nav.classes()"
+          [ariaLabel]="paneLabel(rc)"
+          (tabSelect)="nav.select($event)"
         />
-      }
-      @if (hasControls()) {
-        <span class="ms-auto inline-flex items-center">
-          <ng-container
-            [ngTemplateOutlet]="paneControls"
-            [ngTemplateOutletContext]="{ $implicit: rc, key, item }"
-          />
-        </span>
       }
     </div>
   }
@@ -193,11 +213,43 @@
   </button>
 </ng-template>
 
-<ng-template #contentBody let-rc let-key="key">
+<!-- CONTENT AREA — the body; for a content whose own contents are vertical tabs, a frame that puts
+     their toggles beside the body from lg up (below lg they've joined the header). The frame stays
+     at every width, so crossing lg only moves the toggles — the body is never re-created. -->
+<ng-template #contentArea let-rc let-key="key">
+  @if (hasSideSlot(rc)) {
+    <div [id]="bodyId(key)" [hidden]="isCollapsed(key)" [class]="sideLayoutClass(rc)">
+      @if (sideNav(rc, key); as nav) {
+        <div [class]="sideNavSlotClass()">
+          <contents-tab-nav
+            orientation="vertical"
+            [tabs]="nav.tabs()"
+            [activeKey]="nav.activeKey()"
+            [classes]="nav.classes()"
+            [ariaLabel]="paneLabel(rc)"
+            (tabSelect)="nav.select($event)"
+          />
+        </div>
+      }
+      <ng-container
+        [ngTemplateOutlet]="contentBody"
+        [ngTemplateOutletContext]="{ $implicit: rc, key, framed: true }"
+      />
+    </div>
+  } @else {
+    <ng-container
+      [ngTemplateOutlet]="contentBody"
+      [ngTemplateOutletContext]="{ $implicit: rc, key, framed: false }"
+    />
+  }
+</ng-template>
+
+<!-- the body — inside a frame, the frame carries the id / hidden that collapse targets -->
+<ng-template #contentBody let-rc let-key="key" let-framed="framed">
   <div
     [class]="bodyClass(rc, key)"
-    [id]="bodyId(key)"
-    [hidden]="isCollapsed(key)"
+    [attr.id]="framed ? null : bodyId(key)"
+    [hidden]="!framed && isCollapsed(key)"
     [attr.tabindex]="bodyScrolls(key) ? 0 : null"
   >
     @switch (rc.content.type) {
@@ -235,6 +287,7 @@
       <contents-view
         [params]="nestedParameter(rc.content)"
         [class]="nestedContentsClass(rc.content)"
+        [tabsHost]="navHostFor(key)"
       />
     }
   </div>

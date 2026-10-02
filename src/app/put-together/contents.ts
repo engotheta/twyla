@@ -149,7 +149,7 @@ export function getContentsParameter(): ContentsParameter {
             type: 'table',
             slug: 'countries',
             label: 'countries',
-            icon: 'calendar',
+            icon: 'map',
 
             // header: 'auto',
             collapsible: false,

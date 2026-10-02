@@ -20,10 +20,10 @@ import {
   untracked,
   viewChild,
   viewChildren,
+  WritableSignal,
 } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { combineLatest, isObservable, of } from 'rxjs';
@@ -47,7 +47,8 @@ import {
   releasePersistedSelectionKey,
   writePersistedSelection,
 } from './persisted-selection.util';
-import { SlidingTabIndicatorDirective } from './sliding-tab-indicator.directive';
+import { ContentsTabNavComponent } from './tab-nav/tab-nav.component';
+import { TabNavItem, TabNavState } from './tab-nav/tab-nav.interface';
 import { LG_UP_QUERY, mediaQuerySignal } from './viewport.util';
 import { clusterEdges, GridAxis, trackIndex } from './grid-metrics.util';
 
@@ -68,6 +69,23 @@ interface ContentHeading {
   badge?: string | number;
 }
 
+/** a content's badge, if it has one to show (`0` counts; empty / null doesn't) */
+function badgeOf(rc: ResolvedContent): string | number | undefined {
+  return rc.badge === undefined || rc.badge === null || rc.badge === '' ? undefined : rc.badge;
+}
+
+function shallowEqual<T extends object>(a: T, b: T): boolean {
+  const keys = Object.keys(a) as (keyof T)[];
+  return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key]);
+}
+
+/** the toggles a nested level hands up are compared by value: its params are rebuilt on every
+ *  check of its parent, and an equal-but-new list would re-dirty that parent — which renders it —
+ *  every time, looping forever */
+function sameTabs(a: readonly TabNavItem[], b: readonly TabNavItem[]): boolean {
+  return a.length === b.length && a.every((tab, i) => shallowEqual(tab, b[i]));
+}
+
 /** Recursively flattens a ContentView tree (including every nested `.contents`) into a
  *  flat list — a pure structural walk over the input data, independent of what's
  *  actually mounted (see `ContentsViewInstance.contents`). */
@@ -84,8 +102,10 @@ function flattenContents(contents: ContentView[]): ContentView[] {
 /** smallest a column / row pane may be dragged to, px */
 const MIN_COL_PX = 80;
 const MIN_ROW_PX = 60;
-/** localStorage namespace for `persisted-selection.util` (see `SlidingTabIndicatorDirective`'s `'tabs'`) */
+/** localStorage namespaces for `persisted-selection.util`: a resizable level's pane sizes, and a
+ *  tabs level's active tab */
 const SIZES_NAMESPACE = 'contents-sizes';
+const TABS_NAMESPACE = 'tabs';
 
 /** move `deltaPx` between two adjacent panes (`a`, `b` px) keeping their sum and clamping each
  *  to `>= minPx`. Returns the new pair — the caller converts back to fractions. Pure/exported
@@ -207,9 +227,8 @@ function syncOverlayContainer(doc: Document, container: HTMLElement): void {
     NgComponentOutlet,
     NgTemplateOutlet,
     MatIconModule,
-    MatTabsModule,
     MatTooltipModule,
-    SlidingTabIndicatorDirective,
+    ContentsTabNavComponent,
     PanelResizeDirective,
     ActionButtonsComponent,
     DataGridComponent,
@@ -228,8 +247,10 @@ function syncOverlayContainer(doc: Document, container: HTMLElement): void {
 export class ContentsViewComponent implements OnInit {
   readonly params = input.required<ContentsParameter>();
   readonly instanceChange = output<ContentsViewInstance>();
-
-  private readonly activeSlugSig = signal<string | undefined>(undefined);
+  /** internal — set by a parent contents-view on the level it nests: the slot this level hands
+   *  its tab navigation up to, so the content owning these tabs renders the toggles itself (in
+   *  its header, or beside its body). A level without one (the root) renders its own. */
+  readonly tabsHost = input<WritableSignal<TabNavState | undefined>>();
 
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -320,55 +341,126 @@ export class ContentsViewComponent implements OnInit {
     });
   });
 
-  /** the EFFECTIVE active slug — falls back to the `initialActive`-marked content, then
-   *  the first one, until the user (or `selectContent`) explicitly picks one. Backs both
-   *  the template's active-tab/panel checks and the instance's `activeSlug()`/
-   *  `activeContent()`, so they always agree with what's actually shown. */
-  protected readonly effectiveActiveSlug = computed(() => {
-    const list = this.visibleContents();
-    return (
-      this.activeSlugSig() ??
-      list.find((rc) => rc.content.initialActive)?.content.slug ??
-      list[0]?.content.slug
-    );
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Tabs (ContentsLayout.showContentsInTabs) — a tabs level renders its contents as tab panels;
+  // its toggles (`contents-tab-nav`) live with the content owning the tabs: in that content's
+  // header, or as a sidebar beside its body (vertical, from lg up). The level hands its nav
+  // state up through `tabsHost`; only the root, owned by nothing, renders its own toggles.
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /** the tab the user (or `selectContent`, or the persisted choice) picked — by content key, so
+   *  slug-less contents switch too */
+  private readonly activeKeySig = signal<string | undefined>(undefined);
+
+  /** the EFFECTIVE active tab: the picked one while it's still visible, else the
+   *  `initialActive`-marked content, else the first. Backs the panels, the toggles and the
+   *  instance's `activeSlug()` / `activeContent()`, so they always agree with what's shown. */
+  protected readonly effectiveActiveKey = computed(() => {
+    const keys = this.visibleKeys();
+    const picked = this.activeKeySig();
+    if (picked !== undefined && keys.includes(picked)) return picked;
+    const initial = this.visibleContents().findIndex((rc) => rc.content.initialActive);
+    return keys[Math.max(initial, 0)];
   });
 
-  /** structural orientation, defaulting horizontal — separate from `tabsContainerClass`, which
-   *  is now purely the consumer-supplied presentation class for the toggle-button row itself. */
+  private readonly activeRc = computed(
+    () => this.visibleContents()[this.visibleKeys().indexOf(this.effectiveActiveKey() ?? '')],
+  );
+
+  /** tab panels shown at least once — with `preserveInactiveContent` (default) they stay mounted,
+   *  hidden, after they're left */
+  private readonly visitedKeys = signal<ReadonlySet<string>>(new Set());
+  /** localStorage slot for the active tab — claimed once the contents resolve */
+  private tabsPersistKey?: string;
+
+  /** this level's tab navigation — rendered by the level itself at the root, handed up via
+   *  `tabsHost` everywhere else. Compared by value (see `sameTabs`): the parent reading it rebuilds
+   *  this level's params on every check. */
+  protected readonly navState: TabNavState = {
+    tabs: computed(
+      () =>
+        this.params().showContentsInTabs
+          ? this.visibleContents().map((rc, i) => {
+              const key = contentKey(rc, i);
+              return {
+                key,
+                label: this.paneLabel(rc),
+                icon: rc.content.icon,
+                badge: badgeOf(rc),
+                disabled: rc.disabled,
+                tabId: this.tabId(key),
+                panelId: this.panelId(key),
+              };
+            })
+          : [],
+      { equal: sameTabs },
+    ),
+    activeKey: computed(() => this.effectiveActiveKey()),
+    classes: computed(
+      () => ({
+        container: this.params().tabsContainerClass,
+        tab: this.params().tabClass,
+        activeTab: this.params().activeTabClass,
+        indicator: this.params().tabIndicatorClass,
+      }),
+      { equal: shallowEqual },
+    ),
+    select: (key) => this.selectByKey(key),
+  };
+
   protected readonly tabsOrientation = computed<'horizontal' | 'vertical'>(() =>
     this.params().tabsOrientation === 'vertical' ? 'vertical' : 'horizontal',
   );
 
-  /** presents/arranges the tab toggle-button row only. Structural orientation styling (flex-
-   *  direction + divider border) is computed directly from `tabsOrientation()` here, rather than
-   *  a `> .contents-view-tablist { ... }` SCSS parent-combinator rule — unnecessary since
-   *  orientation is already a signal available on the component. `rounded-lg` (a fully-rounded,
-   *  standalone pill) when the active tab's own header is shown below it, since that header
-   *  already forms its own visually-separate rounded block (`headerClass`'s `rounded-b-lg`);
-   *  `rounded-t-lg` (top only) when there's no header in between, so the tablist instead seams
-   *  directly into the body content below. Merged (consumer wins conflicts) with
-   *  `tabsContainerClass`, which is cascaded down through nested levels by `nestedParameter`. */
-  protected readonly tablistClass = computed(() => {
-    const vertical = this.tabsOrientation() === 'vertical';
+  /** the root's own toggles go beside its panels: vertical tabs, from lg up */
+  protected readonly ownNavSide = computed(
+    () => this.tabsOrientation() === 'vertical' && this.lgUp(),
+  );
 
-    const activeRc = this.visibleContents().find(
-      (rc) => rc.content.slug === this.effectiveActiveSlug(),
-    );
+  /** the tabs level's frame: the root's own toggles and the panels — a row when those toggles are
+   *  a sidebar, else a column (a nested level, whose toggles live with its owner, is panels only) */
+  protected readonly tabsLayoutClass = computed(() =>
+    [
+      !this.tabsHost() && this.ownNavSide() ? 'flex gap-2' : 'flex flex-col',
+      this.isCover() ? 'h-full min-h-0' : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
+  );
 
-    const rounding =
-      activeRc && this.showsHeader(activeRc) ? 'rounded-lg mb-2' : 'rounded-t-lg mb-[1px]';
-
-    const structural = [
-      'contents-view-tablist bg-white ',
-      rounding,
-      'flex',
-      vertical
-        ? 'flex-col flex-none border-r border-black/12'
-        : 'flex-row border-b border-black/12',
-    ].join(' ');
-
-    return mergeClasses(structural, this.params().tabsContainerClass ?? '');
+  /** the card around the root's own toggles — like a header above the panels, or a sidebar */
+  protected readonly ownNavCardClass = computed(() => {
+    if (!this.ownNavSide()) return 'flex flex-none bg-white p-2 mb-2 rounded-lg';
+    return this.isCover()
+      ? 'flex flex-none min-h-0 bg-white p-2 rounded-lg'
+      : 'flex flex-none self-start sticky top-0 bg-white p-2 rounded-lg';
   });
+
+  protected readonly panelsClass = computed(() =>
+    ['flex flex-col min-w-0 flex-1', this.isCover() ? 'min-h-0' : ''].filter(Boolean).join(' '),
+  );
+
+  /** the active panel fills what's left (an inactive one is `hidden` outright) */
+  protected readonly panelClass = computed(() =>
+    this.isCover() ? 'flex flex-col flex-1 min-h-0' : '',
+  );
+
+  protected tabId(key: string): string {
+    return `${this.mountId}-tab-${key}`;
+  }
+
+  protected panelId(key: string): string {
+    return `${this.mountId}-panel-${key}`;
+  }
+
+  /** a panel's content renders once its tab is first shown, and — unless
+   *  `preserveInactiveContent: false` — stays mounted (hidden) after it's left */
+  protected rendersPanel(key: string): boolean {
+    return (
+      key === this.effectiveActiveKey() ||
+      (this.params().preserveInactiveContent !== false && this.visitedKeys().has(key))
+    );
+  }
 
   /** every content's own wrapper (list item or tab panel). `min-w-0` (existing horizontal fix)
    *  always applies; `flex flex-col h-full min-h-0`, fitIntoView() only, turns it into the
@@ -427,19 +519,14 @@ export class ContentsViewComponent implements OnInit {
     return this.isCover() || this.isFullscreen(key);
   }
 
-  /** every content's own header (see the `#header` template) — structural label/icon/badge/
-   *  actionButtons row classes, `rounded-b-lg` while shown as a tab (seams with `tablistClass`'s
-   *  own `rounded-lg` above it) vs `rounded-lg` otherwise, merged with the cascaded `headersClass`,
+  /** every content's own header card (see the `#header` template) — a column: the top row
+   *  (heading, action buttons, pane controls), then, for a content whose own contents are
+   *  horizontal tabs, a faded rule and their toggles. Merged with the cascaded `headersClass`,
    *  then this content's own `headerClass` (still wins conflicts last) — the header-level analog
-   *  of `listItemClass`/`bodyClass`. */
+   *  of `listItemClass`/`bodyClass` — so a consumer can rearrange it (`flex-row`, …). */
   protected headerClass(rc: ResolvedContent): string {
-    const structural = [
-      'flex items-center gap-1 font-medium flex-none bg-white p-2 mb-2',
-      this.params().showContentsInTabs ? 'rounded-lg' : 'rounded-lg',
-    ].join(' ');
-
     return mergeClasses(
-      mergeClasses(structural, this.params().headersClass ?? ''),
+      mergeClasses('flex flex-col flex-none bg-white p-2 mb-2 rounded-lg', this.params().headersClass ?? ''),
       rc.content.headerClass ?? '',
     );
   }
@@ -991,7 +1078,7 @@ export class ContentsViewComponent implements OnInit {
    *  - `'none'` → none. */
   protected headingOf(rc: ResolvedContent): ContentHeading | undefined {
     const { header, title, label, icon } = rc.content;
-    const badge = rc.badge === undefined || rc.badge === null || rc.badge === '' ? undefined : rc.badge;
+    const badge = badgeOf(rc);
     if (header === 'full') {
       const text = title || label;
       return text || icon || badge !== undefined ? { text, icon, badge } : undefined;
@@ -1000,26 +1087,74 @@ export class ContentsViewComponent implements OnInit {
     return this.params().showContentsInTabs ? { text: title } : { text: title, icon, badge };
   }
 
-  /** whether THIS content renders a header row at all — whenever there's a heading, any
-   *  `actionButtons`, or pane controls to hold; else nothing renders above the body */
-  protected showsHeader(rc: ResolvedContent): boolean {
+  /** the header's top row — whenever there's a heading, any `actionButtons`, or pane controls */
+  protected showsHeaderRow(rc: ResolvedContent): boolean {
     return !!this.headingOf(rc) || !!rc.content.actionButtons || this.hasControls();
   }
 
-  /** index of `effectiveActiveSlug()` within `visibleContents()`, for `<mat-tab-group>`'s own
-   *  `[selectedIndex]` — mat-tab-group's keyboard handling (roving tabindex, Home/End, disabled-tab
-   *  skipping) replaces the old hand-rolled `onTablistKeydown`. */
-  protected readonly selectedTabIndex = computed(() => {
-    const index = this.visibleContents().findIndex(
-      (rc) => rc.content.slug === this.effectiveActiveSlug(),
-    );
-    return index >= 0 ? index : 0;
-  });
-
-  protected onSelectedTabIndexChange(index: number): void {
-    const rc = this.visibleContents()[index];
-    if (rc && !rc.disabled) this.activateContent(rc.content);
+  /** whether THIS content renders a header at all — for its top row, or for the toggles of its
+   *  own horizontal tabs; else nothing renders above the body */
+  protected showsHeader(rc: ResolvedContent, key: string): boolean {
+    return this.showsHeaderRow(rc) || !!this.headerNav(rc, key);
   }
+
+  // ── tab toggles hosted for a content's own nested tabs level ──
+
+  /** per content key: the slot its nested tabs level hands its navigation up to (`tabsHost`) */
+  private readonly navHosts = new Map<string, WritableSignal<TabNavState | undefined>>();
+
+  /** `key`'s slot — created on first read, so a template reading it subscribes before the nested
+   *  level reports in */
+  protected navHostFor(key: string): WritableSignal<TabNavState | undefined> {
+    let host = this.navHosts.get(key);
+    if (!host) this.navHosts.set(key, (host = signal<TabNavState | undefined>(undefined)));
+    return host;
+  }
+
+  /** where the toggles of `rc`'s own nested tabs go — from its config alone, never from the
+   *  nested level, so nothing re-renders once that reports in: its header for horizontal tabs
+   *  (and for vertical ones below lg), a sidebar beside its body for vertical ones from lg up */
+  private navSlot(rc: ResolvedContent): 'header' | 'side' | undefined {
+    const c = rc.content;
+    if (!c.contents?.length || !c.showContentsInTabs) return undefined;
+    return c.tabsOrientation === 'vertical' && this.lgUp() ? 'side' : 'header';
+  }
+
+  /** a content whose own tabs are vertical keeps its content-area wrapper at every width, so
+   *  crossing lg only moves the toggles — its body (and the nested level) stay mounted */
+  protected hasSideSlot(rc: ResolvedContent): boolean {
+    const c = rc.content;
+    return !!c.contents?.length && !!c.showContentsInTabs && c.tabsOrientation === 'vertical';
+  }
+
+  protected headerNav(rc: ResolvedContent, key: string): TabNavState | undefined {
+    return this.navSlot(rc) === 'header' ? this.hostedNav(key) : undefined;
+  }
+
+  protected sideNav(rc: ResolvedContent, key: string): TabNavState | undefined {
+    return this.navSlot(rc) === 'side' ? this.hostedNav(key) : undefined;
+  }
+
+  /** the nested level's toggles, once it has reported in and has any */
+  private hostedNav(key: string): TabNavState | undefined {
+    const nav = this.navHostFor(key)();
+    return nav?.tabs().length ? nav : undefined;
+  }
+
+  /** the content-area wrapper of a content with vertical tabs: from lg up, a row — its toggles,
+   *  then its body; below lg, just the body's frame (the toggles have joined the header) */
+  protected sideLayoutClass(rc: ResolvedContent): string {
+    const cover = this.isCover();
+    if (this.navSlot(rc) === 'side') {
+      return cover ? 'flex gap-2 min-w-0 flex-1 min-h-0' : 'flex gap-2 min-w-0 items-start';
+    }
+    return cover ? 'flex flex-col flex-1 min-h-0' : '';
+  }
+
+  /** the sidebar holding those toggles: full height (scrolling inside) in cover, sticky in flow */
+  protected readonly sideNavSlotClass = computed(() =>
+    this.isCover() ? 'flex flex-none min-h-0' : 'flex flex-none sticky top-0',
+  );
 
   // outputs wiring for dynamically-hosted `componentParams.component` instances —
   // NgComponentOutlet has no outputs binding or (created) event, only a
@@ -1128,6 +1263,28 @@ export class ContentsViewComponent implements OnInit {
       if (this.fullscreenTarget?.el.contains(container)) this.document.body.appendChild(container);
       this.exitFullscreen();
     });
+
+    // a tab panel shown once is "visited" — `rendersPanel` keeps its content mounted
+    effect(() => {
+      const key = this.effectiveActiveKey();
+      if (key === undefined || !this.params().showContentsInTabs) return;
+      untracked(() => {
+        if (!this.visitedKeys().has(key)) this.visitedKeys.update((keys) => new Set(keys).add(key));
+      });
+    });
+
+    // restore the persisted active tab once this tabs level's contents first resolve
+    effect(() => {
+      if (!this.params().showContentsInTabs || this.tabsPersistKey) return;
+      const list = this.visibleContents();
+      if (list.length) untracked(() => this.restoreActiveTab(list));
+    });
+
+    // the owner renders this level's toggles only while this level is alive
+    this.destroyRef.onDestroy(() => {
+      const host = this.tabsHost();
+      if (host?.() === this.navState) host.set(undefined);
+    });
   }
 
   ngOnInit(): void {
@@ -1136,10 +1293,8 @@ export class ContentsViewComponent implements OnInit {
       get contents() {
         return getContents();
       },
-      activeContent: () =>
-        this.visibleContents().find((rc) => rc.content.slug === this.effectiveActiveSlug())
-          ?.content,
-      activeSlug: () => this.effectiveActiveSlug(),
+      activeContent: () => this.activeRc()?.content,
+      activeSlug: () => this.activeRc()?.content.slug,
       selectContent: (slug) => this.selectBySlug(slug),
       sizes: () => this.currentSizes(),
       setSizes: (sizes) => {
@@ -1159,21 +1314,47 @@ export class ContentsViewComponent implements OnInit {
       exitFullscreen: () => this.exitFullscreen(),
     };
     this.instanceChange.emit(instance);
+
+    // a nested level hands its toggles to the content owning these tabs (see `tabsHost`)
+    this.tabsHost()?.set(this.navState);
   }
 
   private selectBySlug(slug: string): void {
-    const rc = this.visibleContents().find((rc) => rc.content.slug === slug && !rc.disabled);
-    if (rc) this.activateContent(rc.content);
+    const index = this.visibleContents().findIndex((rc) => rc.content.slug === slug);
+    if (index >= 0) this.selectByKey(this.visibleKeys()[index]);
   }
 
-  private activateContent(content: ContentView): void {
-    this.activeSlugSig.set(content.slug);
-    content.onActive?.(content, this.params().contents);
-    this.params().onContentChange?.(content, this.params().contents);
+  /** a toggle (or `selectContent`) picked a tab — a disabled one never activates */
+  private selectByKey(key: string): void {
+    const rc = this.visibleContents()[this.visibleKeys().indexOf(key)];
+    if (rc && !rc.disabled) this.activate(rc, key);
+  }
+
+  private activate(rc: ResolvedContent, key: string): void {
+    this.activeKeySig.set(key);
+    if (this.tabsPersistKey) writePersistedSelection(this.tabsPersistKey, key);
+    rc.content.onActive?.(rc.content, this.params().contents);
+    this.params().onContentChange?.(rc.content, this.params().contents);
+  }
+
+  /** claims this level's localStorage slot (route + its contents) and re-activates the tab saved
+   *  there, if it's still here and enabled — firing `onActive` / `onContentChange` like a pick */
+  private restoreActiveTab(list: ResolvedContent[]): void {
+    const persistKey = claimPersistedSelectionKey(
+      TABS_NAMESPACE,
+      this.router.url,
+      list.map((rc) => rc.content.slug ?? rc.content.label ?? ''),
+    );
+    this.tabsPersistKey = persistKey;
+    this.destroyRef.onDestroy(() => releasePersistedSelectionKey(persistKey));
+
+    const saved = readPersistedSelection(persistKey);
+    if (saved !== null && saved !== this.effectiveActiveKey()) this.selectByKey(saved);
   }
 
   /** Builds the nested mount's `ContentsParameter` — cascading `contentsClass`/
-   *  `contentsContainerClass`/`tabsContainerClass`/`bodiesClass`/`headersClass` by merging THIS level's
+   *  `contentsContainerClass`/`tabsContainerClass`/`tabClass`/`activeTabClass`/
+   *  `tabIndicatorClass`/`bodiesClass`/`headersClass` by merging THIS level's
    *  already-cascaded effective value (`this.params().<field>`, itself built the same way by
    *  this component's own parent) with the child's own override, rather than overwriting. By
    *  induction, every level's `params().<field>` is therefore always the fully-merged value from
@@ -1189,6 +1370,12 @@ export class ContentsViewComponent implements OnInit {
       tabsContainerClass: mergeClasses(
         this.params().tabsContainerClass ?? '',
         content.tabsContainerClass ?? '',
+      ),
+      tabClass: mergeClasses(this.params().tabClass ?? '', content.tabClass ?? ''),
+      activeTabClass: mergeClasses(this.params().activeTabClass ?? '', content.activeTabClass ?? ''),
+      tabIndicatorClass: mergeClasses(
+        this.params().tabIndicatorClass ?? '',
+        content.tabIndicatorClass ?? '',
       ),
       bodiesClass: mergeClasses(this.params().bodiesClass ?? '', content.bodiesClass ?? ''),
       headersClass: mergeClasses(this.params().headersClass ?? '', content.headersClass ?? ''),

@@ -1,8 +1,8 @@
 /**
  * Best-effort localStorage persistence for "which tab/step was last active" (used by
- * `SlidingTabIndicatorDirective` and `StepperProgressIndicatorDirective`). Keys are derived from
- * the labels of the group itself rather than assigned by the caller, so a directive can restore
- * across a page refresh without any wiring from the component it's attached to.
+ * contents-view's tabs levels and pane sizes, and by `StepperProgressIndicatorDirective`). Keys
+ * are derived from the labels of the group itself rather than assigned by the caller, so a
+ * selection is restored across a page refresh without any wiring from the consumer.
  */
 
 const STORAGE_PREFIX = 'studio.tab-state.';

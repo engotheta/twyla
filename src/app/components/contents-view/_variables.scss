@@ -6,11 +6,11 @@
 // there has to live outside any single component's style scope.
 //
 // `--mat-stepper-header-height` is NOT declared here — it's a real Angular Material system token,
-// already supplied by the `mat.theme(...)` include in `styles.scss`. `--indicator-x`/
-// `--indicator-width` (tabs) and `--progress-x`/`--progress-width` (stepper) aren't declared here
-// either — those are set at runtime by `SlidingTabIndicatorDirective`/`StepperProgressIndicatorDirective`
-// on the specific element they animate, and every consuming `var(...)` already carries its own
-// fallback for before the first measurement lands.
+// already supplied by the `mat.theme(...)` include in `styles.scss`. `--progress-x`/
+// `--progress-width` (stepper) aren't declared here either — `StepperProgressIndicatorDirective`
+// sets them at runtime on the element it animates, and every consuming `var(...)` carries its own
+// fallback for before the first measurement lands. (contents-view's own tabs don't use Material:
+// `contents-tab-nav` styles itself.)
 :root {
   // surfaces
   --color-white: #ffffff;

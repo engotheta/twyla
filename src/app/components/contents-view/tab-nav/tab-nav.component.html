@@ -1,0 +1,69 @@
+@if (paginated()) {
+  <button
+    type="button"
+    aria-hidden="true"
+    tabindex="-1"
+    [class]="arrowClass"
+    [disabled]="atStart()"
+    (pointerdown)="startPaging(-1, $event)"
+  >
+    <mat-icon>{{ rtl() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+  </button>
+}
+
+<div #viewport class="cv-tab-nav-viewport">
+  <div
+    #tablist
+    role="tablist"
+    class="cv-tab-nav-list"
+    [attr.aria-orientation]="orientation()"
+    [attr.aria-label]="ariaLabel() || null"
+    (keydown)="onKeydown($event)"
+    (focusout)="onFocusOut($event)"
+  >
+    <span
+      #indicator
+      class="cv-tab-nav-indicator"
+      [class]="indicatorClass()"
+      aria-hidden="true"
+    ></span>
+
+    @for (tab of tabs(); track tab.key; let i = $index) {
+      <button
+        tabNavItem
+        type="button"
+        role="tab"
+        class="cv-tab-nav-tab"
+        [class]="tabClass(tab)"
+        [id]="tab.tabId"
+        [attr.aria-selected]="tab.key === activeKey()"
+        [attr.aria-controls]="tab.panelId"
+        [attr.aria-disabled]="tab.disabled || null"
+        [tabIndex]="tabIndexOf(i)"
+        (focus)="onTabFocus(i)"
+        (click)="choose(tab)"
+      >
+        @if (tab.icon) {
+          <mat-icon class="!text-base" aria-hidden="true">{{ tab.icon }}</mat-icon>
+        }
+        <span class="cv-tab-nav-label">{{ tab.label }}</span>
+        @if (tab.badge !== undefined) {
+          <span class="rounded-full bg-black/10 px-1.5 text-xs">{{ tab.badge }}</span>
+        }
+      </button>
+    }
+  </div>
+</div>
+
+@if (paginated()) {
+  <button
+    type="button"
+    aria-hidden="true"
+    tabindex="-1"
+    [class]="arrowClass"
+    [disabled]="atEnd()"
+    (pointerdown)="startPaging(1, $event)"
+  >
+    <mat-icon>{{ rtl() ? 'chevron_left' : 'chevron_right' }}</mat-icon>
+  </button>
+}

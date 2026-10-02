@@ -21,10 +21,24 @@ export interface ContentsLayout {
    *  effect for a level whose `showContentsInTabs` is true (nothing reads it there — a single
    *  active tab isn't a "list" to arrange). */
   contentsContainerClass?: string;
-  /** Arranges/presents the tab TOGGLE-BUTTON ROW only (not the panels beneath it); applied from
-   *  this level down through all nested levels, merged with each level's own
-   *  `tabsContainerClass`. */
+  /** The tab toggles' container — the strip (horizontal) or the sidebar (vertical) holding them,
+   *  not the panels. Merged over the defaults (a bordered, rounded white strip), so any of those
+   *  can be overridden; applied from this level down through all nested levels, merged with each
+   *  level's own value. See `showContentsInTabs`. */
   tabsContainerClass?: string;
+  /** Every tab toggle — merged over the defaults (rounded, `px-3.5`, `h-[34px]`, `font-medium`,
+   *  a hover tint). Cascades like `tabsContainerClass`. Tip: give a text colour here, not a font
+   *  size on the container — class merging treats every `text-*` as one group. */
+  tabClass?: string;
+  /** The active tab toggle, merged after `tabClass` (default `text-white`, to read on the
+   *  indicator). Cascades like `tabsContainerClass`. */
+  activeTabClass?: string;
+  /** The indicator sliding behind the active toggle (default a `bg-primary` pill covering it,
+   *  sliding over 300ms). Its size and offset are classes reading the active toggle's measured
+   *  box (`--cv-tab-x/y/w/h`), so it can be reshaped too — e.g. `bg-emerald-600`, or an underline:
+   *  `h-0.5 top-auto bottom-0 rounded-none` (with an `activeTabClass` such as `text-primary`).
+   *  Cascades like `tabsContainerClass`. */
+  tabIndicatorClass?: string;
   /** Applied to every child content's own BODY (the scrollable region holding its rendered
    *  table/details/form/html/component, below its header) from this level down through all
    *  nested levels, merged with each nested level's own `bodiesClass` — and, at each content
@@ -37,8 +51,27 @@ export interface ContentsLayout {
    *  level's own `headersClass` — and, at each content itself, further merged with that content's
    *  own `headerClass`. The header-level analog of `bodiesClass`. */
   headersClass?: string;
+  /** default `'horizontal'` — where this level's tab toggles go (see `showContentsInTabs`):
+   *  - `'horizontal'`: in the header of the content owning the tabs, under its heading /
+   *    buttons and a faded rule; they make that header show even when nothing else would.
+   *  - `'vertical'`: a sidebar beside that content's body (its header shows only for its own
+   *    reasons), the indicator sliding vertically. Below Tailwind's `lg` they turn horizontal and
+   *    join the header instead, leaving the content the full width — the content isn't re-created
+   *    as the breakpoint is crossed, only the toggles move.
+   *  At the root, owned by no content, the toggles sit in a card above the panels — or beside
+   *  them, vertical from lg up. */
   tabsOrientation?: 'horizontal' | 'vertical';
-  /** default false */
+  /** default false. Shows this level's contents as tab panels, one at a time, switched by a row
+   *  (or column) of toggles placed per `tabsOrientation` and styled by `tabsContainerClass` /
+   *  `tabClass` / `activeTabClass` / `tabIndicatorClass`. They behave like Material's tabs:
+   *  - keyboard: arrow keys move focus (wrapping; ↑/↓ when vertical), Home/End jump,
+   *    Enter/Space select — so arrowing past a panel that fetches doesn't load it; a disabled
+   *    content's toggle is focusable but never selected.
+   *  - an indicator slides behind the active toggle.
+   *  - horizontal toggles that don't fit scroll (swipe, trackpad), with prev/next arrows that
+   *    page — held, they repeat — keeping the focused / active toggle in view.
+   *  The active tab is remembered per route (localStorage). A panel renders when first shown;
+   *  `preserveInactiveContent` keeps it mounted afterwards. */
   showContentsInTabs?: boolean;
   /** How this level's contents use vertical space at viewport width ≥ Tailwind's `lg` (64rem /
    *  1024px) — below that, `flowOnSmallerView` (default on) makes every level `'flow'`. Default
@@ -102,10 +135,10 @@ export interface ContentsLayout {
    *  `collapsible`; set `fullscreenable: false` on a child to opt its subtree out. See
    *  `ContentsViewInstance.fullscreenSlug` / `exitFullscreen`. */
   fullscreenable?: boolean;
-  /** default true: an inactive tab's content (esp. a live `formParams`/`gridParams`
-   *  embed) stays mounted rather than being destroyed on tab switch — set false to
-   *  free resources for a rarely-revisited or expensive tab instead. Only relevant
-   *  when `showContentsInTabs` is true. */
+  /** default true: a tab's content, rendered when the tab is first shown, stays mounted (hidden)
+   *  once left — a live `formParams`/`gridParams` embed keeps its state — rather than being
+   *  destroyed on tab switch; set false to free resources for a rarely-revisited or expensive tab
+   *  instead. Only relevant when `showContentsInTabs` is true. */
   preserveInactiveContent?: boolean;
 }
 
@@ -169,10 +202,11 @@ interface ContentViewBase extends ContentsLayout {
   /** fires when this content is activated (tabs mode only) */
   onActive?: (content: ContentView, siblings: ContentView[]) => void;
 
-  /** this content's HEADING — the start of its header row, ahead of its `actionButtons` and pane
-   *  controls (collapse / full screen: `collapsible` / `fullscreenable`). The row shows whenever
-   *  it has a heading or any of those buttons; with neither, nothing renders above the body.
-   *  Default `'auto'`.
+  /** this content's HEADING — the start of its header's top row, ahead of its `actionButtons` and
+   *  pane controls (collapse / full screen: `collapsible` / `fullscreenable`). The row shows
+   *  whenever it has a heading or any of those buttons; the header itself also shows to hold the
+   *  toggles of this content's own horizontal tabs (`showContentsInTabs`), under that row and a
+   *  faded rule. With none of these, nothing renders above the body. Default `'auto'`.
    *  - `'auto'`: the `title`, when there is one — with icon and badge in list mode, alone while
    *    shown as a tab (the tab toggle button above already carries those). No `title`, no
    *    heading: the `label` then only names the tab / collapsed strip.

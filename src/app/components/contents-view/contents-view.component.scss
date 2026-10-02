@@ -115,6 +115,21 @@
   }
 }
 
+// in a header holding tab toggles: the hairline between its top row and the toggles, fading out
+// at both ends
+.cv-tab-rule {
+  flex: none;
+  height: 1px;
+  margin: 0.375rem 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgb(0 0 0 / 0.12) 15%,
+    rgb(0 0 0 / 0.12) 85%,
+    transparent
+  );
+}
+
 // a collapsed pane: one button restoring it — a thin row strip, or a narrow column strip whose
 // label runs top to bottom
 .cv-strip {

@@ -11,6 +11,7 @@ import {
   refitFractions,
 } from './contents-view.component';
 import {
+  ContentsLayout,
   ContentsSizes,
   ContentsViewInstance,
   ContentsParameter,
@@ -113,13 +114,12 @@ describe('ContentsViewComponent', () => {
   beforeEach(() => {
     stubMatchMedia(true);
     stubLocalStorage();
-    // <mat-tab-group> attaches a newly-selected tab's content on a real ~100ms fallback timer
-    // (simulating a CSS transitionend that jsdom never fires) unless animations are known to be
-    // off — that timer runs outside the Angular zone, so `whenStable()` won't wait for it and a
-    // freshly-selected tab's content would read back empty. Declaring 'NoopAnimations' (the same
-    // token `@angular/platform-browser/animations`'s `provideNoopAnimations()` sets, not pulled in
-    // here since `@angular/animations` isn't a project dependency) makes Material attach it
-    // synchronously instead, which is what every test below assumes.
+    // Material components rendered INSIDE contents (a details' `<mat-tab-group>`, …) settle on
+    // real fallback timers (standing in for a CSS transitionend jsdom never fires) unless
+    // animations are known to be off — timers `whenStable()` doesn't wait for. Declaring
+    // 'NoopAnimations' (the token `provideNoopAnimations()` sets; `@angular/animations` isn't a
+    // project dependency) makes them synchronous, which every test below assumes. (The tabs of
+    // contents-view itself are its own `contents-tab-nav`, with nothing to wait for.)
     TestBed.configureTestingModule({
       imports: [ContentsViewComponent],
       providers: [{ provide: ANIMATION_MODULE_TYPE, useValue: 'NoopAnimations' }],
@@ -525,31 +525,43 @@ describe('ContentsViewComponent', () => {
     expect(headerDiv?.className).toContain('level1-header-class');
   });
 
-  it('tablist is fully rounded when the active tab has a visible header, top-rounded only otherwise', async () => {
-    // `tablistClass()` no longer lands on a DOM element THIS component's own template owns — it's
-    // pushed onto Material's internal `.mat-mdc-tab-header` by `SlidingTabIndicatorDirective`'s
-    // `tabHeaderClass` input (see `contents-view.component.html`), so assert against that element.
-    // in tabs mode, `header: 'auto'` only renders a panel header for actionButtons, so use those
-    const withHeader: ContentView[] = [
-      { type: 'html', slug: 'a', label: 'A', html: 'content-a', actionButtons: [{ label: 'Go' }] },
-    ];
-    const fixture = mount({ contents: withHeader, showContentsInTabs: true });
+  async function settle(fixture: ReturnType<typeof mount>) {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
-    const header = (fixture.nativeElement as HTMLElement).querySelector('.mat-mdc-tab-header')!;
-    expect(header.className).toContain('rounded-lg');
-    expect(header.className).not.toContain('rounded-t-lg');
+  }
 
-    // no label/icon/badge/actionButtons on the only content -> showsHeader() is false for it
-    const noHeader: ContentView[] = [{ type: 'html', slug: 'a', html: 'content-a' }];
-    const fixture2 = mount({ contents: noHeader, showContentsInTabs: true });
-    fixture2.detectChanges();
-    await fixture2.whenStable();
-    fixture2.detectChanges();
-    const header2 = (fixture2.nativeElement as HTMLElement).querySelector('.mat-mdc-tab-header')!;
-    expect(header2.className).toContain('rounded-t-lg');
-    expect(header2.className).not.toContain('rounded-lg');
+  async function mountWithInstance(params: ContentsParameter) {
+    const fixture = mount(params);
+    let instance: ContentsViewInstance | undefined;
+    fixture.componentInstance.instanceChange.subscribe((i) => (instance = i));
+    await settle(fixture);
+    return { fixture, instance: instance! };
+  }
+
+  /** CDK's key manager reads `keyCode` */
+  const press = (el: Element, key: string, keyCode: number) =>
+    el.dispatchEvent(new KeyboardEvent('keydown', { key, keyCode, bubbles: true }));
+
+  it('a root tabs level renders its own toggles, each wired to its panel', async () => {
+    const contents: ContentView[] = [
+      { type: 'html', slug: 'a', label: 'A', html: 'content-a' },
+      { type: 'html', slug: 'b', label: 'B', html: 'content-b', badge: 2 },
+    ];
+    const { fixture } = await mountWithInstance({ contents, showContentsInTabs: true });
+    const el = fixture.nativeElement as HTMLElement;
+
+    const tablist = el.querySelector('[role="tablist"]')!;
+    expect(tablist.getAttribute('aria-orientation')).toBe('horizontal');
+    const tabs = Array.from(tablist.querySelectorAll<HTMLElement>('[role="tab"]'));
+    const panels = Array.from(el.querySelectorAll<HTMLElement>('[role="tabpanel"]'));
+    expect(tabs.map((t) => t.querySelector('.cv-tab-nav-label')?.textContent)).toEqual(['A', 'B']);
+    expect(tabs[1].textContent).toContain('2'); // the badge
+    expect(tabs[0].getAttribute('aria-controls')).toBe(panels[0].id);
+    expect(panels[0].getAttribute('aria-labelledby')).toBe(tabs[0].id);
+    expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+    expect(tabs.map((t) => t.tabIndex)).toEqual([0, -1]); // one tab stop
+    expect(panels.map((p) => p.hidden)).toEqual([false, true]);
   });
 
   it("suppresses label/icon in the tab panel header by default, shows them when header: 'full'", async () => {
@@ -564,12 +576,10 @@ describe('ContentsViewComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    // Material's <mat-tab-body> marks the inactive one via `aria-hidden`, not the native `hidden`
-    // attribute/property (see the "mounted but inactive" test below for the full rationale).
     const activePanel = () =>
       Array.from(
         (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('[role="tabpanel"]'),
-      ).find((p) => p.getAttribute('aria-hidden') !== 'true');
+      ).find((p) => !p.hidden);
 
     expect(activePanel()?.textContent).not.toContain('Plain Tab'); // 'a' active by default, suppressed
     expect(activePanel()?.textContent).toContain('body-a');
@@ -582,50 +592,170 @@ describe('ContentsViewComponent', () => {
     expect(activePanel()?.textContent).toContain('Full Tab'); // header: 'full' shows it
   });
 
-  it('an inactive-but-mounted tab panel is hidden via aria-hidden, keeping its fit-mode classes (Material owns visibility, not a literal "hidden" class swap)', async () => {
-    // <mat-tab-group preserveContent> (mapped from `preserveInactiveContent`, default true) keeps
-    // an already-visited tab's content in the DOM instead of destroying it, and Material itself
-    // marks the inactive <mat-tab-body> via `[attr.aria-hidden]` + its own `.mat-mdc-tab-body`/
-    // `.mat-mdc-tab-body-content` CSS (position/overflow/visibility) — unlike the old hand-rolled
-    // tablist, `listItemClass`'s flex/grid fit-mode classes no longer need to be swapped out for a
-    // literal 'hidden' string for the inactive panel to actually disappear.
+  it('renders a tab panel when first shown, and keeps it mounted — hidden — once left', async () => {
     const contents: ContentView[] = [
       { type: 'html', slug: 'a', label: 'A', html: 'content-a' },
       { type: 'html', slug: 'b', label: 'B', html: 'content-b' },
     ];
-    const fixture = mount({ contents, showContentsInTabs: true });
-    let instance: ContentsViewInstance | undefined;
-    fixture.componentInstance.instanceChange.subscribe((i) => (instance = i));
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    const { fixture, instance } = await mountWithInstance({ contents, showContentsInTabs: true });
+    const panels = () =>
+      Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('[role="tabpanel"]'),
+      );
 
-    // 'a' is active by default; visit 'b' then switch back to 'a' so BOTH panels are mounted
-    // (preserveContent keeps 'b' around instead of tearing it down), with 'a' active and 'b' hidden.
-    instance?.selectContent('b');
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    instance?.selectContent('a');
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    // b's panel is there (its toggle's `aria-controls` target) but empty until first shown
+    expect(panels()[1].hidden).toBe(true);
+    expect(panels()[1].textContent).not.toContain('content-b');
 
-    const panels = Array.from(
-      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('[role="tabpanel"]'),
+    instance.selectContent('b');
+    await settle(fixture);
+    expect(panels().map((p) => p.hidden)).toEqual([true, false]);
+    instance.selectContent('a');
+    await settle(fixture);
+    expect(panels().map((p) => p.hidden)).toEqual([false, true]);
+    expect(panels()[1].textContent).toContain('content-b'); // still mounted
+    // with its fit-mode item classes intact (contentsFit 'auto' → cover: matchMedia stub = true)
+    expect(panels()[1].querySelector('.contents-view-item')!.className).toContain('flex');
+  });
+
+  it('preserveInactiveContent: false destroys a panel once it is left', async () => {
+    const contents: ContentView[] = [
+      { type: 'html', slug: 'a', label: 'A', html: 'content-a' },
+      { type: 'html', slug: 'b', label: 'B', html: 'content-b' },
+    ];
+    const { fixture, instance } = await mountWithInstance({
+      contents,
+      showContentsInTabs: true,
+      preserveInactiveContent: false,
+    });
+    instance.selectContent('b');
+    await settle(fixture);
+    instance.selectContent('a');
+    await settle(fixture);
+    const b = (fixture.nativeElement as HTMLElement).querySelectorAll('[role="tabpanel"]')[1];
+    expect(b.textContent).not.toContain('content-b');
+  });
+
+  it('remembers the active tab per route — a remount restores it', async () => {
+    const contents: ContentView[] = [
+      { type: 'html', slug: 'a', label: 'A', html: 'content-a' },
+      { type: 'html', slug: 'b', label: 'B', html: 'content-b' },
+    ];
+    const first = await mountWithInstance({ contents, showContentsInTabs: true });
+    first.instance.selectContent('b');
+    await settle(first.fixture);
+    first.fixture.destroy();
+
+    const second = await mountWithInstance({ contents, showContentsInTabs: true });
+    expect(second.instance.activeSlug()).toBe('b');
+  });
+
+  // ── tabs whose toggles the owning content hosts ──
+
+  /** a group whose own contents are tabs — its toggles render in ITS header (or beside its body) */
+  const tabbedGroup = (layout: ContentsLayout = {}, title?: string): ContentView => ({
+    type: 'group',
+    slug: 'g',
+    label: 'Group',
+    title,
+    showContentsInTabs: true,
+    ...layout,
+    contents: [
+      { type: 'html', slug: 'one', label: 'One', html: 'body-one' },
+      { type: 'html', slug: 'two', label: 'Two', html: 'body-two' },
+    ],
+  });
+
+  it("a nested tabs level's toggles join the owner's header, under its top row and a faded rule", async () => {
+    const { fixture } = await mountWithInstance({ contents: [tabbedGroup({}, 'Group title')] });
+    const item = (fixture.nativeElement as HTMLElement).querySelector('.contents-view-item')!;
+    const header = item.firstElementChild as HTMLElement;
+
+    expect(header.textContent).toContain('Group title'); // the top row
+    expect(header.querySelector('.cv-tab-rule')).toBeTruthy();
+    const tablist = header.querySelector('[role="tablist"]')!;
+    expect(tablist.getAttribute('aria-label')).toBe('Group');
+    expect(
+      Array.from(tablist.querySelectorAll('.cv-tab-nav-label')).map((l) => l.textContent),
+    ).toEqual(['One', 'Two']);
+    // the nested level renders only its panels
+    const nested = item.querySelector('contents-view')!;
+    expect(nested.querySelector('[role="tablist"]')).toBeNull();
+    expect(nested.querySelectorAll('[role="tabpanel"]').length).toBe(2);
+  });
+
+  it('a header holding nothing but the toggles has no rule', async () => {
+    const { fixture } = await mountWithInstance({ contents: [tabbedGroup()] }); // no title, buttons or controls
+    const header = (fixture.nativeElement as HTMLElement).querySelector('.contents-view-item')!
+      .firstElementChild as HTMLElement;
+    expect(header.querySelector('[role="tablist"]')).toBeTruthy();
+    expect(header.querySelector('.cv-tab-rule')).toBeNull();
+  });
+
+  it("the owner's toggles switch the nested panels — by click, or arrow key and Enter", async () => {
+    const { fixture } = await mountWithInstance({ contents: [tabbedGroup()] });
+    const item = (fixture.nativeElement as HTMLElement).querySelector('.contents-view-item')!;
+    const tabs = () => Array.from(item.firstElementChild!.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    const panels = () =>
+      Array.from(item.querySelector('contents-view')!.querySelectorAll<HTMLElement>('[role="tabpanel"]'));
+
+    expect(panels().map((p) => p.hidden)).toEqual([false, true]);
+    tabs()[1].click();
+    await settle(fixture);
+    expect(panels().map((p) => p.hidden)).toEqual([true, false]);
+    expect(tabs()[1].getAttribute('aria-selected')).toBe('true');
+
+    // ArrowRight from Two wraps focus to One; Enter (a <button>'s native click) selects it
+    tabs()[1].focus();
+    press(tabs()[1], 'ArrowRight', 39);
+    await settle(fixture);
+    expect(document.activeElement).toBe(tabs()[0]);
+    expect(panels()[1].hidden).toBe(false); // focus alone doesn't switch — manual activation
+    (document.activeElement as HTMLButtonElement).click();
+    await settle(fixture);
+    expect(panels().map((p) => p.hidden)).toEqual([false, true]);
+  });
+
+  it('vertical toggles are a sidebar beside the body from lg up — and join the header below lg, the body untouched', async () => {
+    const listeners = stubMatchMedia(true);
+    const { fixture } = await mountWithInstance({
+      contents: [tabbedGroup({ tabsOrientation: 'vertical' })],
+    });
+    const item = (fixture.nativeElement as HTMLElement).querySelector('.contents-view-item')!;
+    const nested = item.querySelector('contents-view');
+
+    // no header — nothing but the toggles would have called for one — and a [sidebar | body] row
+    const frame = item.firstElementChild as HTMLElement;
+    expect(frame.querySelector('[role="tablist"]')!.getAttribute('aria-orientation')).toBe('vertical');
+    expect(frame.querySelector('.contents-view-body')!.contains(nested)).toBe(true);
+
+    listeners.forEach((l) => l({ matches: false } as MediaQueryListEvent));
+    await settle(fixture);
+    const header = item.firstElementChild as HTMLElement;
+    expect(header.querySelector('[role="tablist"]')!.getAttribute('aria-orientation')).toBe(
+      'horizontal',
     );
-    const active = panels.find((p) => p.getAttribute('aria-hidden') !== 'true')!;
-    const inactive = panels.find((p) => p.getAttribute('aria-hidden') === 'true')!;
-    expect(active).toBeTruthy();
-    expect(inactive).toBeTruthy();
-    expect(active.textContent).toContain('content-a');
-    expect(inactive.textContent).toContain('content-b'); // still mounted, just aria-hidden
+    expect(item.querySelectorAll('[role="tablist"]').length).toBe(1); // moved, not copied
+    expect(item.querySelector('contents-view')).toBe(nested); // the body wasn't re-created
+  });
 
-    // both keep the same fit-mode wrapper classes — Material hides the inactive one itself
-    const activeItem = active.querySelector('.contents-view-item')!;
-    const inactiveItem = inactive.querySelector('.contents-view-item')!;
-    expect(activeItem.className).toContain('flex'); // contentsFit 'auto' → cover (matchMedia stub = true)
-    expect(inactiveItem.className).toContain('flex');
+  it('cascades the tab class hooks to nested levels, merged with their own', async () => {
+    const { fixture } = await mountWithInstance({
+      contents: [tabbedGroup({ tabClass: 'own-tab' })],
+      tabsContainerClass: 'root-strip',
+      tabClass: 'root-tab',
+      activeTabClass: 'root-active-tab',
+      tabIndicatorClass: 'root-indicator',
+    });
+    const header = (fixture.nativeElement as HTMLElement).querySelector('.contents-view-item')!
+      .firstElementChild as HTMLElement;
+    const [active, other] = Array.from(header.querySelectorAll<HTMLElement>('[role="tab"]'));
+    expect(header.querySelector('contents-tab-nav')!.className).toContain('root-strip');
+    expect(other.className).toContain('root-tab');
+    expect(other.className).toContain('own-tab');
+    expect(other.className).not.toContain('root-active-tab');
+    expect(active.className).toContain('root-active-tab');
+    expect(header.querySelector('.cv-tab-nav-indicator')!.className).toContain('root-indicator');
   });
 
   const coverClasses = (fixture: ReturnType<typeof mount>) =>
