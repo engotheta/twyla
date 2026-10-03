@@ -1,0 +1,108 @@
+<header
+  class="relative flex h-16 items-center gap-1 border-b border-gray-200 bg-white px-2 sm:gap-2 sm:px-4"
+>
+  <button
+    mat-icon-button
+    type="button"
+    aria-label="Toggle navigation"
+    aria-controls="app-sidebar"
+    [attr.aria-expanded]="layout.sidebarVisible()"
+    (click)="layout.toggleSidebar()"
+  >
+    <mat-icon aria-hidden="true">menu</mat-icon>
+  </button>
+
+  @if (!layout.large() || !layout.sidebarVisible()) {
+    <a
+      class="min-w-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      [routerLink]="config.homeUrl"
+    >
+      <brand-logo [showName]="layout.large()" />
+    </a>
+  }
+
+  <span class="flex-1"></span>
+
+  @if (config.headerActions.length) {
+    <action-buttons class="hidden sm:block" [buttons]="config.headerActions" />
+  }
+
+  @if (fullscreenSupported) {
+    <button
+      mat-icon-button
+      type="button"
+      class="hidden! md:inline-flex!"
+      aria-label="Full screen"
+      matTooltip="Full screen"
+      [attr.aria-pressed]="fullscreen()"
+      (click)="toggleFullscreen()"
+    >
+      <mat-icon aria-hidden="true">{{ fullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+    </button>
+  }
+
+  @if (notifications) {
+    <button
+      mat-icon-button
+      type="button"
+      aria-label="Notifications"
+      matTooltip="Notifications"
+      [matMenuTriggerFor]="notificationsMenu"
+      [matBadge]="unread()"
+      [matBadgeHidden]="!unread()"
+      [matBadgeDescription]="unread() + ' unread'"
+      matBadgeSize="small"
+      matBadgeColor="warn"
+    >
+      <mat-icon aria-hidden="true">notifications</mat-icon>
+    </button>
+
+    <mat-menu #notificationsMenu="matMenu" xPosition="before" class="w-80 max-w-[calc(100vw-2rem)]">
+      <p class="px-4 pt-2 pb-1 text-sm font-semibold text-gray-900">Notifications</p>
+      @for (notification of notifications(); track notification.id) {
+        <button
+          mat-menu-item
+          type="button"
+          class="h-auto! py-2!"
+          (click)="openNotification(notification)"
+        >
+          <mat-icon aria-hidden="true">{{ notification.icon ?? 'notifications' }}</mat-icon>
+          <span class="flex flex-col py-1 leading-snug">
+            <span class="flex items-center gap-2 text-sm font-medium text-gray-900">
+              {{ notification.title }}
+              @if (notification.unread) {
+                <span class="size-2 shrink-0 rounded-full bg-primary" aria-hidden="true"></span>
+                <span class="sr-only">(unread)</span>
+              }
+            </span>
+            @if (notification.text) {
+              <span class="text-xs text-gray-700">{{ notification.text }}</span>
+            }
+            @if (notification.time) {
+              <span class="text-xs text-gray-600">{{ notification.time }}</span>
+            }
+          </span>
+        </button>
+      } @empty {
+        <p class="px-4 py-6 text-center text-sm text-gray-600">You're all caught up.</p>
+      }
+      @if (config.markAllRead && unread()) {
+        <mat-divider />
+        <button mat-menu-item type="button" (click)="markAllRead()">
+          <mat-icon aria-hidden="true">done_all</mat-icon>
+          <span>Mark all as read</span>
+        </button>
+      }
+    </mat-menu>
+  }
+
+  <user-menu />
+
+  @if (loading()) {
+    <mat-progress-bar
+      class="absolute! inset-x-0 bottom-0"
+      mode="indeterminate"
+      aria-label="Loading page"
+    />
+  }
+</header>

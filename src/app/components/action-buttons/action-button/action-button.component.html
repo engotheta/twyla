@@ -48,69 +48,145 @@
     </div>
   </mat-menu>
 
+  <!-- the menu trigger goes on the button itself, and only on a button with a menu: it stamps
+       aria-haspopup / aria-expanded on its host, which a plain button or a wrapper must not carry -->
   <div
     class="inline-flex"
     [matTooltip]="vm.tooltip ?? ''"
     [matTooltipDisabled]="!vm.tooltip"
     [matTooltipPosition]="vm.tooltipPosition"
     [matTooltipClass]="vm.tooltipClass ?? ''"
-    [matMenuTriggerFor]="hasChildren() ? childMenu : null"
-    [attr.aria-label]="ariaLabel()"
     (click)="handleClick($event)"
   >
-    @switch (type()) {
-      @case ('fab') {
-        <button
-          mat-fab
-          type="button"
-          [class]="vm.class"
-          [extended]="!!displayLabel()"
-          [disabled]="vm.disabled"
-          [buttonLoading]="vm.loading"
-        >
-          <ng-container [ngTemplateOutlet]="buttonContent" />
-        </button>
-      }
-      @case ('mini-fab') {
-        <button
-          mat-mini-fab
-          type="button"
-          [class]="vm.class"
-          [disabled]="vm.disabled"
-          [buttonLoading]="vm.loading"
-        >
-          <ng-container [ngTemplateOutlet]="buttonContent" />
-        </button>
-      }
-      @case ('icon') {
-        <ng-container *ngTemplateOutlet="iconButton; context: { $implicit: false }" />
-      }
-      @case ('mini-icon') {
-        <ng-container *ngTemplateOutlet="iconButton; context: { $implicit: true }" />
-      }
-      @default {
-        <button
-          matButton="outlined"
-          type="button"
-          [class]="vm.class"
-          [buttonLoading]="vm.loading"
-          [disabled]="vm.disabled"
-        >
-          <ng-container [ngTemplateOutlet]="buttonContent" />
-        </button>
-      }
-    }
+    <ng-container
+      [ngTemplateOutlet]="buttonByType"
+      [ngTemplateOutletContext]="{ $implicit: hasChildren() ? childMenu : null }"
+    />
   </div>
 
-  <ng-template #iconButton let-mini>
-    <button
-      mat-icon-button
-      type="button"
-      [class]="mini ? '!h-8 !w-8 scale-90 ' + vm.class : vm.class"
-      [disabled]="vm.disabled"
-      [buttonLoading]="vm.loading"
-    >
-      <ng-container [ngTemplateOutlet]="buttonContent" />
-    </button>
+  <!-- `menu`: the child menu, or null for a plain action. A directive can't be added
+       conditionally, so each variant comes twice: with the trigger, and without -->
+  <ng-template #buttonByType let-menu>
+    @switch (type()) {
+      @case ('fab') {
+        @if (menu) {
+          <button
+            mat-fab
+            type="button"
+            [matMenuTriggerFor]="menu"
+            [attr.aria-label]="ariaLabel()"
+            [class]="vm.class"
+            [extended]="!!displayLabel()"
+            [disabled]="vm.disabled"
+            [buttonLoading]="vm.loading"
+          >
+            <ng-container [ngTemplateOutlet]="buttonContent" />
+          </button>
+        } @else {
+          <button
+            mat-fab
+            type="button"
+            [attr.aria-label]="ariaLabel()"
+            [class]="vm.class"
+            [extended]="!!displayLabel()"
+            [disabled]="vm.disabled"
+            [buttonLoading]="vm.loading"
+          >
+            <ng-container [ngTemplateOutlet]="buttonContent" />
+          </button>
+        }
+      }
+      @case ('mini-fab') {
+        @if (menu) {
+          <button
+            mat-mini-fab
+            type="button"
+            [matMenuTriggerFor]="menu"
+            [attr.aria-label]="ariaLabel()"
+            [class]="vm.class"
+            [disabled]="vm.disabled"
+            [buttonLoading]="vm.loading"
+          >
+            <ng-container [ngTemplateOutlet]="buttonContent" />
+          </button>
+        } @else {
+          <button
+            mat-mini-fab
+            type="button"
+            [attr.aria-label]="ariaLabel()"
+            [class]="vm.class"
+            [disabled]="vm.disabled"
+            [buttonLoading]="vm.loading"
+          >
+            <ng-container [ngTemplateOutlet]="buttonContent" />
+          </button>
+        }
+      }
+      @case ('icon') {
+        <ng-container
+          [ngTemplateOutlet]="iconButton"
+          [ngTemplateOutletContext]="{ $implicit: false, menu }"
+        />
+      }
+      @case ('mini-icon') {
+        <ng-container
+          [ngTemplateOutlet]="iconButton"
+          [ngTemplateOutletContext]="{ $implicit: true, menu }"
+        />
+      }
+      @default {
+        @if (menu) {
+          <button
+            matButton="outlined"
+            type="button"
+            [matMenuTriggerFor]="menu"
+            [attr.aria-label]="ariaLabel()"
+            [class]="vm.class"
+            [buttonLoading]="vm.loading"
+            [disabled]="vm.disabled"
+          >
+            <ng-container [ngTemplateOutlet]="buttonContent" />
+          </button>
+        } @else {
+          <button
+            matButton="outlined"
+            type="button"
+            [attr.aria-label]="ariaLabel()"
+            [class]="vm.class"
+            [buttonLoading]="vm.loading"
+            [disabled]="vm.disabled"
+          >
+            <ng-container [ngTemplateOutlet]="buttonContent" />
+          </button>
+        }
+      }
+    }
+  </ng-template>
+
+  <ng-template #iconButton let-mini let-menu="menu">
+    @if (menu) {
+      <button
+        mat-icon-button
+        type="button"
+        [matMenuTriggerFor]="menu"
+        [attr.aria-label]="ariaLabel()"
+        [class]="mini ? '!h-8 !w-8 scale-90 ' + vm.class : vm.class"
+        [disabled]="vm.disabled"
+        [buttonLoading]="vm.loading"
+      >
+        <ng-container [ngTemplateOutlet]="buttonContent" />
+      </button>
+    } @else {
+      <button
+        mat-icon-button
+        type="button"
+        [attr.aria-label]="ariaLabel()"
+        [class]="mini ? '!h-8 !w-8 scale-90 ' + vm.class : vm.class"
+        [disabled]="vm.disabled"
+        [buttonLoading]="vm.loading"
+      >
+        <ng-container [ngTemplateOutlet]="buttonContent" />
+      </button>
+    }
   </ng-template>
 }

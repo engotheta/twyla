@@ -1,4 +1,4 @@
-import { applog } from '../app';
+import { applog } from './support/applog';
 import { CellsProps, GridParameter, RowProps } from '../components/data-grid';
 import { FieldType, obs } from '../components/generic-form';
 import { employees, Employee } from './support/data';
@@ -76,7 +76,7 @@ export const gridParameter: GridParameter<Employee> = {
 
           valueFn: (row: Employee) =>
             `${row.address?.city}
-          ${row.address?.zip ? ` <span class="text-gray-400">(${row.address.zip})</span>` : ''}`,
+          ${row.address?.zip ? ` <span class="text-gray-600">(${row.address.zip})</span>` : ''}`,
 
           //a component or template that will be used to render the cell for this column.
           // template: '',

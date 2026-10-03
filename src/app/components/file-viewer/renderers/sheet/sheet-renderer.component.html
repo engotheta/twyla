@@ -1,0 +1,89 @@
+@if (isCsv()) {
+  <div class="flex flex-wrap items-center gap-2 border-b border-black/10 px-3 py-1.5">
+    <button
+      type="button"
+      [class]="toggle"
+      [attr.aria-pressed]="headerRow()"
+      (click)="headerRow.set(!headerRow())"
+    >
+      First row is the header
+    </button>
+  </div>
+}
+
+<div
+  class="sheet-scroller relative min-h-0 flex-1 overflow-auto bg-white outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+  tabindex="0"
+  data-viewer-scroll
+  [attr.role]="tabs().length > 1 ? 'tabpanel' : 'region'"
+  [attr.id]="tabs().length > 1 ? 'sheet-panel-' + uid : null"
+  [attr.aria-labelledby]="tabs().length > 1 ? 'sheet-tab-' + uid + '-' + active() : null"
+  [attr.aria-label]="tabs().length > 1 ? null : label() + ' — spreadsheet'"
+>
+  @if (sheet(); as s) {
+    <table class="sheet-table" [style.zoom]="scale()">
+      @if (s.colWidths.length) {
+        <colgroup>
+          <col class="sheet-row-col" />
+          @for (c of columns(); track c) {
+            <col [style.width.px]="s.colWidths[c] ?? null" />
+          }
+        </colgroup>
+      }
+      <thead>
+        <tr>
+          <th scope="col" class="sheet-corner"><span class="sr-only">Row</span></th>
+          @for (h of headers(); track $index) {
+            <th scope="col">{{ h }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.index) {
+          <tr>
+            <th scope="row">{{ row.label }}</th>
+            @for (cell of row.cells; track cell.col) {
+              <td
+                [class.sheet-num]="cell.numeric"
+                [attr.rowspan]="cell.rowspan"
+                [attr.colspan]="cell.colspan"
+                [style]="cell.style"
+              >
+                {{ cell.text }}
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    @if (hasMore()) {
+      <div class="sticky left-0 flex justify-center p-3">
+        <button #more type="button" matButton="outlined" (click)="showMore()">
+          Show more rows ({{ rows().length }} of {{ totalRows() }})
+        </button>
+      </div>
+    } @else if (s.truncated) {
+      <p class="sticky left-0 m-0 p-3 text-xs text-black/70">
+        This sheet is too large to show in full — download the file to see the rest.
+      </p>
+    }
+  }
+
+  @if (busy()) {
+    <div class="absolute inset-0 grid place-items-center" role="status">
+      <mat-progress-spinner mode="indeterminate" diameter="40" aria-label="Opening spreadsheet" />
+    </div>
+  }
+</div>
+
+@if (tabs().length > 1) {
+  <div class="border-t border-black/10 bg-[#f3f4f6] px-2 py-1.5">
+    <contents-tab-nav
+      [tabs]="tabs()"
+      [activeKey]="'' + active()"
+      ariaLabel="Sheets"
+      (tabSelect)="selectSheet($event)"
+    />
+  </div>
+}

@@ -14,6 +14,7 @@
 @use './app/components/contents-view/material-tabs-group';
 @use './app/components/generic-form/material-stepper';
 @use './app/components/generic-form/material-form-field';
+@use './app/components/file-viewer/file-viewer';
 
 html {
   height: 100%;

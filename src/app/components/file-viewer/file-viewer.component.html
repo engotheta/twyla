@@ -1,0 +1,227 @@
+@let v = view();
+
+<file-viewer-toolbar
+  [titleId]="titleId()"
+  [heading]="heading()"
+  [showTitle]="showTitle_()"
+  [details]="details()"
+  [icon]="icon()"
+  [file]="v.status === 'ready' ? file() : undefined"
+  [items]="toolbar_()"
+  [index]="position()"
+  [names]="names()"
+  [canDownload]="!!file()"
+  [canOpen]="!!url() || !!file()?.external"
+  [fullscreen]="isFullscreen()"
+  [fullscreenSupported]="fullscreenSupported"
+  [closable]="closable_()"
+  [actionButtons]="actionButtons_()"
+  (download)="download()"
+  (print)="print()"
+  (openInNewTab)="openInNewTab()"
+  (toggleFullscreen)="toggleFullscreen()"
+  (closed)="close()"
+  (navigate)="navigate($event)"
+/>
+
+@if (controller.findOpen() && controller.capabilities().search) {
+  <file-viewer-find-bar (closed)="focusFindToggle()" />
+}
+
+<div class="relative min-h-0 flex-1 bg-[#f3f4f6]">
+  @switch (v.status) {
+    @case ('loading') {
+      <div class="absolute inset-0 grid place-items-center p-6">
+        <div class="flex w-full max-w-xs flex-col items-center gap-2 text-center" role="status">
+          <span class="text-sm text-black/80">Loading {{ heading() }}…</span>
+          <mat-progress-bar
+            class="w-full"
+            [mode]="percent() === undefined ? 'indeterminate' : 'determinate'"
+            [value]="percent() ?? 0"
+            [attr.aria-label]="'Loading ' + heading()"
+          />
+          <span class="h-4 text-xs tabular-nums text-black/60">{{ progressText() }}</span>
+        </div>
+      </div>
+    }
+
+    @case ('empty') {
+      <file-viewer-message
+        class="absolute inset-0"
+        icon="insert_drive_file"
+        heading="No file to show"
+      />
+    }
+
+    @case ('error') {
+      <file-viewer-message
+        class="absolute inset-0"
+        tone="error"
+        icon="error_outline"
+        heading="This file can't be shown"
+        [message]="v.message"
+        [details]="file() ? file()!.name : ''"
+        [canRetry]="true"
+        [canDownload]="!!file()"
+        [canOpen]="!!url()"
+        [canOffice]="officeEligible()"
+        (retry)="retry()"
+        (download)="download()"
+        (open)="openInNewTab()"
+        (office)="showOfficeOnline()"
+      />
+    }
+
+    @case ('ready') {
+      <!-- keyed per file: a new file gets a fresh renderer -->
+      @for (entry of shown(); track entry.key) {
+        @let f = entry.file;
+        <div class="absolute inset-0">
+          @if (f.external) {
+            @defer (on immediate) {
+              <file-viewer-office-online [file]="f" [label]="heading()" />
+            } @placeholder {
+              <ng-container [ngTemplateOutlet]="pending" />
+            } @error {
+              <ng-container [ngTemplateOutlet]="chunkFailed" />
+            }
+          } @else {
+            @switch (f.kind) {
+              @case ('image') {
+                @defer (on immediate) {
+                  <file-viewer-image
+                    [file]="f"
+                    [url]="url()"
+                    [label]="heading()"
+                    (failed)="renderFailed($event)"
+                  />
+                } @placeholder {
+                  <ng-container [ngTemplateOutlet]="pending" />
+                } @error {
+                  <ng-container [ngTemplateOutlet]="chunkFailed" />
+                }
+              }
+              @case ('pdf') {
+                @defer (on immediate) {
+                  <file-viewer-pdf
+                    [file]="f"
+                    [url]="url()"
+                    [label]="heading()"
+                    [initialPage]="initialPage()"
+                    (failed)="renderFailed($event)"
+                    (opened)="controller.announce($event + ($event === 1 ? ' page' : ' pages'))"
+                  />
+                } @placeholder {
+                  <ng-container [ngTemplateOutlet]="pending" />
+                } @error {
+                  <ng-container [ngTemplateOutlet]="chunkFailed" />
+                }
+              }
+              @case ('docx') {
+                @defer (on immediate) {
+                  <file-viewer-docx
+                    [file]="f"
+                    [label]="heading()"
+                    (failed)="renderFailed($event)"
+                  />
+                } @placeholder {
+                  <ng-container [ngTemplateOutlet]="pending" />
+                } @error {
+                  <ng-container [ngTemplateOutlet]="chunkFailed" />
+                }
+              }
+              @case ('sheet') {
+                @defer (on immediate) {
+                  <file-viewer-sheet
+                    [file]="f"
+                    [label]="heading()"
+                    (failed)="renderFailed($event)"
+                  />
+                } @placeholder {
+                  <ng-container [ngTemplateOutlet]="pending" />
+                } @error {
+                  <ng-container [ngTemplateOutlet]="chunkFailed" />
+                }
+              }
+              @case ('csv') {
+                @defer (on immediate) {
+                  <file-viewer-sheet
+                    [file]="f"
+                    [label]="heading()"
+                    (failed)="renderFailed($event)"
+                  />
+                } @placeholder {
+                  <ng-container [ngTemplateOutlet]="pending" />
+                } @error {
+                  <ng-container [ngTemplateOutlet]="chunkFailed" />
+                }
+              }
+              @case ('text') {
+                @defer (on immediate) {
+                  <file-viewer-text
+                    [file]="f"
+                    [label]="heading()"
+                    (failed)="renderFailed($event)"
+                  />
+                } @placeholder {
+                  <ng-container [ngTemplateOutlet]="pending" />
+                } @error {
+                  <ng-container [ngTemplateOutlet]="chunkFailed" />
+                }
+              }
+              @case ('audio') {
+                <file-viewer-media
+                  [file]="f"
+                  [url]="url()"
+                  [label]="heading()"
+                  (failed)="renderFailed($event)"
+                />
+              }
+              @case ('video') {
+                <file-viewer-media
+                  [file]="f"
+                  [url]="url()"
+                  [label]="heading()"
+                  (failed)="renderFailed($event)"
+                />
+              }
+              @default {
+                <file-viewer-message
+                  [icon]="icon()"
+                  heading="Preview not available"
+                  [message]="unavailableMessage()"
+                  [details]="details()"
+                  [canDownload]="true"
+                  [canOpen]="!!url()"
+                  [canOffice]="officeEligible()"
+                  (download)="download()"
+                  (open)="openInNewTab()"
+                  (office)="showOfficeOnline()"
+                />
+              }
+            }
+          }
+        </div>
+      }
+    }
+  }
+</div>
+
+<ng-template #pending>
+  <div class="grid size-full place-items-center">
+    <mat-progress-bar class="!w-40" mode="indeterminate" aria-label="Opening viewer" />
+  </div>
+</ng-template>
+
+<ng-template #chunkFailed>
+  <file-viewer-message
+    tone="error"
+    icon="cloud_off"
+    heading="The viewer couldn't load"
+    message="Check your connection and try again."
+    [canRetry]="true"
+    [canDownload]="true"
+    (retry)="retry()"
+    (download)="download()"
+  />
+</ng-template>

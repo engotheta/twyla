@@ -23,6 +23,8 @@ export interface InputField extends ValueField<string | number> {
   step?: number;
   maxLength?: number;
   autocomplete?: string;
+  /** `inputType: 'password'` only: adds a "Show password" toggle button; default true */
+  revealable?: boolean;
 }
 
 export interface BooleanField extends ValueField<boolean> {

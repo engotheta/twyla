@@ -1,7 +1,10 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
+  ElementRef,
   Injector,
   OnDestroy,
   OnInit,
@@ -11,11 +14,14 @@ import {
   runInInjectionContext,
   Signal,
   signal,
+  untracked,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatStepperModule } from '@angular/material/stepper';
 import { Observable, Subscription, firstValueFrom, isObservable } from 'rxjs';
 import { controlStatus } from './fields/components/control-status.util';
@@ -53,8 +59,10 @@ interface DisplayStep {
   selector: 'generic-form',
   imports: [
     NgTemplateOutlet,
+    ReactiveFormsModule,
     MatButtonModule,
     MatIconModule,
+    MatProgressSpinnerModule,
     MatStepperModule,
     StepperProgressIndicatorDirective,
     FieldComponent,
@@ -85,6 +93,7 @@ export class GenericFormComponent implements OnInit, OnDestroy {
   );
 
   private readonly engine = inject(FormEngineService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   // ngOnInit is NOT a valid injection context (only the constructor/field initializers are) —
   // `controlStatus()` needs one (it calls `toObservable()`), so `buildSteps()`/`makeBannerSignal()`
   // run through `runInInjectionContext` using this, captured here where DI is actually available.
@@ -104,6 +113,7 @@ export class GenericFormComponent implements OnInit, OnDestroy {
     runInInjectionContext(this.injector, () => {
       this.buildSteps();
       this.banner = this.makeBannerSignal();
+      this.focusInvalidOnSubmit();
     });
 
     const closeAction$ = this.params().closeAction$;
@@ -229,6 +239,35 @@ export class GenericFormComponent implements OnInit, OnDestroy {
     result: boolean | Promise<boolean> | Observable<boolean>,
   ): Promise<boolean> {
     return isObservable(result) ? firstValueFrom(result) : Promise.resolve(result);
+  }
+
+  /** SPEC §7: after a submit stopped at validation, take the user to the first field to fix —
+   *  once the touched controls have rendered their errors */
+  private focusInvalidOnSubmit(): void {
+    effect(() => {
+      if (this.instance.invalidSubmits() === 0) return;
+      untracked(() => afterNextRender(() => this.focusFirstInvalid(), { injector: this.injector }));
+    });
+  }
+
+  private focusFirstInvalid(): void {
+    // `.ng-invalid` sits on each control's own element (input, mat-select, mat-checkbox…) — and on
+    // the <form> / nested groups, which are skipped; hidden fields (SPEC §6) can't take focus
+    const invalid = this.host.nativeElement.querySelectorAll<HTMLElement>(
+      '.ng-invalid:not(form):not([formgroup])',
+    );
+    for (const element of Array.from(invalid)) {
+      if (element.closest('[hidden]')) continue;
+      const target = element.matches('input, textarea, select, [tabindex]')
+        ? element
+        : element.querySelector<HTMLElement>(
+            'input, textarea, select, [tabindex]:not([tabindex="-1"])',
+          );
+      if (target) {
+        target.focus();
+        return;
+      }
+    }
   }
 
   private closeModal(data?: unknown): void {

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { of, switchMap } from 'rxjs';
 import { FieldType } from '../../../interfaces/field-type.interface';
@@ -10,23 +11,31 @@ import { ButtonField } from '../../static.fields';
 
 @Component({
   selector: 'app-button-field',
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let f = state();
 
+    <!-- busy: disabled but still focusable (disabledInteractive), so focus isn't dropped mid-submit;
+         the engine ignores a second submit while the first runs -->
     <button
-      type="button"
+      [type]="nativeSubmit() ? 'submit' : 'button'"
       mat-flat-button
       [color]="f.color ?? 'primary'"
-      [disabled]="isSaving()"
+      [disabled]="busy()"
+      [disabledInteractive]="true"
       [matTooltip]="f.tooltip ?? ''"
       [matTooltipDisabled]="!f.tooltip"
       [class]="f.class ?? ''"
       (click)="onClick()"
     >
-      @if (isSaving()) {
-        <mat-icon aria-hidden="true">hourglass_top</mat-icon>
+      @if (busy()) {
+        <mat-progress-spinner
+          class="me-2 inline-block align-middle [--mat-progress-spinner-active-indicator-color:currentColor]"
+          mode="indeterminate"
+          diameter="18"
+          aria-hidden="true"
+        />
       } @else if (f.icon) {
         <mat-icon aria-hidden="true">{{ f.icon }}</mat-icon>
       }
@@ -46,7 +55,20 @@ export class ButtonFieldComponent {
     { initialValue: false },
   );
 
+  /** a plain submit button inside a `nativeForm`: the form's own submit event runs the submit */
+  protected readonly nativeSubmit = computed(
+    () =>
+      this.field().type === FieldType.submit && !this.field().click && this.instance().nativeForm,
+  );
+
+  /** `isSaving$`, or — for a submit button — the form's own submit in progress */
+  protected readonly busy = computed(
+    () =>
+      this.isSaving() || (this.field().type === FieldType.submit && this.instance().submitting()),
+  );
+
   protected async onClick(): Promise<void> {
+    if (this.nativeSubmit() || this.busy()) return;
     const f = this.field();
     if (f.click) {
       await f.click(this.instance().formState().value, this.instance().formState());

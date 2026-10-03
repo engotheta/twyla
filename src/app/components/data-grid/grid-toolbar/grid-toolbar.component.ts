@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormInstance } from '../../generic-form';
 import { ActionButtonsComponent } from '../../action-buttons/action-buttons.component';
-import { ViewService } from '../../view';
+import { ViewService } from '../../../services/view';
 import { GridExportService } from '../grid-export.service';
 import { GridInstance } from '../grid-engine.service';
 import { GridColumnPanelComponent } from '../grid-column-panel/grid-column-panel.component';

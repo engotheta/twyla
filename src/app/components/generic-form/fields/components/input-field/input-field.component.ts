@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -67,6 +67,19 @@ const HTML_TYPE: Record<InputType, string> = {
       @if (f.suffixIcon) {
         <mat-icon matSuffix aria-hidden="true">{{ f.suffixIcon }}</mat-icon>
       }
+      @if (revealable()) {
+        <!-- one fixed name plus aria-pressed, so screen readers hear the state, not a new label -->
+        <button
+          matSuffix
+          mat-icon-button
+          type="button"
+          aria-label="Show password"
+          [attr.aria-pressed]="revealed()"
+          (click)="toggleReveal()"
+        >
+          <mat-icon aria-hidden="true">{{ revealed() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      }
       @if (f.showClear && status().value) {
         <button
           matSuffix
@@ -103,7 +116,15 @@ export class InputFieldComponent {
     () => this.state().showSubscript ?? this.instance().params().showSubscript ?? true,
   );
 
-  protected readonly htmlType = computed(() => HTML_TYPE[this.state().inputType ?? 'text']);
+  /** a password the user chose to show — rendered as plain text until toggled back */
+  protected readonly revealed = signal(false);
+  protected readonly revealable = computed(
+    () => this.state().inputType === 'password' && this.state().revealable !== false,
+  );
+
+  protected readonly htmlType = computed(() =>
+    this.revealable() && this.revealed() ? 'text' : HTML_TYPE[this.state().inputType ?? 'text'],
+  );
 
   protected readonly stepValue = computed(() => {
     const f = this.state();
@@ -128,5 +149,9 @@ export class InputFieldComponent {
   protected clear(): void {
     this.control().setValue(null);
     this.control().markAsDirty();
+  }
+
+  protected toggleReveal(): void {
+    this.revealed.update((revealed) => !revealed);
   }
 }

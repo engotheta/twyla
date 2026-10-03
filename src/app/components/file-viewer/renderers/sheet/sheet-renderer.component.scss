@@ -1,0 +1,56 @@
+// Grid mechanics only — colours come from the cells themselves or stay neutral.
+.sheet-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #111;
+}
+
+.sheet-table th,
+.sheet-table td {
+  border-inline-end: 1px solid #e2e4e8;
+  border-bottom: 1px solid #e2e4e8;
+  padding: 3px 8px;
+  white-space: nowrap;
+  vertical-align: bottom;
+  text-align: start;
+  max-width: 480px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f3f4f6;
+  font-weight: 500;
+  color: #374151;
+  text-align: center;
+}
+
+.sheet-table tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: #f3f4f6;
+  font-weight: 400;
+  color: #4b5563;
+  text-align: end;
+  min-width: 3rem;
+}
+
+.sheet-table .sheet-corner {
+  inset-inline-start: 0;
+  z-index: 3;
+}
+
+.sheet-table td.sheet-num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet-row-col {
+  width: 3rem;
+}

@@ -1,9 +1,9 @@
 import { inject } from '@angular/core';
-import { applog } from '../app';
+import { applog } from './support/applog';
 import { ActionButton } from '../components/action-buttons/action-button.interface';
 import { ContentsParameter, ContentView } from '../components/contents-view';
-import { FetchService } from '../components/fetch';
-import { NotificationService } from '../components/notification';
+import { FetchService } from '../services/fetch';
+import { NotificationService } from '../services/notification';
 import { gridParameter } from './data-grid';
 import { getGridParameterFetch } from './data-grid-fetch';
 import { detailsParameter } from './details';

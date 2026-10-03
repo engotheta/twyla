@@ -55,67 +55,58 @@
     </blockquote>
   }
 
-  <!-- attachment: icon + filename/link -->
+  <!-- attachment: icon + filename — opens in the file viewer -->
   @case ('attachment') {
     @if (f.value) {
-      <a
-        [href]="f.value"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="inline-flex items-center gap-1 text-primary hover:underline"
-      >
+      <button type="button" [class]="viewButton" (click)="view()">
         <mat-icon class="shrink-0" aria-hidden="true">{{ attachmentIcon() }}</mat-icon>
         <span class="truncate max-w-64">{{ f.value }}</span>
-      </a>
+      </button>
     }
   }
 
-  <!-- pdf: base64 pdf, opened in a new tab -->
+  <!-- pdf: base64 pdf — opens in the file viewer -->
   @case ('pdf') {
-    @if (media(); as m) {
-      <a
-        [href]="m.uri"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="inline-flex items-center gap-1 text-primary hover:underline"
-      >
+    @if (media()) {
+      <button type="button" [class]="viewButton" (click)="view()">
         <mat-icon class="shrink-0" aria-hidden="true">picture_as_pdf</mat-icon>
         <span>View PDF</span>
-      </a>
+      </button>
     }
   }
 
-  <!-- image: base64 image, rendered inline (NgOptimizedImage doesn't support inline base64) -->
+  <!-- image: base64 image as a thumbnail (NgOptimizedImage doesn't support inline base64);
+       the thumbnail opens it full size in the file viewer -->
   @case ('image') {
     @if (media(); as m) {
-      <img
-        [src]="m.uri"
-        [alt]="f.label ?? ''"
-        class="max-h-32 rounded border border-black/10 object-contain"
-      />
+      <button type="button" [class]="thumbButton" (click)="view()">
+        <img
+          [src]="m.uri"
+          [alt]="'View ' + (f.label ?? 'image')"
+          class="max-h-32 rounded border border-black/10 object-contain"
+        />
+      </button>
     }
   }
 
-  <!-- base64: unrouted blob, tell image vs. downloadable file apart from its file signature -->
+  <!-- base64: unrouted blob, image vs. other file told apart from its file signature -->
   @case ('base64') {
     @if (media(); as m) {
       @if (m.isImage) {
-        <img
-          [src]="m.uri"
-          [alt]="f.label ?? ''"
-          class="max-h-32 rounded border border-black/10 object-contain"
-        />
+        <button type="button" [class]="thumbButton" (click)="view()">
+          <img
+            [src]="m.uri"
+            [alt]="'View ' + (f.label ?? 'image')"
+            class="max-h-32 rounded border border-black/10 object-contain"
+          />
+        </button>
       } @else {
-        <a
-          [href]="m.uri"
-          [download]="f.label ?? true"
-          class="inline-flex items-center gap-1 text-primary hover:underline"
-        >
+        <button type="button" [class]="viewButton" (click)="view()">
           <mat-icon class="shrink-0" aria-hidden="true">{{
-            m.isPdf ? 'picture_as_pdf' : 'download'
+            m.isPdf ? 'picture_as_pdf' : 'description'
           }}</mat-icon>
-          <span>Download</span>
-        </a>
+          <span>View file</span>
+        </button>
       }
     }
   }

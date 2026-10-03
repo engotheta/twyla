@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { GridParameter } from '../components/data-grid';
-import { FetchService } from '../components/fetch';
+import { FetchService } from '../services/fetch';
 
 /** The dummyjson.com user fields the fetch demos use. */
 export interface DummyUser {

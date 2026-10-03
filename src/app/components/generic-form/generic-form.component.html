@@ -1,14 +1,33 @@
 @let p = params();
 
-<div [class]="p.outerClass ?? ''">
-  <ng-container [ngTemplateOutlet]="fieldsBodyTpl" />
+<!-- nativeForm (SPEC §7): a real <form>, so Enter submits and password managers see it -->
+@if (instance.nativeForm) {
+  <form
+    novalidate
+    [class]="p.outerClass ?? ''"
+    [formGroup]="instance.form"
+    [attr.aria-busy]="instance.submitting() || null"
+    (ngSubmit)="submitForm()"
+  >
+    <ng-container [ngTemplateOutlet]="fieldsBodyTpl" />
 
-  @if (!hasSteps && p.showFooter !== false) {
-    <div [class]="footerClass()">
-      <ng-container [ngTemplateOutlet]="actionsTpl" />
-    </div>
-  }
-</div>
+    @if (p.showFooter !== false) {
+      <div [class]="footerClass()">
+        <ng-container [ngTemplateOutlet]="actionsTpl" />
+      </div>
+    }
+  </form>
+} @else {
+  <div [class]="p.outerClass ?? ''">
+    <ng-container [ngTemplateOutlet]="fieldsBodyTpl" />
+
+    @if (!hasSteps && p.showFooter !== false) {
+      <div [class]="footerClass()">
+        <ng-container [ngTemplateOutlet]="actionsTpl" />
+      </div>
+    }
+  </div>
+}
 
 <ng-template #fieldsBodyTpl>
   @if (hasSteps) {
@@ -51,12 +70,7 @@
               }
 
               @if ($index === steps.length - 1) {
-                <button mat-flat-button color="primary" type="button" (click)="submitForm()">
-                  @if (p.submitButtonIcon) {
-                    <mat-icon aria-hidden="true">{{ p.submitButtonIcon }}</mat-icon>
-                  }
-                  {{ p.submitButtonLabel ?? 'Submit' }}
-                </button>
+                <ng-container [ngTemplateOutlet]="submitButtonTpl" />
               } @else {
                 <button
                   mat-flat-button
@@ -90,14 +104,52 @@
     <div class="me-auto text-sm text-red-600" role="alert">{{ bannerMessage }}</div>
   }
   @if (dialogRef()) {
-    <button mat-button type="button" (click)="cancel()">{{ p.cancelButtonLabel ?? 'Cancel' }}</button>
-  }
-  @if (p.addSubmitButton !== false) {
-    <button mat-flat-button color="primary" type="button" (click)="submitForm()">
-      @if (p.submitButtonIcon) {
-        <mat-icon aria-hidden="true">{{ p.submitButtonIcon }}</mat-icon>
-      }
-      {{ p.submitButtonLabel ?? 'Submit' }}
+    <button mat-button type="button" (click)="cancel()">
+      {{ p.cancelButtonLabel ?? 'Cancel' }}
     </button>
   }
+  @if (p.addSubmitButton !== false) {
+    <ng-container [ngTemplateOutlet]="submitButtonTpl" />
+  }
+</ng-template>
+
+<!-- busy while submitting: disabled but still focusable (disabledInteractive), so focus isn't
+     dropped mid-submit; the engine ignores a second submit while the first runs -->
+<ng-template #submitButtonTpl>
+  @if (instance.nativeForm) {
+    <button
+      mat-flat-button
+      color="primary"
+      type="submit"
+      [disabled]="instance.submitting()"
+      [disabledInteractive]="true"
+    >
+      <ng-container [ngTemplateOutlet]="submitContentTpl" />
+    </button>
+  } @else {
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      [disabled]="instance.submitting()"
+      [disabledInteractive]="true"
+      (click)="submitForm()"
+    >
+      <ng-container [ngTemplateOutlet]="submitContentTpl" />
+    </button>
+  }
+</ng-template>
+
+<ng-template #submitContentTpl>
+  @if (instance.submitting()) {
+    <mat-progress-spinner
+      class="me-2 inline-block align-middle [--mat-progress-spinner-active-indicator-color:currentColor]"
+      mode="indeterminate"
+      diameter="18"
+      aria-hidden="true"
+    />
+  } @else if (p.submitButtonIcon) {
+    <mat-icon aria-hidden="true">{{ p.submitButtonIcon }}</mat-icon>
+  }
+  {{ p.submitButtonLabel ?? 'Submit' }}
 </ng-template>

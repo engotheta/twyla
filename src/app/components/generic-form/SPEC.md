@@ -126,6 +126,32 @@ auto submit button and any inline `type: 'submit'` button field call;
 `submitValue()` is the lower-level primitive for callers that just want the
 assembled value without triggering `onSubmit`/modal-close side effects.
 
+**Running a submit** (`submit()` only — `submitValue()` has none of this):
+
+- `FormInstance.submitting` is true from the start of assembly (including
+  deferred uploads) until `onSubmit` settles: its Promise resolves/rejects, or
+  its Observable completes/errors (the engine awaits the **last** emission).
+  It resets in a `finally`, so a throwing `onSubmit` doesn't leave the form
+  stuck.
+- A `submit()` call while one is running resolves `null` immediately and does
+  nothing else — double clicks and Enter mashing never submit twice.
+- Submit buttons (the footer's, the stepper's last, and `type: 'submit'`
+  fields) render `submitting` as their busy state: disabled with a spinner,
+  but still focusable (`disabledInteractive`), so focus isn't dropped.
+- When assembly stops at validation, `FormInstance.invalidSubmits` increments
+  and `GenericFormComponent` moves focus to the first invalid, visible control
+  once the errors have rendered.
+
+**`FormParameter.nativeForm`** (default false; `FormInstance.nativeForm`):
+
+- The flat layout renders inside `<form novalidate [formGroup] (ngSubmit)>`,
+  so Enter in a field submits and browsers / password managers recognise it.
+- The footer submit button and `type: 'submit'` fields without their own
+  `click` become `type="submit"`; their click does nothing itself — the form's
+  submit event runs `submit()` once.
+- Ignored (false) when the form has step fields: Enter must not submit a
+  stepper from its first step.
+
 ## 8. `valueFn` vs `toSubmit` timing
 
 - `valueFn(value, formState)` transforms the value **on the way into the
@@ -189,6 +215,14 @@ index?)` to remove one — it never touches `uploadFn`, status, or the
 - `hasNoneOption` prepends `{ label: 'None', value: null }` after options
   resolve, before sorting.
 - Deprecated `onModalClose` / `onCloseAction` both forward to `onClose`.
+- `inputType: 'password'` fields get a "Show password" suffix toggle
+  (`aria-pressed`, switches the input to `type="text"`); `revealable: false`
+  removes it.
+- `validators.ts` holds ready-made `Validator`s (`validators.required()`,
+  `.email()`, `.minLength(n)`, `.strongPassword(rules)`, …) whose `name`
+  equals the error key their validator sets, plus the apps' `VALIDATOR_*`
+  aliases. `passwordChecks(value, rules)` lists each password rule with
+  whether it's met, for a live checklist next to the field.
 
 ## 13. Component reactivity (why `fieldState` exists)
 

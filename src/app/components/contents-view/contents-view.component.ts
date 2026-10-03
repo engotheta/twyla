@@ -34,6 +34,7 @@ import { DataGridComponent } from '../data-grid';
 import { DetailsComponent } from '../details/details.component';
 import { GenericFormComponent } from '../generic-form';
 import { mergeClasses } from '../details/util/class-name/class-name.helpers';
+import { syncOverlayContainer } from '../../services/view/fullscreen-overlay.util';
 import {
   ContentsSizes,
   ContentsViewInstance,
@@ -49,7 +50,7 @@ import {
 } from './persisted-selection.util';
 import { ContentsTabNavComponent } from './tab-nav/tab-nav.component';
 import { TabNavItem, TabNavState } from './tab-nav/tab-nav.interface';
-import { LG_UP_QUERY, mediaQuerySignal } from './viewport.util';
+import { LG_UP_QUERY, mediaQuerySignal } from '../../services/view/viewport.util';
 import { clusterEdges, GridAxis, trackIndex } from './grid-metrics.util';
 
 /** one resolved content, ready to render — `visible`/`disabled`/`badge`/`html`
@@ -194,24 +195,6 @@ let nextMountId = 0;
 /** a content's stable key within its mount — its `slug`, else its position */
 function contentKey(rc: ResolvedContent, index: number): string {
   return rc.content.slug ?? `#${index}`;
-}
-
-/**
- * Keeps the CDK overlay container (dialogs, menus, tooltips, the notification stack) inside the
- * full-screen pane: the browser makes everything outside the full-screen element inert, so an
- * overlay left under `<body>` would still paint on top (CDK shows it as a top-layer popover) yet
- * ignore every click and never take focus. Same move as CDK's `FullscreenOverlayContainer`, done
- * here so apps need no provider — but only for a contents-view pane: a foreign full-screen
- * element (a `<video>`) is left alone. Idempotent, so every mount can run it on every change.
- */
-function syncOverlayContainer(doc: Document, container: HTMLElement): void {
-  const fullscreen = doc.fullscreenElement;
-  const parent = !fullscreen
-    ? doc.body
-    : fullscreen.classList.contains('contents-view-item')
-      ? fullscreen
-      : null;
-  if (parent && container.parentElement !== parent) parent.appendChild(container);
 }
 
 /**

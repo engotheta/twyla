@@ -33,7 +33,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActionButtonsComponent } from '../action-buttons/action-buttons.component';
 import { mergeClasses } from '../details/util/class-name/class-name.helpers';
-import { ViewService } from '../view';
+import { ViewService } from '../../services/view';
 import { ColumnResizeDirective } from './column-resize.directive';
 import { GridCellComponent } from './grid-cell/grid-cell.component';
 import { GridRow } from './interfaces/grid-cell.interface';

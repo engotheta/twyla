@@ -82,6 +82,28 @@ const params: FormParameter<{ name: string; country: string; city: string }> = {
 <generic-form [params]="params" />
 ```
 
+### Sign-in style forms
+
+```typescript
+const signIn: FormParameter<{ username: string; password: string }> = {
+  nativeForm: true, // real <form>: Enter submits, password managers recognise it
+  submitButtonLabel: 'Sign in',
+  fields: [
+    { type: FieldType.input, key: 'username', autocomplete: 'username', validations: [VALIDATOR_REQUIRED] },
+    {
+      type: FieldType.input,
+      key: 'password',
+      inputType: 'password', // gets a "Show password" toggle (revealable: false removes it)
+      autocomplete: 'current-password',
+      validations: [validators.required('Enter your password')],
+    },
+  ],
+  // awaited (Promise, or an Observable's last value): the submit button shows a spinner meanwhile,
+  // and a second submit is ignored until it settles (SPEC §7)
+  onSubmit: (value) => session.login(value),
+};
+```
+
 ## `fieldsClass` vs `fieldsContainerClass`
 
 Every container that has a `fields` list (`ObjectField`, `StepField`,

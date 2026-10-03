@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { DataGridComponent } from '../components/data-grid';
-import { FetchService } from '../components/fetch';
-import { LoadingOverlayDirective } from '../components/loading';
+import { FetchService } from '../services/fetch';
+import { LoadingOverlayDirective } from '../services/loading';
 import { DummyUser, DummyUsersResponse, getGridParameterFetch } from './data-grid-fetch';
 
 /**

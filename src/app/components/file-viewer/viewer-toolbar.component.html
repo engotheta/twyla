@@ -1,0 +1,309 @@
+@let s = show();
+@let c = controller;
+
+<div
+  class="flex flex-wrap items-center gap-x-1 gap-y-0.5 px-2 py-1"
+  role="toolbar"
+  aria-label="File viewer"
+  aria-orientation="horizontal"
+>
+  <!-- what's open -->
+  <div class="flex min-w-0 flex-1 basis-48 items-center gap-2 py-1 ps-1">
+    <mat-icon class="shrink-0 text-primary" aria-hidden="true">{{ icon() }}</mat-icon>
+    <div class="min-w-0">
+      @if (showTitle()) {
+        <h2 [id]="titleId()" class="m-0 truncate text-sm font-medium leading-5" [title]="heading()">
+          {{ heading() }}
+        </h2>
+      } @else {
+        <h2 [id]="titleId()" class="sr-only">{{ heading() }}</h2>
+      }
+      @if (details()) {
+        <p class="m-0 truncate text-xs leading-4 text-black/60">{{ details() }}</p>
+      }
+    </div>
+  </div>
+
+  <!-- document controls -->
+  @if (s.search || s.thumbnails) {
+    <div class="flex items-center">
+      @if (s.thumbnails) {
+        <button
+          type="button"
+          mat-icon-button
+          [attr.aria-pressed]="c.thumbnailsOpen()"
+          aria-label="Page thumbnails"
+          matTooltip="Page thumbnails"
+          (click)="c.toggleThumbnails()"
+        >
+          <mat-icon aria-hidden="true">view_sidebar</mat-icon>
+        </button>
+      }
+      @if (s.search) {
+        <button
+          type="button"
+          mat-icon-button
+          [attr.aria-pressed]="c.findOpen()"
+          aria-label="Find in document"
+          aria-keyshortcuts="Control+F Meta+F"
+          matTooltip="Find (Ctrl+F)"
+          [attr.data-viewer-find-toggle]="''"
+          (click)="c.findOpen() ? c.closeFind() : c.openFind()"
+        >
+          <mat-icon aria-hidden="true">search</mat-icon>
+        </button>
+      }
+    </div>
+  }
+
+  @if (s.zoom) {
+    <div class="flex items-center">
+      <button
+        type="button"
+        mat-icon-button
+        aria-label="Zoom out"
+        aria-keyshortcuts="-"
+        matTooltip="Zoom out (−)"
+        (click)="c.zoomOut()"
+      >
+        <mat-icon aria-hidden="true">zoom_out</mat-icon>
+      </button>
+      <button
+        type="button"
+        mat-button
+        class="!min-w-16 !px-2 tabular-nums"
+        [matMenuTriggerFor]="zoomMenu"
+        [attr.aria-label]="'Zoom ' + zoomText() + ', choose a zoom level'"
+      >
+        {{ zoomText() }}
+      </button>
+      <button
+        type="button"
+        mat-icon-button
+        aria-label="Zoom in"
+        aria-keyshortcuts="+"
+        matTooltip="Zoom in (+)"
+        (click)="c.zoomIn()"
+      >
+        <mat-icon aria-hidden="true">zoom_in</mat-icon>
+      </button>
+      <mat-menu #zoomMenu="matMenu">
+        <button type="button" mat-menu-item (click)="zoomTo('fit')">
+          <mat-icon aria-hidden="true">fit_screen</mat-icon>{{ zoomLabels.fit }}
+        </button>
+        @if (s.fitWidth) {
+          <button type="button" mat-menu-item (click)="zoomTo('fit-width')">
+            <mat-icon aria-hidden="true">swap_horiz</mat-icon>{{ zoomLabels['fit-width'] }}
+          </button>
+        }
+        <button type="button" mat-menu-item (click)="zoomTo('actual')">
+          <mat-icon aria-hidden="true">crop_free</mat-icon>{{ zoomLabels.actual }}
+        </button>
+        @for (z of zoomPresets; track z) {
+          <button type="button" mat-menu-item (click)="zoomTo(z)">{{ z * 100 }}%</button>
+        }
+      </mat-menu>
+    </div>
+  }
+
+  @if (s.rotate) {
+    <button
+      type="button"
+      mat-icon-button
+      aria-label="Rotate clockwise"
+      aria-keyshortcuts="R"
+      matTooltip="Rotate (R)"
+      (click)="c.rotate(90)"
+    >
+      <mat-icon aria-hidden="true">rotate_right</mat-icon>
+    </button>
+  }
+
+  @if (s.pages) {
+    <div class="flex items-center gap-1 text-sm">
+      <button
+        type="button"
+        mat-icon-button
+        aria-label="Previous page"
+        matTooltip="Previous page"
+        [disabled]="c.page() <= 1"
+        (click)="c.goToPage(c.page() - 1)"
+      >
+        <mat-icon aria-hidden="true">keyboard_arrow_up</mat-icon>
+      </button>
+      <input
+        #pageInput
+        type="number"
+        inputmode="numeric"
+        min="1"
+        [max]="c.pageCount()"
+        [value]="c.page()"
+        aria-label="Page number"
+        class="h-8 w-12 rounded border border-black/20 bg-transparent px-1 text-center tabular-nums outline-none [appearance:textfield] focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40 [&::-webkit-inner-spin-button]:appearance-none"
+        (change)="goToPage(pageInput)"
+        (keydown.enter)="goToPage(pageInput)"
+      />
+      <span class="whitespace-nowrap text-black/70">of {{ c.pageCount() }}</span>
+      <button
+        type="button"
+        mat-icon-button
+        aria-label="Next page"
+        matTooltip="Next page"
+        [disabled]="c.page() >= c.pageCount()"
+        (click)="c.goToPage(c.page() + 1)"
+      >
+        <mat-icon aria-hidden="true">keyboard_arrow_down</mat-icon>
+      </button>
+    </div>
+  }
+
+  <!-- between files -->
+  @if (s.navigation) {
+    <div class="flex items-center">
+      <button
+        type="button"
+        mat-icon-button
+        aria-label="Previous file"
+        aria-keyshortcuts="ArrowLeft"
+        matTooltip="Previous file (←)"
+        (click)="step(-1)"
+      >
+        <mat-icon aria-hidden="true">chevron_left</mat-icon>
+      </button>
+      <button
+        type="button"
+        mat-button
+        class="!min-w-0 !px-2 tabular-nums"
+        [matMenuTriggerFor]="filesMenu"
+        [attr.aria-label]="'File ' + (index() + 1) + ' of ' + names().length + ', choose a file'"
+      >
+        {{ index() + 1 }} / {{ names().length }}
+      </button>
+      <button
+        type="button"
+        mat-icon-button
+        aria-label="Next file"
+        aria-keyshortcuts="ArrowRight"
+        matTooltip="Next file (→)"
+        (click)="step(1)"
+      >
+        <mat-icon aria-hidden="true">chevron_right</mat-icon>
+      </button>
+      <mat-menu #filesMenu="matMenu">
+        @for (name of names(); track $index) {
+          <button
+            type="button"
+            mat-menu-item
+            [attr.aria-current]="$index === index() ? 'true' : null"
+            (click)="navigate.emit($index)"
+          >
+            <mat-icon aria-hidden="true">{{
+              $index === index() ? 'radio_button_checked' : 'description'
+            }}</mat-icon>
+            <span class="block max-w-72 truncate">{{ name }}</span>
+          </button>
+        }
+      </mat-menu>
+    </div>
+  }
+
+  <!-- file actions -->
+  <div class="flex items-center">
+    @if (actionButtons().length && file()) {
+      <action-buttons [buttons]="actionButtons()" [data]="file()" />
+    }
+    @if (s.download) {
+      <button
+        type="button"
+        mat-icon-button
+        aria-label="Download"
+        matTooltip="Download"
+        (click)="download.emit()"
+      >
+        <mat-icon aria-hidden="true">download</mat-icon>
+      </button>
+    }
+    @if (s.print) {
+      <button
+        type="button"
+        mat-icon-button
+        class="!hidden @2xl:!inline-flex"
+        aria-label="Print"
+        matTooltip="Print"
+        (click)="print.emit()"
+      >
+        <mat-icon aria-hidden="true">print</mat-icon>
+      </button>
+    }
+    @if (s.open) {
+      <button
+        type="button"
+        mat-icon-button
+        class="!hidden @2xl:!inline-flex"
+        aria-label="Open in new tab"
+        matTooltip="Open in new tab"
+        (click)="openInNewTab.emit()"
+      >
+        <mat-icon aria-hidden="true">open_in_new</mat-icon>
+      </button>
+    }
+    @if (s.fullscreen) {
+      <button
+        type="button"
+        mat-icon-button
+        class="!hidden @2xl:!inline-flex"
+        [attr.aria-pressed]="fullscreen()"
+        [attr.aria-label]="fullscreen() ? 'Exit full screen' : 'Full screen'"
+        [matTooltip]="fullscreen() ? 'Exit full screen' : 'Full screen'"
+        (click)="toggleFullscreen.emit()"
+      >
+        <mat-icon aria-hidden="true">{{
+          fullscreen() ? 'fullscreen_exit' : 'fullscreen'
+        }}</mat-icon>
+      </button>
+    }
+    @if (hasMore()) {
+      <button
+        type="button"
+        mat-icon-button
+        class="@2xl:!hidden"
+        aria-label="More actions"
+        matTooltip="More"
+        [matMenuTriggerFor]="moreMenu"
+      >
+        <mat-icon aria-hidden="true">more_vert</mat-icon>
+      </button>
+      <mat-menu #moreMenu="matMenu">
+        @if (s.print) {
+          <button type="button" mat-menu-item (click)="print.emit()">
+            <mat-icon aria-hidden="true">print</mat-icon>Print
+          </button>
+        }
+        @if (s.open) {
+          <button type="button" mat-menu-item (click)="openInNewTab.emit()">
+            <mat-icon aria-hidden="true">open_in_new</mat-icon>Open in new tab
+          </button>
+        }
+        @if (s.fullscreen) {
+          <button type="button" mat-menu-item (click)="toggleFullscreen.emit()">
+            <mat-icon aria-hidden="true">{{
+              fullscreen() ? 'fullscreen_exit' : 'fullscreen'
+            }}</mat-icon>
+            {{ fullscreen() ? 'Exit full screen' : 'Full screen' }}
+          </button>
+        }
+      </mat-menu>
+    }
+    @if (closable()) {
+      <button
+        type="button"
+        mat-icon-button
+        aria-label="Close viewer"
+        matTooltip="Close"
+        (click)="closed.emit()"
+      >
+        <mat-icon aria-hidden="true">close</mat-icon>
+      </button>
+    }
+  </div>
+</div>

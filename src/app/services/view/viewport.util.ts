@@ -27,6 +27,7 @@ export function mediaQuerySignal(query: string): Signal<boolean> {
   return matches.asReadonly();
 }
 
-/** `matchMedia` query for Tailwind's `lg` breakpoint (64rem) — the point at which the default
- *  contents grid goes two-column, and the `contentsFit: 'auto'` cover/flow switch happens. */
+/** `matchMedia` query for Tailwind's `lg` breakpoint (64rem) — where the default contents grid
+ *  goes two-column, the `contentsFit: 'auto'` cover/flow switch happens, and the app layout's
+ *  sidebar stops being an overlay drawer. */
 export const LG_UP_QUERY = '(min-width: 64rem)';

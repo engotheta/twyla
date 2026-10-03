@@ -27,7 +27,7 @@ import {
 import { resolveDynamicValue$ } from '../dynamic-value.util';
 import { ButtonLoadingDirective } from '../button-loading.directive';
 import { ConfirmDialog } from '../confirm-dialogue/confirm-dialog.interface';
-import { ViewService } from '../../view';
+import { ViewService } from '../../../services/view';
 
 interface ActionButtonViewModel {
   label?: string;
@@ -160,7 +160,10 @@ export class ActionButtonComponent<D = unknown> implements OnDestroy {
     }
 
     if (vm.confirmMessage || vm.confirmConfig) {
-      const config = { ...vm.confirmConfig, message: vm.confirmConfig?.message ?? vm.confirmMessage };
+      const config = {
+        ...vm.confirmConfig,
+        message: vm.confirmConfig?.message ?? vm.confirmMessage,
+      };
       void this.view.confirm(config).then((ok) => ok && this.button().click?.(this.data()));
       return;
     }

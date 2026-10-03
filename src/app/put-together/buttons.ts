@@ -1,7 +1,7 @@
 import { Subject } from 'rxjs';
 import { getAllFields } from '../components/details/field/fields.helper';
 import { ActionButton } from '../components/action-buttons/action-button.interface';
-import { applog } from '../app';
+import { applog } from './support/applog';
 
 export const removeFile$ = new Subject<boolean>();
 

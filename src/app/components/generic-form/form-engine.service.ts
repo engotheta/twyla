@@ -100,8 +100,19 @@ export interface FormInstance<T = Record<string, unknown>> {
    *  first (SPEC §11). Returns null when invalid (marks all touched). */
   submitValue(): Promise<T | null>;
   /** `submitValue()` + invoking `params.onSubmit` when it assembled successfully. This is what
-   *  the footer's auto submit button and any inline `type: 'submit'` button field call. */
+   *  the footer's auto submit button and any inline `type: 'submit'` button field call. Awaits
+   *  `onSubmit`'s Promise, or its Observable's last emission. Ignored (resolves `null`) while a
+   *  previous call is still running. SPEC §7 */
   submit(): Promise<T | null>;
+  /** true while `submit()` runs — the upload/assembly AND the awaited `onSubmit`. Submit buttons
+   *  show it as their busy state. SPEC §7 */
+  submitting: Signal<boolean>;
+  /** how many `submit()` calls stopped at validation; `GenericFormComponent` moves focus to the
+   *  first invalid control after each. SPEC §7 */
+  invalidSubmits: Signal<number>;
+  /** `params.nativeForm`, unless the form has steps (where it doesn't apply) — whether the form
+   *  renders inside a real `<form>` whose submit buttons are `type="submit"`. SPEC §7 */
+  nativeForm: boolean;
   /** SPEC §11: hand the engine a user-picked file for an attachment field (or list item at
    *  `index`). Uploads immediately unless the field's `uploadOn` is `'submit'`. */
   selectAttachment(field: FormField, file: File, index?: number): Promise<void>;
@@ -142,6 +153,9 @@ export class FormEngineService {
     if (initialParams.model) this.seedModel(fields, initialParams.model as Record<string, unknown>);
     this.walk(fields, '', form, form, fields, flat, runtimes, initialParams, itemFieldsByGroup);
 
+    const submitting = signal(false);
+    const invalidSubmits = signal(0);
+
     const instance: FormInstance<T> = {
       form,
       fields: flat,
@@ -159,10 +173,25 @@ export class FormEngineService {
       // spots (plus autoLabels inside addListItem, below) are the only ones allowed to.
       submitValue: () => this.assembleSubmitValue<T>(form, flat, runtimes, paramsSignal()),
       submit: async () => {
-        const value = await this.assembleSubmitValue<T>(form, flat, runtimes, paramsSignal());
-        if (value !== null) await paramsSignal().onSubmit?.(value, this.makeFormState<T>(form, flat));
-        return value;
+        if (submitting()) return null;
+        submitting.set(true);
+        try {
+          const value = await this.assembleSubmitValue<T>(form, flat, runtimes, paramsSignal());
+          if (value === null) {
+            invalidSubmits.update((count) => count + 1);
+            return null;
+          }
+          const result = paramsSignal().onSubmit?.(value, this.makeFormState<T>(form, flat));
+          if (isObservable(result)) await lastValueFrom(result, { defaultValue: undefined });
+          else await result;
+          return value;
+        } finally {
+          submitting.set(false);
+        }
       },
+      submitting: submitting.asReadonly(),
+      invalidSubmits: invalidSubmits.asReadonly(),
+      nativeForm: initialParams.nativeForm === true && !fields.some(isStepField),
       selectAttachment: (field, file, index) =>
         this.selectAttachment(field, file, form, flat, runtimes, index),
       clearAttachment: (field, index) => this.clearAttachment(field, runtimes, index),
@@ -189,7 +218,8 @@ export class FormEngineService {
     // One-time: changeDebounce is baked into the pipe here and never re-read (accepted gap).
     if (initialParams.onChange) {
       let changes: Observable<T> = form.valueChanges as Observable<T>;
-      if (initialParams.changeDebounce) changes = changes.pipe(debounceTime(initialParams.changeDebounce));
+      if (initialParams.changeDebounce)
+        changes = changes.pipe(debounceTime(initialParams.changeDebounce));
       formSubs.push(
         changes.subscribe((value) =>
           initialParams.onChange!(value, this.makeFormState<T>(form, flat)),
@@ -940,11 +970,23 @@ export class FormEngineService {
     const parentPath = dot === -1 ? '' : path.slice(0, dot);
     const parentGroup = parentPath ? (form.get(parentPath) as FormGroup | null) : form;
     if (!parentGroup) {
-      console.warn(`[FormEngine] reconcile: no parent group at '${parentPath}' for new field '${path}'`);
+      console.warn(
+        `[FormEngine] reconcile: no parent group at '${parentPath}' for new field '${path}'`,
+      );
       return;
     }
     const before = flat.length;
-    this.walk([field], parentPath, form, parentGroup, siblings, flat, runtimes, params, itemFieldsByGroup);
+    this.walk(
+      [field],
+      parentPath,
+      form,
+      parentGroup,
+      siblings,
+      flat,
+      runtimes,
+      params,
+      itemFieldsByGroup,
+    );
     for (const f of flat.slice(before)) this.wireField(f, form, flat, runtimes, cascade);
   }
 
@@ -1159,14 +1201,33 @@ export class FormEngineService {
       .sort((a, b) => a.path.split('.').length - b.path.split('.').length); // parents before children
     for (const e of addedRoots) {
       if (!e.newField) continue;
-      this.addFieldAt(e.path, e.newField, e.newSiblings ?? [], form, flat, runtimes, params, itemFieldsByGroup, cascade);
+      this.addFieldAt(
+        e.path,
+        e.newField,
+        e.newSiblings ?? [],
+        form,
+        flat,
+        runtimes,
+        params,
+        itemFieldsByGroup,
+        cascade,
+      );
     }
 
     for (const e of keptSame) {
       if (!e.oldField || !e.newField) continue;
       const rt = runtimes.get(e.oldField);
       if (!rt) continue;
-      this.reKeyField(e.oldField, e.newField, rt, e.newSiblings ?? [], form, flat, runtimes, cascade);
+      this.reKeyField(
+        e.oldField,
+        e.newField,
+        rt,
+        e.newSiblings ?? [],
+        form,
+        flat,
+        runtimes,
+        cascade,
+      );
     }
   }
 
@@ -1183,17 +1244,39 @@ export class FormEngineService {
   ): void {
     const oldEligible = collectOldEligible(runtimes);
     const entries = diffFieldTree(oldEligible, newFields);
-    this.reconcileSubtree(newFields, '', oldEligible, form, flat, runtimes, params, cascade, itemFieldsByGroup);
+    this.reconcileSubtree(
+      newFields,
+      '',
+      oldEligible,
+      form,
+      flat,
+      runtimes,
+      params,
+      cascade,
+      itemFieldsByGroup,
+    );
 
     for (const e of entries) {
-      if (e.kind !== 'kept-list' || !e.oldField || !e.newField || !isObjectField(e.newField)) continue;
+      if (e.kind !== 'kept-list' || !e.oldField || !e.newField || !isObjectField(e.newField))
+        continue;
       const rt = runtimes.get(e.oldField);
       if (!rt || !(rt.control instanceof FormArray)) continue;
-      this.reKeyField(e.oldField, e.newField, rt, e.newSiblings ?? [], form, flat, runtimes, cascade);
+      this.reKeyField(
+        e.oldField,
+        e.newField,
+        rt,
+        e.newSiblings ?? [],
+        form,
+        flat,
+        runtimes,
+        cascade,
+      );
 
       const arr = rt.control;
       const path = e.newField.path ?? e.path;
-      const newValues = Array.isArray(e.newField.value) ? (e.newField.value as unknown[]) : undefined;
+      const newValues = Array.isArray(e.newField.value)
+        ? (e.newField.value as unknown[])
+        : undefined;
       const templateChanged = e.newField.fields !== rt.lastItemTemplate;
 
       if (newValues && newValues !== rt.lastListValue) {
@@ -1201,11 +1284,32 @@ export class FormEngineService {
         // using whatever `e.newField.fields` currently is, so a value AND template change in the
         // same emission is handled correctly in one pass.
         rt.lastListValue = newValues;
-        this.reconcileListItems(e.newField, arr, path, newValues, form, flat, runtimes, params, itemFieldsByGroup, cascade);
+        this.reconcileListItems(
+          e.newField,
+          arr,
+          path,
+          newValues,
+          form,
+          flat,
+          runtimes,
+          params,
+          itemFieldsByGroup,
+          cascade,
+        );
       } else if (templateChanged) {
         // no structural change, but the item TEMPLATE itself changed — 3b alone, no add/remove/
         // reorder needed (nothing in `field.value` moved)
-        this.reconcileListItemTemplate(e.newField, arr, path, form, flat, runtimes, params, itemFieldsByGroup, cascade);
+        this.reconcileListItemTemplate(
+          e.newField,
+          arr,
+          path,
+          form,
+          flat,
+          runtimes,
+          params,
+          itemFieldsByGroup,
+          cascade,
+        );
       }
       rt.lastItemTemplate = e.newField.fields;
     }
@@ -1280,7 +1384,17 @@ export class FormEngineService {
     // 3b: now that paths are final, resync each item's OWN sub-field template (object items
     // only — a plain-control item has no per-item field tree to reconcile)
     if (isObjectField(field)) {
-      this.reconcileListItemTemplate(field, arr, path, form, flat, runtimes, params, itemFieldsByGroup, cascade);
+      this.reconcileListItemTemplate(
+        field,
+        arr,
+        path,
+        form,
+        flat,
+        runtimes,
+        params,
+        itemFieldsByGroup,
+        cascade,
+      );
     }
 
     arr.updateValueAndValidity({ emitEvent: true }); // one emission for the whole batch
@@ -1564,16 +1678,28 @@ function diffFieldTree(
     seen.add(path);
     const next = newEligible.get(path);
     if (isListHere(oldField) && isListHere(next?.field)) {
-      entries.push({ path, kind: 'kept-list', oldField, newField: next!.field, newSiblings: next!.siblings });
+      entries.push({
+        path,
+        kind: 'kept-list',
+        oldField,
+        newField: next!.field,
+        newSiblings: next!.siblings,
+      });
       continue;
     }
     if (isListHere(oldField)) continue; // island, no match on the new side — leave alone (rare: a
     // list field surviving under the same path but somehow not re-detected as isList shouldn't
     // happen in practice; conservatively no-op rather than guess)
-    if (!next) { entries.push({ path, kind: 'removed', oldField }); continue; }
+    if (!next) {
+      entries.push({ path, kind: 'removed', oldField });
+      continue;
+    }
     if (isListHere(next.field)) continue; // new side claims this path via an island — leave alone
     entries.push({
-      path, oldField, newField: next.field, newSiblings: next.siblings,
+      path,
+      oldField,
+      newField: next.field,
+      newSiblings: next.siblings,
       kind: oldField.type === next.field.type ? 'kept-same' : 'kept-type-changed',
     });
   }

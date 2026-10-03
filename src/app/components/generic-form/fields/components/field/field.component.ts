@@ -63,6 +63,9 @@ export interface FieldChildContext {
     LabelFieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // `contents`: the wrapper div below is the container's layout item, so a field's own `class`
+  // (`sm:col-span-2`, …) lays it out in a grid, and a hidden field leaves no empty cell
+  host: { class: 'contents' },
   template: `
     @let f = field();
     @let resolved = state();

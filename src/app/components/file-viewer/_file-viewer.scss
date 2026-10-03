@@ -1,0 +1,40 @@
+// Global on purpose: these reach into Material's dialog / icon-button DOM and into the page DOM
+// pdf.js builds itself, which no component's encapsulated styles can touch.
+
+// the dialog FileViewerService opens: no padding, the viewer fills it edge to edge
+.file-viewer-dialog .mat-mdc-dialog-surface {
+  overflow: hidden;
+}
+
+// full screen: the pane outgrows the dialog's max size (set inline by CDK, hence !important)
+.file-viewer-dialog-maximized {
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  --mat-dialog-container-shape: 0;
+}
+
+// a denser toolbar than Material's 48px touch targets would give
+file-viewer-toolbar,
+file-viewer-find-bar {
+  --mat-icon-button-state-layer-size: 36px;
+  --mat-icon-button-icon-size: 22px;
+}
+
+// full screen on the viewer itself (inline viewers)
+.file-viewer:fullscreen {
+  width: 100vw;
+  height: 100vh;
+}
+
+// pdf.js pages: a little more air than its defaults, our shadow instead of its border image
+.file-viewer .pdfViewer {
+  padding-block: 12px;
+}
+
+.file-viewer .pdfViewer .page {
+  border: 0;
+  margin: 0 auto 12px;
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.2),
+    0 4px 12px rgb(0 0 0 / 0.08);
+}

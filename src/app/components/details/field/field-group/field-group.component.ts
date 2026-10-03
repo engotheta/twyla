@@ -22,7 +22,7 @@ import { DataGridComponent, GridColumn_, GridParameter } from '../../../data-gri
 import { BgIconMarkComponent } from '../../bg-icon-mark/bg-icon-mark.component';
 import { mergeClasses } from '../../util/class-name/class-name.helpers';
 import { MergeClassesPipe } from '../../util/class-name/merge-classes.pipe';
-import { ViewService } from '../../../view';
+import { ViewService } from '../../../../services/view';
 import { FieldValueComponent } from '../field-value/field-value.component';
 import { FieldGroupData } from '../field-group.interface';
 import { FieldData, FieldLayout, FieldType } from '../field.interface';
@@ -78,8 +78,10 @@ export class FieldGroupComponent<D = unknown> {
   readonly animation = input<string>();
 
   readonly isArrayItem = input<boolean>(false);
+
   /** Only meaningful when `isArrayItem` — starts the card expanded instead of collapsed. */
   readonly expanded = input<boolean>(false);
+
   readonly fieldConfig = input<FieldConfig>();
   readonly groupConfig = input<FieldGroupConfig>();
   readonly arrayConfig = input<ArrayConfig>();
@@ -88,11 +90,8 @@ export class FieldGroupComponent<D = unknown> {
   readonly showGroupsInTabs = input(false);
 
   private readonly view = inject(ViewService);
-
   protected readonly resolvedGroup = computed(() => this.parameter()?.group ?? this.group() ?? {});
-
   protected readonly resolvedLayout = computed(() => this.parameter()?.layout ?? this.layout());
-
   protected readonly resolvedData = computed(() => this.parameter()?.data ?? this.data());
 
   protected readonly resolvedAnimation = computed(
@@ -103,9 +102,7 @@ export class FieldGroupComponent<D = unknown> {
     () => this.parameter()?.isArrayItem ?? this.isArrayItem(),
   );
 
-  private readonly resolvedExpanded = computed(
-    () => this.parameter()?.expanded ?? this.expanded(),
-  );
+  private readonly resolvedExpanded = computed(() => this.parameter()?.expanded ?? this.expanded());
 
   // Follows `resolvedExpanded` (a `linkedSignal`, not `signal(this.resolvedExpanded())`: inputs
   // aren't bound yet while field initializers run, so a one-off read here always saw the default

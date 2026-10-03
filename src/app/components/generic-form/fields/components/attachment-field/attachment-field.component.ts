@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { AbstractControl, FormArray } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { FileViewerService } from '../../../../file-viewer/file-viewer.service';
+import { ViewerAttachment } from '../../../../file-viewer/file-viewer.interface';
 import { FormInstance } from '../../../form-engine.service';
-import { AttachmentField } from '../../control.fields';
+import { AttachmentField, AttachmentMeta } from '../../control.fields';
 import { controlStatus } from '../control-status.util';
 import { firstErrorMessage } from '../field-errors.util';
 
@@ -77,6 +79,14 @@ import { firstErrorMessage } from '../field-errors.util';
               }
             </div>
 
+            <button
+              type="button"
+              mat-icon-button
+              [attr.aria-label]="'Preview ' + ($any(item?.name) ?? 'file ' + ($index + 1))"
+              (click)="preview($index)"
+            >
+              <mat-icon aria-hidden="true">visibility</mat-icon>
+            </button>
             <button type="button" mat-icon-button aria-label="Remove file" (click)="clear($index)">
               <mat-icon aria-hidden="true">close</mat-icon>
             </button>
@@ -98,6 +108,14 @@ import { firstErrorMessage } from '../field-errors.util';
             }
           </div>
 
+          <button
+            type="button"
+            mat-icon-button
+            [attr.aria-label]="'Preview ' + item.name"
+            (click)="preview()"
+          >
+            <mat-icon aria-hidden="true">visibility</mat-icon>
+          </button>
           <button type="button" mat-icon-button aria-label="Remove file" (click)="clear()">
             <mat-icon aria-hidden="true">close</mat-icon>
           </button>
@@ -116,6 +134,8 @@ import { firstErrorMessage } from '../field-errors.util';
 export class AttachmentFieldComponent {
   readonly field = input.required<AttachmentField>();
   readonly instance = input.required<FormInstance>();
+
+  private readonly fileViewer = inject(FileViewerService);
 
   protected readonly state = computed(() => this.instance().fieldState(this.field())());
   protected readonly control = computed(
@@ -177,6 +197,21 @@ export class AttachmentFieldComponent {
     }
   }
 
+  /** Opens the picked file(s) in the viewer — a list opens at `index`, with previous / next. */
+  protected preview(index?: number): void {
+    const f = this.state();
+    const control = this.control();
+    if (f.isList) {
+      const values =
+        control instanceof FormArray ? control.controls.map((c) => c.value as unknown) : [];
+      const files = this.attachmentList().map((meta, i) => toViewerAttachment(meta, values[i]));
+      this.fileViewer.viewAttachments(files, index ?? 0, f.label);
+      return;
+    }
+    const meta = this.singleAttachment();
+    this.fileViewer.viewAttachment(toViewerAttachment(meta, control.value), meta?.name);
+  }
+
   protected clear(index?: number): void {
     if (index === undefined) this.instance().clearAttachment(this.field());
     else this.instance().removeListItem(this.field().path!, index);
@@ -187,4 +222,15 @@ export class AttachmentFieldComponent {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
+}
+
+/** The picked `File` when the control still holds it, else its stored value (base64 or URL). */
+function toViewerAttachment(
+  meta: AttachmentMeta | null | undefined,
+  value: unknown,
+): ViewerAttachment {
+  const base: ViewerAttachment = { fileName: meta?.name, mimeType: meta?.type };
+  if (meta?.file) return { ...base, file: meta.file };
+  if (typeof value === 'string' && value) return { ...base, src: value };
+  return base;
 }

@@ -1,7 +1,7 @@
 import { Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, ValidationErrors } from '@angular/forms';
-import { map, merge, of, startWith, switchMap } from 'rxjs';
+import { map, of, startWith, switchMap } from 'rxjs';
 
 export interface ControlStatus {
   value: unknown;
@@ -43,8 +43,15 @@ function snapshot(control: AbstractControl | undefined): ControlStatus {
 export function controlStatus(control: Signal<AbstractControl | undefined>): Signal<ControlStatus> {
   return toSignal(
     toObservable(control).pipe(
+      // `events`, not just value/status changes: a submit's `markAllAsTouched()` only emits a
+      // touched event, and error messages wait for `touched`
       switchMap((c) =>
-        c ? merge(c.valueChanges, c.statusChanges).pipe(startWith(null), map(() => snapshot(c))) : of(snapshot(c)),
+        c
+          ? c.events.pipe(
+              startWith(null),
+              map(() => snapshot(c)),
+            )
+          : of(snapshot(c)),
       ),
     ),
     { initialValue: snapshot(undefined) },

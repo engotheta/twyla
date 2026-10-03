@@ -1,4 +1,4 @@
-import { applog } from '../app';
+import { applog } from './support/applog';
 import type { DetailsParameter } from '../components/details/detail.interface';
 import { userDetails } from './support/data';
 

@@ -62,6 +62,14 @@ export interface FormParameter<T = Record<string, unknown>> {
   fieldsContainerClass?: string;
   outerClass?: string;
 
+  /**
+   * default false. Renders the form inside a real `<form>`: Enter in a field submits it, the
+   * submit buttons become `type="submit"`, and browsers and password managers recognise it — use
+   * it for sign-in / sign-up style forms. Ignored when the form has steps. Don't set it on a form
+   * that sits inside another `<form>` (forms can't nest). SPEC §7
+   */
+  nativeForm?: boolean;
+
   /** controls field renderings */
   appearance?: 'fill' | 'outline';
   /**
