@@ -1,5 +1,5 @@
 import { computed, DOCUMENT, inject, Injectable, signal } from '@angular/core';
-import { LG_UP_QUERY, mediaQuerySignal } from '../services/view/viewport.util';
+import { LG_UP_QUERY, mediaQuerySignal } from '@utils/viewport.helpers';
 import { LAYOUT_CONFIG } from './layout-config.token';
 
 /**

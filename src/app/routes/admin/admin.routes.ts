@@ -1,7 +1,6 @@
-import { findFirstAccessibleRoute, matchRoute, TypedRoutes } from '../../layout';
+import { findFirstAccessibleRoute, matchRoute, TypedRoutes } from '@layout';
 
-const placeholder = () =>
-  import('../shared/placeholder.component').then((m) => m.PlaceholderComponent);
+const placeholder = () => import('../shared/placeholder.page').then((m) => m.PlaceholderPage);
 
 /**
  * The Administration module — `app.routes.ts` limits it to the `admin` permission. Shows a
@@ -16,7 +15,7 @@ export const ADMIN_ROUTES: TypedRoutes = [
   {
     path: 'users',
     data: { isMenu: true, name: 'Users', icon: 'group', badge: 3 },
-    loadComponent: () => import('./users.component').then((m) => m.UsersComponent),
+    loadComponent: () => import('./users.page').then((m) => m.UsersPage),
   },
   {
     // users/2 — not a menu entry; the page header's trail puts it under Users

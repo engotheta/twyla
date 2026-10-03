@@ -1,6 +1,6 @@
 // pure functions: row identity, cell value extraction, and LOCAL (non-serverPaginated) search/filter/sort
 
-import { getPathValue } from '../../details/util/util.helpers';
+import { getPathValue } from '@utils/object.helpers';
 import { GridFilterOperator } from '../interfaces/grid-filter.interface';
 import { GridColumn_ } from '../interfaces/grid-column.interface';
 import { SearchField } from '../interfaces/grid-search.interface';

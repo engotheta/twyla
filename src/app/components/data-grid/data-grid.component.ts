@@ -31,9 +31,9 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ActionButtonsComponent } from '../action-buttons/action-buttons.component';
-import { mergeClasses } from '../details/util/class-name/class-name.helpers';
-import { ViewService } from '../../services/view';
+import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
+import { mergeClasses } from '@utils/class-name.helpers';
+import { ViewService } from '@services/view';
 import { ColumnResizeDirective } from './column-resize.directive';
 import { GridCellComponent } from './grid-cell/grid-cell.component';
 import { GridRow } from './interfaces/grid-cell.interface';
@@ -52,7 +52,7 @@ import { formatCellValue, GridValueType, resolveClassMap } from './helpers/grid-
 import { GridHeaderCell } from './interfaces/grid-header.interface';
 import { GridParameter } from './interfaces/grid-parameter.interface';
 import { getCellValue } from './helpers/grid-row.helpers';
-import { GridRowDetailComponent } from './grid-row-detail/grid-row-detail.component';
+import { GridRowDetailComponent } from './grid-row-detail.component';
 import { GridToolbarComponent } from './grid-toolbar/grid-toolbar.component';
 import { ROW_DETAILS_COMPONENT, RowDetailsParams } from './row-details.token';
 

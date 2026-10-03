@@ -8,7 +8,7 @@ import { Menu, MenuNode, TypedRoute } from './menu.interface';
 
 /**
  * The menus, GASCO style: the top-level `isMenu` routes are the modules, and each module's shell
- * puts its own routes in the side menu — `setFromRoutes(COMPONENTS_ROUTES, 'components')`.
+ * puts its own routes in the side menu — `setFromRoutes(COMPONENTS_DEMO_ROUTES, 'components')`.
  * Everything is a signal, filtered through `LayoutConfig.canAccess`, so menus follow the user.
  */
 @Injectable({ providedIn: 'root' })

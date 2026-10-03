@@ -2,7 +2,7 @@
 
 Config-driven form module for Angular + Material. Types define the contract,
 `SPEC.md` defines the runtime semantics, `FormEngineService` implements them,
-`GenericFormComponent` is the rendering shell, `fields/components/` is the
+`GenericFormComponent` is the rendering shell, `fields/` is the
 per-type renderer library.
 
 ## Layout
@@ -11,50 +11,56 @@ per-type renderer library.
 generic-form/
 ├── SPEC.md                       ← runtime rules; read FIRST
 ├── index.ts                      barrel
-├── field-type.interface.ts      FieldType enum + variant literal unions
-├── dynamic.interface.ts         Dynamic<T>, observe/obs, isObserver, Resolved<T>
-├── form-state.interface.ts      FormState, FieldChange, Validator, Option
-├── base-field.interface.ts     CoreField + ValueField
-├── fields/
-│   ├── container.fields.ts     ObjectField, StepField
-│   ├── control.fields.ts       Input/Boolean/Select/Textarea/Date/Color/Attachment
-│   ├── static.fields.ts        Button, Content, Label
-│   └── components/             one folder per renderer, see below
-├── form-field.interface.ts     FormField union + type guards
-├── form-parameter.interface.ts  FormParameter, CrossValidator
-├── form-engine.service.ts       build / observers / submit / lists / attachments
-├── generic-form.component.ts    renderer shell (stepper / footer / modal)
-└── generic-form.component.html
+├── interfaces/
+│   ├── field-type.interface.ts        FieldType enum + variant literal unions
+│   ├── dynamic.interface.ts           Dynamic<T>, observe/obs, isObserver, Resolved<T>
+│   ├── form-state.interface.ts        FormState, FieldChange, Validator, Option
+│   ├── base-field.interface.ts        CoreField + ValueField
+│   ├── container-fields.interface.ts  ObjectField, StepField
+│   ├── control-fields.interface.ts    Input/Boolean/Select/Textarea/Date/Color/Attachment
+│   ├── static-fields.interface.ts     Button, Content, Label
+│   ├── form-field.interface.ts        FormField union + type guards
+│   └── form-parameter.interface.ts    FormParameter, CrossValidator
+├── helpers/                      shared by every field component, see below
+├── fields/                       one renderer per field type, see below
+├── validators.ts                 ready-made validators and the password rules
+├── form-engine.service.ts        build / observers / submit / lists / attachments
+├── generic-form.component.ts     renderer shell (stepper / footer / modal)
+├── generic-form.component.html
+└── stepper-progress-indicator.directive.ts
 ```
 
-`fields/components/` — every selector starts with `app-`, straight to the
-name (`app-object-field`, not `generic-form-object-field`):
+`fields/` and `helpers/` — selectors carry no prefix, straight to the name
+(`object-field`, not `generic-form-object-field`). A field that is one file sits
+flat; one with a template or helpers of its own gets a folder:
 
 ```
-fields/components/
-├── control-status.util.ts    reactive AbstractControl status/value/errors, for OnPush
-├── field-errors.util.ts      resolves a control's first error into a display message
-├── class.util.ts             joinClasses() — plain concatenation, not a Tailwind merge
-├── field/                    app-field        — the dispatcher (§ below)
-├── object-field/             app-object-field — container: nested fields, collapse, lists
-├── input-field/               app-input-field
-├── boolean-field/              app-boolean-field  (checkbox / toggle / radio)
-├── select-field/               app-select-field   (dropdown / toggle / button / checkbox / radio)
-│   └── options.util.ts        optionsParameter raw-data mapping
-├── textarea-field/             app-textarea-field (textarea / richText)
-├── date-field/                 app-date-field     (date / dateTime / time / monthYear / year)
-├── color-field/                app-color-field
-│   └── color.util.ts          hex/rgb/hsl/hsv conversion
-├── attachment-field/           app-attachment-field
-├── button-field/                app-button-field
-├── content-field/               app-content-field
-└── label-field/                 app-label-field
+helpers/
+├── control-status.helpers.ts  reactive AbstractControl status/value/errors, for OnPush
+├── field-errors.helpers.ts    resolves a control's first error into a display message
+└── class.helpers.ts           joinClasses() — plain concatenation, not a Tailwind merge
+
+fields/
+├── form-field.component.ts        form-field       — the dispatcher (§ below)
+├── object-field/                  object-field     — container: nested fields, collapse, lists
+├── input-field.component.ts       input-field
+├── boolean-field.component.ts     boolean-field    (checkbox / toggle / radio)
+├── select-field/                  select-field     (dropdown / toggle / button / checkbox / radio)
+│   └── options.helpers.ts         optionsParameter raw-data mapping
+├── textarea-field.component.ts    textarea-field   (textarea / richText)
+├── date-field.component.ts        date-field       (date / dateTime / time / monthYear / year)
+├── color-field/                   color-field
+│   └── color.helpers.ts           hex/rgb/hsl/hsv conversion
+├── attachment-field.component.ts  attachment-field
+├── button-field.component.ts      button-field
+├── content-field.component.ts     content-field
+└── label-field.component.ts       label-field
 ```
 
 ## Usage
 
 ```typescript
-import { FieldType, FormParameter, observe } from './generic-form';
+import { FieldType, FormParameter, observe } from '@components/generic-form';
 
 const params: FormParameter<{ name: string; country: string; city: string }> = {
   title: 'New License Company',
@@ -119,23 +125,23 @@ top-level `FormParameter`) has both:
 They compose: a 2-column grid of fields, each with its own bottom margin, is
 `fieldsContainerClass: 'grid grid-cols-2 gap-4', fieldsClass: 'mb-2'`.
 
-## The dispatcher (`app-field`)
+## The dispatcher (`form-field`)
 
-`app-field` is the one place that switches on `FieldType` — every container
-(`app-object-field`, `GenericFormComponent`) renders its children through it
+`form-field` is the one place that switches on `FieldType` — every container
+(`object-field`, `GenericFormComponent`) renders its children through it
 rather than importing leaf components directly. It owns the common wrapper
 chrome only: `[hidden]` on `visible === false` (SPEC §6 — the control stays
 registered either way), the merged `fieldsClass` + field's own `class`, and
 `opacity`. Everything about how a field's own control looks and behaves
 belongs to that field's own component.
 
-`app-object-field` needs to recurse back into `app-field` for its children,
-which would make `field.component.ts` and `object-field.component.ts` import
+`object-field` needs to recurse back into `form-field` for its children,
+which would make `form-field.component.ts` and `object-field.component.ts` import
 each other — a circular standalone-component reference that fails at
 runtime with `NG0919`. It's avoided the same way `field-group.component.ts`
-avoids it elsewhere in this repo: `app-field` hands `app-object-field` a
-`TemplateRef` (self-referencing `app-field` — safe, self-import isn't
-circular) instead of `app-object-field` importing `FieldComponent` directly.
+avoids it elsewhere in this repo: `form-field` hands `object-field` a
+`TemplateRef` (self-referencing `form-field` — safe, self-import isn't
+circular) instead of `object-field` importing `FormFieldComponent` directly.
 
 ## Rules of engagement for component authors
 

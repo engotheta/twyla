@@ -244,8 +244,8 @@ index?)` to remove one — it never touches `uploadFn`, status, or the
   removal — see §4).
 - This also covers plain user-driven interaction on a _distant_ ancestor —
   don't assume it doesn't need one. It's tempting to assume a leaf field's own
-  DOM event (e.g. a checkbox toggle inside `app-boolean-field`) automatically
-  propagates a re-check up through `app-field` → `app-object-field` →
+  DOM event (e.g. a checkbox toggle inside `boolean-field`) automatically
+  propagates a re-check up through `form-field` → `object-field` →
   `mat-step` → `GenericFormComponent`, since that's the common mental model
   for Angular's dirty-propagation. Empirically (verified in a real browser,
   not just unit tests) it does **not** reach reliably that many components

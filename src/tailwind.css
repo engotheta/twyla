@@ -4,7 +4,7 @@
    `bg-primary/10`, ... exist as utilities — Tailwind v4 only generates color utilities for
    colors registered here, never for a plain `:root` custom property. `static` always emits both
    variables on `:root`, even with no utility using them, because the Material override partials
-   (`contents-view/_material-tabs-group.scss`, `generic-form/_material-stepper.scss`) read them
+   (`details/_material-tabs-group.scss`, `generic-form/_material-stepper.scss`) read them
    with `var(...)` from outside Tailwind's view. */
 @theme static {
   --color-primary: #2563eb;

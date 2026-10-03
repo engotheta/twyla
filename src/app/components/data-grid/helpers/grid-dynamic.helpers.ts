@@ -1,5 +1,5 @@
 import { isObservable } from 'rxjs';
-import { DynamicValue } from '../../action-buttons/action-button.interface';
+import { DynamicValue } from '@components/action-buttons/action-button.interface';
 
 /**
  * Best-effort SYNCHRONOUS resolution of a `DynamicValue`: static values and functions returning

@@ -1,9 +1,9 @@
 // pure functions: normalize GridColumn (string | GridColumn_) into GridColumn_, auto-generate
 // columns from data, flatten a nested column tree into leaf columns, and compute the header matrix
 
-import { propsFromString } from '../../details/field/field-string.helpers';
-import { keyFromFieldString } from '../../details/field/field-keys.helpers';
-import { labelFromFieldString } from '../../details/field/field-labels.helpers';
+import { propsFromString } from '@components/details/helpers/field-string.helpers';
+import { keyFromFieldString } from '@components/details/helpers/field-keys.helpers';
+import { labelFromFieldString } from '@components/details/helpers/field-labels.helpers';
 import {
   GRID_COLUMN_PROPS,
   GridColumn,

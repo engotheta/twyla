@@ -1,8 +1,7 @@
 import { map, timer } from 'rxjs';
-import { findFirstAccessibleRoute, TypedRoutes } from '../../layout';
+import { findFirstAccessibleRoute, TypedRoutes } from '@layout';
 
-const placeholder = () =>
-  import('../shared/placeholder.component').then((m) => m.PlaceholderComponent);
+const placeholder = () => import('../shared/placeholder.page').then((m) => m.PlaceholderPage);
 
 /** a live badge: an Observable (a Signal works too) */
 const unreadCount$ = timer(0, 8000).pipe(map((tick) => (tick % 4) + 2));
@@ -20,8 +19,7 @@ export const LAYOUT_DEMO_ROUTES: TypedRoutes = [
   {
     path: 'page-header',
     data: { isMenu: true, name: 'Page header', icon: 'title' },
-    loadComponent: () =>
-      import('./page-header-demo.component').then((m) => m.PageHeaderDemoComponent),
+    loadComponent: () => import('./page-header.page').then((m) => m.PageHeaderPage),
   },
   {
     path: 'levels',

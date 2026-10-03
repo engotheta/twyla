@@ -7,7 +7,7 @@ import {
   VALIDATOR_STRONG_PASSWORD,
   validators,
 } from './validators';
-import { firstErrorMessage } from './fields/components/field-errors.util';
+import { firstErrorMessage } from './helpers/field-errors.helpers';
 import { Validator } from './interfaces/form-state.interface';
 
 /** the message a field shows for `value` — the same lookup the inputs use */

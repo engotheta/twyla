@@ -1,8 +1,8 @@
 // value display formatting and GridClassMap (conditional formatting) resolution
 
 import { GridClassMap } from '../interfaces/grid-cell.interface';
-import { getLabelField } from '../../details/field/field-labels.helpers';
-import { isObject } from '../../details/util/util.helpers';
+import { getLabelField } from '@components/details/helpers/field-labels.helpers';
+import { isObject } from '@utils/object.helpers';
 
 export type GridValueType =
   | 'text'

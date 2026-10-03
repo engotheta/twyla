@@ -21,8 +21,8 @@ import {
   isStepField,
   isValueField,
 } from './interfaces/form-field.interface';
-import { AttachmentField, AttachmentMeta } from './fields/control.fields';
-import { ObjectField } from './fields/container.fields';
+import { AttachmentField, AttachmentMeta } from './interfaces/control-fields.interface';
+import { ObjectField } from './interfaces/container-fields.interface';
 import { CrossValidator, FormParameter } from './interfaces/form-parameter.interface';
 
 /** internal alias: engine internals don't care about the payload generic */

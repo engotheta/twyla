@@ -1,7 +1,7 @@
 import { DOCUMENT, inject, Injectable } from '@angular/core';
 import { MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
-import { NotificationService } from '../../services/notification';
-import { ViewService } from '../../services/view';
+import { NotificationService } from '@services/notification';
+import { ViewService } from '@services/view';
 import { FILE_VIEWER_CONFIG } from './file-viewer-config.token';
 import { FileViewerDialogComponent, FileViewerDialogData } from './file-viewer-dialog.component';
 import {

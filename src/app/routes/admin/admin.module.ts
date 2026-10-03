@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { AppLayoutComponent, MenuService } from '../../layout';
+import { AppLayoutComponent, MenuService } from '@layout';
 import { ADMIN_ROUTES } from './admin.routes';
 
 /** The Administration module's shell: its routes become the side menu. */

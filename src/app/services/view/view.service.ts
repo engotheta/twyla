@@ -1,8 +1,8 @@
 import { inject, Injectable, Type } from '@angular/core';
 import { MatDialog, MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom, Observable, take, takeUntil } from 'rxjs';
-import { ConfirmDialogComponent } from '../../components/action-buttons/confirm-dialogue/confirm-dialog.component';
-import { ConfirmDialog } from '../../components/action-buttons/confirm-dialogue/confirm-dialog.interface';
+import { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';
+import { ConfirmDialog } from './confirm-dialog/confirm-dialog.interface';
 import { ViewDialogComponent } from './view-dialog.component';
 import {
   ClickAction,

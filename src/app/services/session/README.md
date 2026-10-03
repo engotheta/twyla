@@ -39,7 +39,7 @@ await session.logout(); // clears, tells the API, goes to loginUrl
 
 `createFakeSessionApi()` runs entirely in the browser, for demos, tests and backends that don't
 exist yet. The studio signs in for real against dummyjson.com
-(`put-together/support/dummyjson-session.api.ts`) and fakes the rest.
+(`configs/dummyjson-session.api.ts`) and fakes the rest.
 
 ## Guards
 

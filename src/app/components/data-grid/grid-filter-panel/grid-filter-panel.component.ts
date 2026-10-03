@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { FormInstance, FormParameter, GenericFormComponent } from '../../generic-form';
+import { FormInstance, FormParameter, GenericFormComponent } from '@components/generic-form';
 import { GridInstance } from '../grid-engine.service';
 
 /**

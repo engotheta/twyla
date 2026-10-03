@@ -2,7 +2,7 @@
 
 import { TemplateRef } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ActionButton, DynamicValue } from '../../action-buttons/action-button.interface';
+import { ActionButton, DynamicValue } from '@components/action-buttons/action-button.interface';
 import type { GridValueType } from '../helpers/grid-format.helpers';
 
 /**

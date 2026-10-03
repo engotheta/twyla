@@ -28,13 +28,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { combineLatest, isObservable, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
-import { ActionButtonsComponent } from '../action-buttons/action-buttons.component';
-import { resolveDynamicValue$ } from '../action-buttons/dynamic-value.util';
-import { DataGridComponent } from '../data-grid';
-import { DetailsComponent } from '../details/details.component';
-import { GenericFormComponent } from '../generic-form';
-import { mergeClasses } from '../details/util/class-name/class-name.helpers';
-import { syncOverlayContainer } from '../../services/view/fullscreen-overlay.util';
+import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
+import { resolveDynamicValue$ } from '@utils/dynamic-value.helpers';
+import { DataGridComponent } from '@components/data-grid';
+import { DetailsComponent } from '@components/details/details.component';
+import { GenericFormComponent } from '@components/generic-form';
+import { mergeClasses } from '@utils/class-name.helpers';
+import { syncOverlayContainer } from '@utils/fullscreen-overlay.helpers';
 import {
   ContentsSizes,
   ContentsViewInstance,
@@ -47,11 +47,11 @@ import {
   readPersistedSelection,
   releasePersistedSelectionKey,
   writePersistedSelection,
-} from './persisted-selection.util';
-import { ContentsTabNavComponent } from './tab-nav/tab-nav.component';
-import { TabNavItem, TabNavState } from './tab-nav/tab-nav.interface';
-import { LG_UP_QUERY, mediaQuerySignal } from '../../services/view/viewport.util';
-import { clusterEdges, GridAxis, trackIndex } from './grid-metrics.util';
+} from '@utils/persisted-selection.helpers';
+import { TabNavComponent } from '@components/tab-nav/tab-nav.component';
+import { TabNavItem, TabNavState } from '@components/tab-nav/tab-nav.interface';
+import { LG_UP_QUERY, mediaQuerySignal } from '@utils/viewport.helpers';
+import { clusterEdges, GridAxis, trackIndex } from './grid-metrics.helpers';
 
 /** one resolved content, ready to render — `visible`/`disabled`/`badge`/`html`
  *  (DynamicValue/Observable-driven) already settled into plain current values */
@@ -103,7 +103,7 @@ function flattenContents(contents: ContentView[]): ContentView[] {
 /** smallest a column / row pane may be dragged to, px */
 const MIN_COL_PX = 80;
 const MIN_ROW_PX = 60;
-/** localStorage namespaces for `persisted-selection.util`: a resizable level's pane sizes, and a
+/** localStorage namespaces for `persisted-selection.helpers`: a resizable level's pane sizes, and a
  *  tabs level's active tab */
 const SIZES_NAMESPACE = 'contents-sizes';
 const TABS_NAMESPACE = 'tabs';
@@ -211,7 +211,7 @@ function contentKey(rc: ResolvedContent, index: number): string {
     NgTemplateOutlet,
     MatIconModule,
     MatTooltipModule,
-    ContentsTabNavComponent,
+    TabNavComponent,
     PanelResizeDirective,
     ActionButtonsComponent,
     DataGridComponent,
@@ -326,7 +326,7 @@ export class ContentsViewComponent implements OnInit {
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Tabs (ContentsLayout.showContentsInTabs) — a tabs level renders its contents as tab panels;
-  // its toggles (`contents-tab-nav`) live with the content owning the tabs: in that content's
+  // its toggles (`tab-nav`) live with the content owning the tabs: in that content's
   // header, or as a sidebar beside its body (vertical, from lg up). The level hands its nav
   // state up through `tabsHost`; only the root, owned by nothing, renders its own toggles.
   // ─────────────────────────────────────────────────────────────────────────────

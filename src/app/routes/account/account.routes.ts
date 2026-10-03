@@ -1,7 +1,6 @@
-import { TypedRoutes } from '../../layout';
+import { TypedRoutes } from '@layout';
 
-const placeholder = () =>
-  import('../shared/placeholder.component').then((m) => m.PlaceholderComponent);
+const placeholder = () => import('../shared/placeholder.page').then((m) => m.PlaceholderPage);
 
 /** The Account module (GASCO's `user` module): reached from the user menu, not the module rail. */
 export const ACCOUNT_ROUTES: TypedRoutes = [
@@ -9,7 +8,7 @@ export const ACCOUNT_ROUTES: TypedRoutes = [
   {
     path: 'profile',
     data: { isMenu: true, name: 'Profile', icon: 'person' },
-    loadComponent: () => import('./profile.component').then((m) => m.ProfileComponent),
+    loadComponent: () => import('./profile.page').then((m) => m.ProfilePage),
   },
   {
     path: 'security',

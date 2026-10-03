@@ -1,8 +1,8 @@
 // column configuration: what a consumer authors, and the runtime layout state the grid tracks
 
 import { TemplateRef } from '@angular/core';
-import { ActionButton, DynamicValue } from '../../action-buttons/action-button.interface';
-import { FormField } from '../../generic-form';
+import { ActionButton, DynamicValue } from '@components/action-buttons/action-button.interface';
+import { FormField } from '@components/generic-form';
 import { GridClassMap } from './grid-cell.interface';
 import type { GridValueType } from '../helpers/grid-format.helpers';
 import { SearchType } from './grid-search.interface';
@@ -11,7 +11,7 @@ import type { GridState } from './grid-state.interface';
 /**
  * If a string, a `GridColumn_` is created with `key` as the string and other properties
  * extracted via the shorthand DSL (see `GRID_COLUMN_PROPS`) — same convention as `DataField`
- * on the Details component (`details/field/field.interface.ts`).
+ * on the Details component (`details/interfaces/field.interface.ts`).
  */
 export type GridColumn<RowType = any> = string | GridColumn_<RowType>;
 
@@ -113,7 +113,7 @@ export interface GridColumnState {
 
 /**
  * Props extractable from a `GridColumn` shorthand string, parsed via `propsFromString` from
- * `details/field/field-string.helpers.ts` (reused, not reimplemented). `columns` is deliberately
+ * `details/helpers/field-string.helpers.ts` (reused, not reimplemented). `columns` is deliberately
  * excluded — nested/grouped header trees are object-form only, since flattening an
  * arbitrary-depth tree into one string isn't practical. Object/function-valued props
  * (`headerProps`, `template`, `templateContext`, `editField`, `conditionalFormat`) are excluded
@@ -121,7 +121,7 @@ export interface GridColumnState {
  * `iconClass`/`imageClass`/`editable`) are reachable via the DSL only for their plain-value variant.
  *
  * The label also supports the Details field-string `'<key> as <Label>'` alias (via the shared
- * `labelFromFieldString`, `details/field/field-labels.helpers.ts`) as a shorthand for the more
+ * `labelFromFieldString`, `details/helpers/field-labels.helpers.ts`) as a shorthand for the more
  * verbose `label(...)` prop — e.g. `'department as Department Name'`. An explicit `label(...)`
  * prop still wins if both are present.
  */

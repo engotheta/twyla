@@ -10,8 +10,8 @@
 // Global (not component-scoped) on purpose — Angular's view encapsulation can't reach into
 // Angular Material's own internal DOM (.mat-mdc-tab-header, .mat-horizontal-stepper-header-container,
 // ...) from a `styleUrl` scoped to the consuming component, same reasoning as `.hide-subscript` below.
-@use './app/components/contents-view/variables';
-@use './app/components/contents-view/material-tabs-group';
+@use './styles/variables';
+@use './app/components/details/material-tabs-group';
 @use './app/components/generic-form/material-stepper';
 @use './app/components/generic-form/material-form-field';
 @use './app/components/file-viewer/file-viewer';

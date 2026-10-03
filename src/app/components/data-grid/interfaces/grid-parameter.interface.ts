@@ -1,8 +1,8 @@
 // master grid config bag
 
 import { Observable } from 'rxjs';
-import { ActionButton, DynamicValue } from '../../action-buttons/action-button.interface';
-import { FormField } from '../../generic-form';
+import { ActionButton, DynamicValue } from '@components/action-buttons/action-button.interface';
+import { FormField } from '@components/generic-form';
 import { GridClassMap } from './grid-cell.interface';
 import { GridColumn, GridColumnState } from './grid-column.interface';
 import { GridEditingConfig } from './grid-editing.interface';

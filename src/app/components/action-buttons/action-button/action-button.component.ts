@@ -24,10 +24,10 @@ import {
   IconPosition,
   IconType,
 } from '../action-button.interface';
-import { resolveDynamicValue$ } from '../dynamic-value.util';
+import { resolveDynamicValue$ } from '@utils/dynamic-value.helpers';
 import { ButtonLoadingDirective } from '../button-loading.directive';
-import { ConfirmDialog } from '../confirm-dialogue/confirm-dialog.interface';
-import { ViewService } from '../../../services/view';
+import { ConfirmDialog } from '@services/view/confirm-dialog/confirm-dialog.interface';
+import { ViewService } from '@services/view';
 
 interface ActionButtonViewModel {
   label?: string;

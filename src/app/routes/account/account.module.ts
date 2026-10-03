@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { AppLayoutComponent, MenuService } from '../../layout';
+import { AppLayoutComponent, MenuService } from '@layout';
 import { ACCOUNT_ROUTES } from './account.routes';
 
 /** The Account module's shell: its routes become the side menu. */

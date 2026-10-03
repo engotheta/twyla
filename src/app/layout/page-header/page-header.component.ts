@@ -7,12 +7,12 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
-import { ActionButton } from '../../components/action-buttons/action-button.interface';
-import { ActionButtonsComponent } from '../../components/action-buttons/action-buttons.component';
+import { ActionButton } from '@components/action-buttons/action-button.interface';
+import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
 import { LAYOUT_CONFIG } from '../layout-config.token';
 import { urlPath } from '../menu/menu.helpers';
 import { MenuService } from '../menu/menu.service';
-import { pageName } from '../app-header/page-title.strategy';
+import { pageName } from '../page-title.strategy';
 import { BreadcrumbsComponent } from './breadcrumbs.component';
 import { Breadcrumb, PageHeaderParameter, PageHeaderToggle } from './page-header.interface';
 

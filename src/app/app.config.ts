@@ -6,7 +6,7 @@ import { provideRouter, TitleStrategy, withComponentInputBinding } from '@angula
 // imports — into the initial bundle, and the pages that need those load lazily anyway
 import { provideFileViewerConfig } from './components/file-viewer/file-viewer-config.token';
 import { provideLayoutConfig } from './layout/layout-config.token';
-import { PageTitleStrategy } from './layout/app-header/page-title.strategy';
+import { PageTitleStrategy } from './layout/page-title.strategy';
 import { provideFetchConfig } from './services/fetch';
 import { provideSessionConfig } from './services/session/session-config.token';
 import { sessionInterceptor } from './services/session/session.interceptor';
@@ -16,12 +16,9 @@ import {
   demoNotifications,
   markAllNotificationsRead,
   markNotificationRead,
-} from './put-together/notifications';
-import {
-  DUMMYJSON_DEMO_CREDENTIALS,
-  dummyJsonSessionApi,
-} from './put-together/support/dummyjson-session.api';
-import { SAMPLE_PATHS } from './put-together/support/sample-files';
+} from './configs/demo-notifications';
+import { DUMMYJSON_DEMO_CREDENTIALS, dummyJsonSessionApi } from './configs/dummyjson-session.api';
+import { SAMPLE_PATHS } from './configs/demo-file-paths';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -31,7 +28,7 @@ export const appConfig: ApplicationConfig = {
     // document titles: "Data grid · Studio"
     { provide: TitleStrategy, useClass: PageTitleStrategy },
     provideHttpClient(withFetch(), withInterceptors([sessionInterceptor])),
-    // the put-together demos talk to dummyjson.com, so their slugs resolve against it
+    // the demo pages talk to dummyjson.com, so their slugs resolve against it
     provideFetchConfig({ apiBaseUrl: 'https://dummyjson.com' }),
     // the file-viewer demo: its "storage paths" resolve to public URLs, and Office Online is opted
     // into so the .pptx sample has a preview (apps leave it off unless their files may go to Microsoft)

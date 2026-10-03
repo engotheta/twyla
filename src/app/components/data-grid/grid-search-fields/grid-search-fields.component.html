@@ -14,7 +14,7 @@
       }
       @for (field of item.fields; track field.key) {
         @if (showTypeField(field)) {
-          <app-field [field]="field" [instance]="formInstance" class="!w-32" />
+          <form-field [field]="field" [instance]="formInstance" class="!w-32" />
         }
       }
     </div>

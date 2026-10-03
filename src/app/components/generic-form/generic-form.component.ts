@@ -24,9 +24,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatStepperModule } from '@angular/material/stepper';
 import { Observable, Subscription, firstValueFrom, isObservable } from 'rxjs';
-import { controlStatus } from './fields/components/control-status.util';
-import { FieldComponent } from './fields/components/field/field.component';
-import { StepField } from './fields/container.fields';
+import { controlStatus } from './helpers/control-status.helpers';
+import { FormFieldComponent } from './fields/form-field.component';
+import { StepField } from './interfaces/container-fields.interface';
 import { FormEngineService, FormInstance } from './form-engine.service';
 import { FormField, isStepField, isValueField } from './interfaces/form-field.interface';
 import { FormParameter } from './interfaces/form-parameter.interface';
@@ -44,7 +44,7 @@ interface DisplayStep {
    *  gate for linearSteppers + header-jump prevention). A real Signal, not a plain getter —
    *  bridged via `controlStatus` because GenericFormComponent's own template does not reliably
    *  get re-checked purely from a change-detection event that originated several components
-   *  deep (e.g. a checkbox toggle inside `app-boolean-field`); only a signal read in the
+   *  deep (e.g. a checkbox toggle inside `boolean-field`); only a signal read in the
    *  template is guaranteed to. */
   valid: Signal<boolean>;
 }
@@ -52,7 +52,7 @@ interface DisplayStep {
 // ─────────────────────────────────────────────
 // Rendering shell. Owns NO field-level semantics — the engine does (SPEC.md). This component
 // only assembles the page around fields: stepper vs. flat layout, footer/modal chrome, and
-// cross-validator banner placement. Per-field rendering is entirely `app-field`'s job.
+// cross-validator banner placement. Per-field rendering is entirely `form-field`'s job.
 // ─────────────────────────────────────────────
 
 @Component({
@@ -65,7 +65,7 @@ interface DisplayStep {
     MatProgressSpinnerModule,
     MatStepperModule,
     StepperProgressIndicatorDirective,
-    FieldComponent,
+    FormFieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './generic-form.component.html',

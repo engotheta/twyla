@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateChildFn, CanActivateFn, Router } from '@angular/router';
-import { NotificationService } from '../notification/notification.service';
+import { NotificationService } from '@services/notification/notification.service';
 import { SESSION_CONFIG } from './session-config.token';
 import { AccessRule } from './session.interface';
 import { SessionService } from './session.service';

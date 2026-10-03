@@ -4,7 +4,7 @@
   <div [class]="tabsLayoutClass()">
     @if (!tabsHost() && navState.tabs().length) {
       <div [class]="ownNavCardClass()">
-        <contents-tab-nav
+        <tab-nav
           [tabs]="navState.tabs()"
           [activeKey]="effectiveActiveKey()"
           [orientation]="ownNavSide() ? 'vertical' : 'horizontal'"
@@ -145,7 +145,7 @@
         @if (showsHeaderRow(rc)) {
           <div class="cv-tab-rule" aria-hidden="true"></div>
         }
-        <contents-tab-nav
+        <tab-nav
           [tabs]="nav.tabs()"
           [activeKey]="nav.activeKey()"
           [classes]="nav.classes()"
@@ -221,7 +221,7 @@
     <div [id]="bodyId(key)" [hidden]="isCollapsed(key)" [class]="sideLayoutClass(rc)">
       @if (sideNav(rc, key); as nav) {
         <div [class]="sideNavSlotClass()">
-          <contents-tab-nav
+          <tab-nav
             orientation="vertical"
             [tabs]="nav.tabs()"
             [activeKey]="nav.activeKey()"

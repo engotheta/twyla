@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { applog } from '../../put-together/support/applog';
+import { applog } from './applog';
 
 /** The demos' "Last action" line — announced politely as it changes. */
 @Component({

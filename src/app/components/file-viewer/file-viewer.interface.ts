@@ -1,6 +1,6 @@
 import { HttpEvent, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ActionButton } from '../action-buttons/action-button.interface';
+import { ActionButton } from '@components/action-buttons/action-button.interface';
 
 /**
  * What a file renders as. `office` is a format with no client-side renderer (doc, xls, ppt, pptx…):

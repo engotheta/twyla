@@ -21,7 +21,7 @@ import {
   takeWhile,
   throwError,
 } from 'rxjs';
-import { resolveUrl } from '../../../services/fetch/fetch.helpers';
+import { resolveUrl } from '@services/fetch/fetch.helpers';
 import { FILE_VIEWER_CONFIG, FileViewerConfig } from '../file-viewer-config.token';
 import {
   FileLoadEvent,

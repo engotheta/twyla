@@ -1,16 +1,16 @@
 import { ANIMATION_MODULE_TYPE } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { NotificationService } from '../../services/notification';
+import { NotificationService } from '@services/notification';
 import {
   createFakeSessionApi,
   provideSessionConfig,
   SessionApi,
   SessionError,
   SessionService,
-} from '../../services/session';
-import { LoginComponent } from './login/login.component';
-import { ResetPasswordComponent } from './reset-password/reset-password.component';
+} from '@services/session';
+import { LoginPage } from './login.page';
+import { ResetPasswordPage } from './reset-password.page';
 
 describe('session pages', () => {
   let navigate: ReturnType<typeof vi.spyOn>;
@@ -51,9 +51,9 @@ describe('session pages', () => {
     input.dispatchEvent(new Event('input'));
   };
 
-  describe('LoginComponent', () => {
-    async function render(returnUrl?: string): Promise<ComponentFixture<LoginComponent>> {
-      const fixture = TestBed.createComponent(LoginComponent);
+  describe('LoginPage', () => {
+    async function render(returnUrl?: string): Promise<ComponentFixture<LoginPage>> {
+      const fixture = TestBed.createComponent(LoginPage);
       if (returnUrl) fixture.componentRef.setInput('returnUrl', returnUrl);
       await settle(fixture);
       return fixture;
@@ -124,9 +124,9 @@ describe('session pages', () => {
     });
   });
 
-  describe('ResetPasswordComponent', () => {
-    async function render(token?: string): Promise<ComponentFixture<ResetPasswordComponent>> {
-      const fixture = TestBed.createComponent(ResetPasswordComponent);
+  describe('ResetPasswordPage', () => {
+    async function render(token?: string): Promise<ComponentFixture<ResetPasswordPage>> {
+      const fixture = TestBed.createComponent(ResetPasswordPage);
       if (token) fixture.componentRef.setInput('token', token);
       await settle(fixture);
       return fixture;

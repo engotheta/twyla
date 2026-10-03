@@ -13,11 +13,11 @@ export const APP_ROUTES: TypedRoutes = [
     path: 'home',
     title: 'Welcome',
     loadComponent: () =>
-      import('./routes/auth/auth-layout.component').then((m) => m.AuthLayoutComponent),
+      import('./layout/auth-layout/auth-layout.component').then((m) => m.AuthLayoutComponent),
     children: [
       {
         path: '',
-        loadComponent: () => import('./routes/home/home.component').then((m) => m.HomeComponent),
+        loadComponent: () => import('./routes/home.page').then((m) => m.HomePage),
       },
     ],
   },
@@ -25,8 +25,7 @@ export const APP_ROUTES: TypedRoutes = [
     path: 'modules',
     title: 'Modules',
     canActivate: [authGuard],
-    loadComponent: () =>
-      import('./routes/modules/modules.component').then((m) => m.ModulesComponent),
+    loadComponent: () => import('./routes/modules.page').then((m) => m.ModulesPage),
   },
 
   // ── modules ──
@@ -41,8 +40,8 @@ export const APP_ROUTES: TypedRoutes = [
       description: 'The studio demos: grids, forms, viewers and more.',
     },
     loadComponent: () =>
-      import('./routes/components/components.module').then((m) => m.ComponentsShell),
-    loadChildren: () => import('./routes/components/components.routes'),
+      import('./routes/components-demo/components-demo.module').then((m) => m.ComponentsDemoShell),
+    loadChildren: () => import('./routes/components-demo/components-demo.routes'),
   },
   {
     path: 'layout',
@@ -86,7 +85,6 @@ export const APP_ROUTES: TypedRoutes = [
   {
     path: '**',
     title: 'Page not found',
-    loadComponent: () =>
-      import('./routes/not-found/not-found.component').then((m) => m.NotFoundComponent),
+    loadComponent: () => import('./routes/not-found.page').then((m) => m.NotFoundPage),
   },
 ];

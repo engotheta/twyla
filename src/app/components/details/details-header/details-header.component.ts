@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input, Signal } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
-import { MergeClassesPipe } from '../util/class-name/merge-classes.pipe';
-import { SignalPipe } from '../util/pipes/signal.pipe';
-import { ActionButton } from '../../action-buttons/action-button.interface';
-import { ActionButtonsComponent } from '../../action-buttons/action-buttons.component';
+import { MergeClassesPipe } from '@utils/pipes/merge-classes.pipe';
+import { SignalPipe } from '@utils/pipes/signal.pipe';
+import { ActionButton } from '@components/action-buttons/action-button.interface';
+import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
 
 export interface HeaderParameter<D = unknown> {
   title?: string;

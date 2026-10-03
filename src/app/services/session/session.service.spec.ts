@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { NotificationService } from '../notification/notification.service';
+import { NotificationService } from '@services/notification/notification.service';
 import { createFakeSessionApi } from './fake-session.api';
 import { provideSessionConfig } from './session-config.token';
 import { Session, SessionApi, SessionError } from './session.interface';

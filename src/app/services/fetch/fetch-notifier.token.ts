@@ -1,5 +1,5 @@
 import { inject, InjectionToken } from '@angular/core';
-import { NotificationService } from '../notification';
+import { NotificationService } from '@services/notification';
 
 /** Where `FetchService` sends its success and error messages. */
 export interface FetchNotifier {

@@ -1,5 +1,5 @@
 import { InjectionToken, Provider, Signal, signal } from '@angular/core';
-import { ActionButton } from '../components/action-buttons/action-button.interface';
+import { ActionButton } from '@components/action-buttons/action-button.interface';
 import { Menu, MenuAccess } from './menu/menu.interface';
 
 export interface LayoutBrand {

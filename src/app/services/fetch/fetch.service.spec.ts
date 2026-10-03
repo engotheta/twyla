@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { effect, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, Subject } from 'rxjs';
-import { provideLoadingConfig } from '../loading';
+import { provideLoadingConfig } from '@services/loading';
 import { provideFetchConfig } from './fetch-config.token';
 import { FetchFailedError } from './fetch-failed.error';
 import { FETCH_NOTIFIER } from './fetch-notifier.token';

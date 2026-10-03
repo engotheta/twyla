@@ -6,16 +6,21 @@ import { switchMap } from 'rxjs/operators';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { mergeClasses } from '../../details/util/class-name/class-name.helpers';
-import { ActionButtonsComponent } from '../../action-buttons/action-buttons.component';
-import { resolveDynamicValue$ } from '../../action-buttons/dynamic-value.util';
-import { FormField, FormInstance, FormParameter, GenericFormComponent } from '../../generic-form';
+import { mergeClasses } from '@utils/class-name.helpers';
+import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
+import { resolveDynamicValue$ } from '@utils/dynamic-value.helpers';
+import {
+  FormField,
+  FormInstance,
+  FormParameter,
+  GenericFormComponent,
+} from '@components/generic-form';
 import { GridInstance } from '../grid-engine.service';
 import { GridColumn_ } from '../interfaces/grid-column.interface';
 import { GridCell, GridRow } from '../interfaces/grid-cell.interface';
 import { formatCellValue, resolveClassMap } from '../helpers/grid-format.helpers';
 import { getCellValue } from '../helpers/grid-row.helpers';
-import { MergeClassesPipe } from '../../details/util/class-name/merge-classes.pipe';
+import { MergeClassesPipe } from '@utils/pipes/merge-classes.pipe';
 
 interface ResolvedCellProps {
   value: unknown;

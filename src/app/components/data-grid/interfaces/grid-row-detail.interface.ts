@@ -1,7 +1,7 @@
 // row master-detail expansion: a row expands to reveal nested detail content
 
 import { Type } from '@angular/core';
-import { DynamicValue } from '../../action-buttons/action-button.interface';
+import { DynamicValue } from '@components/action-buttons/action-button.interface';
 
 export interface GridRowDetailConfig<RowType = any> {
   /** dynamic component rendered as the expanded row's content */

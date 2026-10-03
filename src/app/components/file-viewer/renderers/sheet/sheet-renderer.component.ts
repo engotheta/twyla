@@ -15,8 +15,8 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ContentsTabNavComponent } from '../../../contents-view/tab-nav/tab-nav.component';
-import { TabNavItem } from '../../../contents-view/tab-nav/tab-nav.interface';
+import { TabNavComponent } from '@components/tab-nav/tab-nav.component';
+import { TabNavItem } from '@components/tab-nav/tab-nav.interface';
 import { FILE_VIEWER_CONFIG } from '../../file-viewer-config.token';
 import { ResolvedFile } from '../../file-viewer.interface';
 import { escapeHtml, printHtml } from '../../loader/file-actions.helpers';
@@ -54,7 +54,7 @@ interface RenderRow {
  */
 @Component({
   selector: 'file-viewer-sheet',
-  imports: [ContentsTabNavComponent, MatButtonModule, MatProgressSpinnerModule],
+  imports: [TabNavComponent, MatButtonModule, MatProgressSpinnerModule],
   templateUrl: './sheet-renderer.component.html',
   styleUrl: './sheet-renderer.component.scss',
   host: { class: 'flex size-full min-h-0 flex-col' },

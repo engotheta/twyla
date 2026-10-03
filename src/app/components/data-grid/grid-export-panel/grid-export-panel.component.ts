@@ -12,7 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { labelFromFieldString } from '../../details/field/field-labels.helpers';
+import { labelFromFieldString } from '@components/details/helpers/field-labels.helpers';
 import { GridInstance, SYNTHETIC_COLUMN_KEYS } from '../grid-engine.service';
 import { GridColumn_ } from '../interfaces/grid-column.interface';
 import { GridExportFormat } from '../interfaces/grid-export.interface';

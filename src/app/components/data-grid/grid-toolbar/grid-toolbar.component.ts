@@ -4,9 +4,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { FormInstance } from '../../generic-form';
-import { ActionButtonsComponent } from '../../action-buttons/action-buttons.component';
-import { ViewService } from '../../../services/view';
+import { FormInstance } from '@components/generic-form';
+import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
+import { ViewService } from '@services/view';
 import { GridExportService } from '../grid-export.service';
 import { GridInstance } from '../grid-engine.service';
 import { GridColumnPanelComponent } from '../grid-column-panel/grid-column-panel.component';
@@ -18,10 +18,7 @@ import { GridFilterPanelComponent } from '../grid-filter-panel/grid-filter-panel
 import { GridColumn_ } from '../interfaces/grid-column.interface';
 import { GridExportFormat } from '../interfaces/grid-export.interface';
 import { GridRenderMode } from '../interfaces/grid-render-mode.interface';
-import {
-  GridSearchDialogComponent,
-  GridSearchDialogData,
-} from '../grid-search-dialog/grid-search-dialog.component';
+import { GridSearchDialogComponent, GridSearchDialogData } from '../grid-search-dialog.component';
 import { GridSearchFieldsComponent } from '../grid-search-fields/grid-search-fields.component';
 
 const RENDER_MODE_ICONS: Record<GridRenderMode, string> = {

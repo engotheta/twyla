@@ -1,7 +1,7 @@
 import { HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { WritableSignal } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import type { LoadingTarget } from '../loading';
+import type { LoadingTarget } from '@services/loading';
 
 /* ─────────────────────────── Transports ─────────────────────────── */
 

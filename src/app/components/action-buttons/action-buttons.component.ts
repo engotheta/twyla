@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, map, switchMap } from 'rxjs';
 import { ActionButton, ActionButtonsParameter, DynamicValue } from './action-button.interface';
-import { resolveDynamicValue$ } from './dynamic-value.util';
+import { resolveDynamicValue$ } from '@utils/dynamic-value.helpers';
 import { ActionButtonComponent } from './action-button/action-button.component';
 
 @Component({

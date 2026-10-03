@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { NotificationService } from '../notification/notification.service';
+import { NotificationService } from '@services/notification/notification.service';
 import { createFakeSessionApi } from './fake-session.api';
 import { provideSessionConfig } from './session-config.token';
 import {

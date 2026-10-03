@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
-import { passwordChecks, PasswordRules } from '../../components/generic-form';
+import { passwordChecks, PasswordRules } from '@components/generic-form';
 
 /**
  * The password rules, ticked off as they're met — sits under a new-password field. Not a live

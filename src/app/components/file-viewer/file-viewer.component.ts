@@ -21,9 +21,9 @@ import {
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { catchError, map, Observable, of, startWith, switchMap } from 'rxjs';
-import { ActionButton } from '../action-buttons/action-button.interface';
-import { syncOverlayContainer } from '../../services/view/fullscreen-overlay.util';
-import { NotificationService } from '../../services/notification';
+import { ActionButton } from '@components/action-buttons/action-button.interface';
+import { syncOverlayContainer } from '@utils/fullscreen-overlay.helpers';
+import { NotificationService } from '@services/notification';
 import {
   FileKind,
   FileViewerError,
@@ -52,7 +52,7 @@ import { SheetRendererComponent } from './renderers/sheet/sheet-renderer.compone
 import { TextRendererComponent } from './renderers/text-renderer.component';
 import { ViewerController } from './viewer-controller';
 import { ViewerFindBarComponent } from './viewer-find-bar.component';
-import { ViewerToolbarComponent } from './viewer-toolbar.component';
+import { ViewerToolbarComponent } from './viewer-toolbar/viewer-toolbar.component';
 
 type ViewState =
   | { status: 'empty' }

@@ -5,7 +5,7 @@
 // utilities are recognized — layout/spacing classes and arbitrary custom CSS classes are silently
 // ignored (this only ever ADDS color, never breaks export).
 
-import { DynamicValue } from '../../action-buttons/action-button.interface';
+import { DynamicValue } from '@components/action-buttons/action-button.interface';
 import { GridClassMap } from '../interfaces/grid-cell.interface';
 import { GridColumn_ } from '../interfaces/grid-column.interface';
 import { resolveSyncDynamic } from './grid-dynamic.helpers';

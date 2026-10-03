@@ -11,7 +11,29 @@
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
-          "style": "scss"
+          "style": "scss",
+          "type": "component",
+          "changeDetection": "OnPush",
+          "prefix": ""
+        },
+        "@schematics/angular:directive": {
+          "type": "directive",
+          "prefix": ""
+        },
+        "@schematics/angular:service": {
+          "type": "service"
+        },
+        "@schematics/angular:pipe": {
+          "typeSeparator": "."
+        },
+        "@schematics/angular:guard": {
+          "typeSeparator": "."
+        },
+        "@schematics/angular:interceptor": {
+          "typeSeparator": "."
+        },
+        "@schematics/angular:resolver": {
+          "typeSeparator": "."
         }
       },
       "root": "",

@@ -1,0 +1,404 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  linkedSignal,
+  signal,
+  TemplateRef,
+} from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { combineLatest, map, Observable, of, switchMap } from 'rxjs';
+import { CommonModule, NgTemplateOutlet } from '@angular/common';
+import { MatIcon } from '@angular/material/icon';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { ArrayConfig, FieldConfig, FieldGroupConfig } from '../interfaces/details.interface';
+import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
+import { resolveDynamicValue$ } from '@utils/dynamic-value.helpers';
+import { DataGridComponent, GridColumn_, GridParameter } from '@components/data-grid';
+import { BgIconMarkComponent } from '../bg-icon-mark.component';
+import { mergeClasses } from '@utils/class-name.helpers';
+import { MergeClassesPipe } from '@utils/pipes/merge-classes.pipe';
+import { ViewService } from '@services/view';
+import { FieldValueComponent } from '../field-value/field-value.component';
+import {
+  DEFAULT_VIEW_MODEL,
+  FieldGroupData,
+  FieldGroupParameter,
+  FieldRow,
+  FieldRowViewModel,
+} from '../interfaces/field-group.interface';
+import { FieldData, FieldLayout, FieldType } from '../interfaces/field.interface';
+import { getFieldType } from '../helpers/fields.helpers';
+import {
+  DEFAULT_PAGE_SIZE,
+  LAYOUT_PRESETS,
+  mergeArrayConfig,
+  mergeFieldConfig,
+} from './field-group.constants';
+
+/**
+ * Renders a resolved `FieldGroupData` — bind `[group]` and friends, or a single `[parameter]`
+ * bundling them (handy when recursing, see `childParameter`). An object field's value opens its
+ * nested fields in a dialog via `ViewService.open(FieldGroupComponent, { inputs: { parameter } })`
+ * — the shell supplies the title bar, so this component has no dialog mode of its own.
+ *
+ * Resolution priority for every setting: `parameter` > the individual input.
+ */
+@Component({
+  selector: 'field-group',
+  templateUrl: './field-group.component.html',
+  styleUrl: './field-group.component.scss',
+  imports: [
+    NgTemplateOutlet,
+    MatIcon,
+    MatPaginatorModule,
+    MatTabsModule,
+    MatTooltipModule,
+    ActionButtonsComponent,
+    DataGridComponent,
+    BgIconMarkComponent,
+    MergeClassesPipe,
+    FieldValueComponent,
+    FieldGroupComponent,
+    CommonModule,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class FieldGroupComponent<D = unknown> {
+  /** Accepts either a full parameter object, or the individual props below. */
+  readonly parameter = input<FieldGroupParameter<D>>();
+
+  readonly group = input<FieldGroupData>();
+  readonly layout = input<FieldLayout>('list');
+  readonly data = input<D>();
+  readonly animation = input<string>();
+
+  readonly isArrayItem = input<boolean>(false);
+
+  /** Only meaningful when `isArrayItem` — starts the card expanded instead of collapsed. */
+  readonly expanded = input<boolean>(false);
+
+  readonly fieldConfig = input<FieldConfig>();
+  readonly groupConfig = input<FieldGroupConfig>();
+  readonly arrayConfig = input<ArrayConfig>();
+
+  readonly showBgIconMark = input(false);
+  readonly showGroupsInTabs = input(false);
+
+  private readonly view = inject(ViewService);
+  protected readonly resolvedGroup = computed(() => this.parameter()?.group ?? this.group() ?? {});
+  protected readonly resolvedLayout = computed(() => this.parameter()?.layout ?? this.layout());
+  protected readonly resolvedData = computed(() => this.parameter()?.data ?? this.data());
+
+  protected readonly resolvedAnimation = computed(
+    () => this.parameter()?.animation ?? this.animation(),
+  );
+
+  protected readonly resolvedIsArrayItem = computed(
+    () => this.parameter()?.isArrayItem ?? this.isArrayItem(),
+  );
+
+  private readonly resolvedExpanded = computed(() => this.parameter()?.expanded ?? this.expanded());
+
+  // Follows `resolvedExpanded` (a `linkedSignal`, not `signal(this.resolvedExpanded())`: inputs
+  // aren't bound yet while field initializers run, so a one-off read here always saw the default
+  // and `expanded` never took effect). A manual toggle holds until the resolved value itself
+  // changes — a parent re-render with the same `expanded` doesn't clobber it.
+  protected readonly isOpen = linkedSignal(() => this.resolvedExpanded());
+  protected readonly bodyId = `field-group-body-${Math.random().toString(36).slice(2)}`;
+
+  // The caller's *raw* override — kept undiluted by any layout preset, because this is exactly
+  // what gets propagated to children (via `childParameter`), and each nesting level may resolve a
+  // different layout and must apply its own preset fresh. See `effectiveFieldConfig` for the
+  // version actually used to render this instance.
+  protected readonly resolvedFieldConfig = computed(
+    () => this.parameter()?.fieldConfig ?? this.fieldConfig(),
+  );
+
+  protected readonly resolvedGroupConfig = computed(
+    () => this.parameter()?.groupConfig ?? this.groupConfig(),
+  );
+
+  protected readonly resolvedArrayConfig = computed(
+    () => this.parameter()?.arrayConfig ?? this.arrayConfig(),
+  );
+
+  // This instance's resolved layout's preset, merged with the caller's raw override — what
+  // rendering actually uses. Class-like props combine (mergeClasses); everything else, the
+  // caller's value wins.
+  protected readonly effectiveFieldConfig = computed(() =>
+    mergeFieldConfig(LAYOUT_PRESETS[this.resolvedLayout()].fieldConfig, this.resolvedFieldConfig()),
+  );
+
+  protected readonly effectiveArrayConfig = computed(() =>
+    mergeArrayConfig(LAYOUT_PRESETS[this.resolvedLayout()].arrayConfig, this.resolvedArrayConfig()),
+  );
+
+  // A field can request its own layout (`field.layout`) independent of the group's — reuses the
+  // already-computed `effectiveFieldConfig` for the common case, only re-merging when it differs.
+  private fieldConfigFor(fieldLayout?: FieldLayout): FieldConfig {
+    if (!fieldLayout || fieldLayout === this.resolvedLayout()) return this.effectiveFieldConfig();
+    return mergeFieldConfig(LAYOUT_PRESETS[fieldLayout].fieldConfig, this.resolvedFieldConfig());
+  }
+
+  protected readonly resolvedShowBgIconMark = computed(
+    () => this.parameter()?.showBgIconMark ?? this.showBgIconMark(),
+  );
+
+  protected readonly resolvedShowGroupsInTabs = computed(
+    () => this.parameter()?.showGroupsInTabs ?? this.showGroupsInTabs(),
+  );
+
+  // Bundles this instance's resolved cross-cutting settings (everything but `group`, which is
+  // always call-site-specific) so recursive `<field-group>` calls in the template can pass
+  // `[parameter]="{ ...childParameter(), group: x }"` instead of repeating every binding.
+  protected readonly childParameter = computed<FieldGroupParameter<D>>(() => ({
+    layout: this.resolvedLayout(),
+    data: this.resolvedData(),
+    animation: this.resolvedAnimation(),
+    fieldConfig: this.resolvedFieldConfig(),
+    groupConfig: this.resolvedGroupConfig(),
+    arrayConfig: this.resolvedArrayConfig(),
+    showBgIconMark: this.resolvedShowBgIconMark(),
+    showGroupsInTabs: this.resolvedShowGroupsInTabs(),
+  }));
+
+  protected readonly fields = computed(() => {
+    let fields = this.resolvedGroup().fields as FieldData[] | undefined;
+    return fields?.filter((f) => f.visible !== false) ?? [];
+  });
+
+  protected readonly subGroups = computed(() => this.resolvedGroup().groups ?? []);
+
+  protected readonly showHeader = computed(() => {
+    const g = this.resolvedGroup();
+    return g.showHeader !== false && !!(g.label || g.icon);
+  });
+
+  protected readonly inTabs = computed(
+    () => this.resolvedGroup().showGroupsInTabs ?? this.resolvedShowGroupsInTabs(),
+  );
+
+  private readonly fields$ = toObservable(this.fields);
+
+  private readonly data$ = toObservable(this.resolvedData);
+
+  // One combined stream resolving every field's DynamicValue props (class/icon/tooltip/...) at
+  // once, keeping each field paired with its own view model — avoids building a fresh
+  // RxJS pipeline per template call, and avoids a separate per-field component (which would
+  // need to import FieldGroupComponent back for nested recursion, forming a circular
+  // standalone-component dependency that fails at runtime with NG0919).
+  protected readonly rows = toSignal(
+    combineLatest([this.fields$, this.data$]).pipe(
+      switchMap(([fields, data]) =>
+        fields.length
+          ? combineLatest(
+              fields.map((field) =>
+                this.buildViewModel$(field, data).pipe(map((vm) => ({ field, vm }))),
+              ),
+            )
+          : of([] as FieldRow[]),
+      ),
+    ),
+    { initialValue: [] as FieldRow[] },
+  );
+
+  protected hasLabel(field: FieldData): boolean {
+    return (
+      this.resolvedGroupConfig()?.showLabels !== false && field.showLabel !== false && !!field.label
+    );
+  }
+
+  protected showColon(field: FieldData): boolean {
+    return field.showColon ?? this.fieldConfigFor(field.layout).showColon ?? false;
+  }
+
+  protected showUnderline(field: FieldData): boolean {
+    return field.showUnderline ?? this.fieldConfigFor(field.layout).showUnderlines ?? false;
+  }
+
+  // The row's own bottom border (from its layout preset, e.g. `table`'s grid separator) is
+  // structural and always present; the *conditional* underline is a separate, additive class —
+  // applied to the row itself (not just the value) so it aligns across sibling columns in a
+  // multi-column `containerClass` grid, and covers object fields the same as scalar ones.
+  protected rowClass(row: FieldRow): string {
+    const field = row.field;
+    const fc = this.fieldConfigFor(field.layout);
+    const underlineArrayTypes: FieldType[] = ['stringArray', 'numberArray', 'booleanArray'];
+    const isArray = field.type?.toLowerCase()?.includes('array');
+    const underlineArray = underlineArrayTypes.includes(field.type as FieldType);
+
+    const line = `border-b border-dashed border-black/10`;
+    const underline = (underlineArray || !isArray) && this.showUnderline(field) ? line : '';
+
+    return [fc.class, row.vm.class, row.vm.outerClass, underline]
+      .filter((c): c is string => !!c)
+      .reduce((acc, cls) => mergeClasses(acc, cls), '');
+  }
+
+  protected labelClass(row: FieldRow): string {
+    const base = this.fieldConfigFor(row.field.layout).labelsClass ?? '';
+    return row.vm.labelClass ? mergeClasses(base, row.vm.labelClass) : base;
+  }
+
+  protected valueClass(row: FieldRow): string {
+    const field = row.field;
+    const fc = this.fieldConfigFor(field.layout);
+    const layout = field.layout ?? this.resolvedLayout();
+    const isGrid = layout === 'table' || layout === 'palletes';
+    const base = !this.hasLabel(field) && isGrid ? 'col-span-12 text-sm' : (fc.valuesClass ?? '');
+    return row.vm.valueClass ? mergeClasses(base, row.vm.valueClass) : base;
+  }
+
+  // The tabular array view's grid: rows stay `FieldGroupData` wrappers (not the raw item), same
+  // as the non-tabular card-list branch, so cells render via `cellField`+`<field-value>` — reusing
+  // each field's already-resolved icon/tooltip/formatting instead of re-deriving it from scratch.
+  protected tabularGridParameter(
+    f: FieldData,
+    cellTemplate: TemplateRef<unknown>,
+    actionsTemplate: TemplateRef<unknown>,
+  ): GridParameter<FieldGroupData> {
+    const first = f.fieldGroups?.[0];
+    const columns: GridColumn_<FieldGroupData>[] = (
+      (first?.fields as FieldData[] | undefined) ?? []
+    ).map((c) => ({ key: c.key, label: c.label ?? c.key, template: cellTemplate }));
+
+    if (f.itemButtons?.length) {
+      columns.push({ key: '__item_actions__', label: 'Actions', template: actionsTemplate });
+    }
+
+    const size = this.pageSizeFor(f);
+
+    return {
+      columns,
+      gridData: f.fieldGroups ?? [],
+      label: f.label,
+      size,
+      sizeOptions: [size],
+      showToolbar: false,
+      showTableControlsToggle: false,
+      addIndexColumn: this.effectiveArrayConfig().showHeaders !== false,
+      // rows are `FieldGroupData` wrappers, not the raw item — the click-to-view-details
+      // affordance would show the wrapper's internal shape instead of the actual entity.
+      viewDetailsClicks: 0,
+      animation: this.resolvedAnimation(),
+    };
+  }
+
+  protected cellField(row: FieldGroupData, key: string): FieldData | undefined {
+    return (row.fields as FieldData[] | undefined)?.find((c) => c.key === key);
+  }
+
+  /** `itemButtons` click handlers expect the raw array item, not its `FieldGroupData` wrapper. */
+  protected readonly itemActionsData = (row: FieldGroupData) => row.object;
+
+  // Card-list (non-tabular) array pagination state, keyed by field so a group with more than
+  // one paginated array keeps independent pages. The tabular case doesn't need this — DataTable
+  // owns its own page index internally.
+  private readonly pageIndexByField = signal<Record<string, number>>({});
+
+  protected pageSizeFor(field: FieldData): number {
+    return field.pageSize ?? DEFAULT_PAGE_SIZE;
+  }
+
+  protected isArrayPaginated(field: FieldData): boolean {
+    return (field.fieldGroups?.length ?? 0) > this.pageSizeFor(field);
+  }
+
+  protected pageIndexFor(field: FieldData): number {
+    return this.pageIndexByField()[field.path ?? field.key] ?? 0;
+  }
+
+  protected pagedFieldGroups(field: FieldData): FieldGroupData[] {
+    const groups = field.fieldGroups ?? [];
+    if (!this.isArrayPaginated(field)) return groups;
+
+    const size = this.pageSizeFor(field);
+    const start = this.pageIndexFor(field) * size;
+    return groups.slice(start, start + size);
+  }
+
+  protected onArrayPage(field: FieldData, event: PageEvent): void {
+    const key = field.path ?? field.key;
+    this.pageIndexByField.update((m) => ({ ...m, [key]: event.pageIndex }));
+  }
+
+  /** The value shown for an `isObject` field before it's expanded: its labelField, evaluated. */
+  protected labelFieldData(f: FieldData): FieldData {
+    const key = f.labelField?.key || f.key;
+    const value = f.labelField?.value;
+    return { key, path: f.path, value, type: getFieldType({ key, value }) };
+  }
+
+  protected nestedLayout(f: FieldData): FieldLayout {
+    return f.layout ?? this.resolvedLayout();
+  }
+
+  /** A field with its own `click` runs it (for an object field, instead of the dialog below). */
+  protected onFieldClick(field: FieldData): void {
+    field.click?.(this.resolvedData(), field);
+  }
+
+  /** A tabular-array cell's `click` gets the row's own item, not this group's data. */
+  protected onCellClick(field: FieldData, row: FieldGroupData): void {
+    field.click?.(row.object ?? this.resolvedData(), field);
+  }
+
+  /** An object field's nested fields, shown in a dialog — or its `click`, when it has one. */
+  protected openObjectDialog(row: FieldRow): void {
+    const f = row.field;
+    if (f.click) return this.onFieldClick(f);
+    if (!f.fields?.length) return;
+
+    this.view.open(FieldGroupComponent, {
+      title: f.label,
+      icon: row.vm.icon || row.vm.labelIcon,
+      width: '32rem',
+      inputs: {
+        parameter: {
+          ...this.childParameter(),
+          group: { fields: f.fields },
+          layout: this.nestedLayout(f),
+        } satisfies FieldGroupParameter<D>,
+      },
+    });
+  }
+
+  private buildViewModel$(field: FieldData, data: unknown): Observable<FieldRowViewModel> {
+    return combineLatest({
+      icon: resolveDynamicValue$(field.icon, data),
+      class: resolveDynamicValue$(field.class, data),
+      tooltip: this.resolveTooltip$(field, data),
+      outerClass: resolveDynamicValue$(field.outerClass, data),
+      innerClass: resolveDynamicValue$(field.innerClass, data),
+      labelClass: resolveDynamicValue$(field.labelClass, data),
+      valueClass: resolveDynamicValue$(field.valueClass, data),
+      iconClass: resolveDynamicValue$(field.iconClass, data),
+      labelIcon: resolveDynamicValue$(field.labelIcon, data),
+      valueIcon: resolveDynamicValue$(field.valueIcon, data),
+    }).pipe(map(({ tooltip, ...rest }) => ({ ...DEFAULT_VIEW_MODEL, ...rest, ...tooltip })));
+  }
+
+  private resolveTooltip$(field: FieldData, data: unknown) {
+    return resolveDynamicValue$(field.tooltipConfig, data).pipe(
+      switchMap((config) =>
+        combineLatest({
+          fromConfig: resolveDynamicValue$(config?.tooltip, data),
+          fallback: resolveDynamicValue$(field.tooltip, data),
+          position: resolveDynamicValue$(config?.position, data),
+          tooltipClass: resolveDynamicValue$(config?.class, data),
+        }).pipe(
+          map((x) => ({
+            tooltip: x.fromConfig ?? x.fallback,
+            tooltipPosition: x.position ?? ('below' as const),
+            tooltipClass: x.tooltipClass,
+          })),
+        ),
+      ),
+    );
+  }
+}

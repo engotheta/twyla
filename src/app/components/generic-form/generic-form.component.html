@@ -46,7 +46,7 @@
         <mat-step [label]="entry.label()" [optional]="entry.optional" [completed]="entry.valid()">
           <div [class]="p.fieldsContainerClass ?? ''">
             @for (child of entry.fields; track child) {
-              <app-field [field]="child" [instance]="instance" [fieldsClass]="p.fieldsClass" />
+              <form-field [field]="child" [instance]="instance" [fieldsClass]="p.fieldsClass" />
             }
           </div>
 
@@ -93,7 +93,7 @@
   } @else {
     <div [class]="p.fieldsContainerClass ?? ''">
       @for (child of topFields(); track child) {
-        <app-field [field]="child" [instance]="instance" [fieldsClass]="p.fieldsClass" />
+        <form-field [field]="child" [instance]="instance" [fieldsClass]="p.fieldsClass" />
       }
     </div>
   }

@@ -208,7 +208,7 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
   except the first, unconditionally — not gated by count, unlike the
   stock `isList` "remove" button (`object-field.component.ts`), which is
   why `grid-search-fields` renders its own per-item list chrome via
-  `FormEngineService` + `<app-field>` directly instead of
+  `FormEngineService` + `<form-field>` directly instead of
   `<generic-form>`/`ObjectFieldComponent`'s built-in list template.
 - Each instance's own "column" dropdown excludes columns already picked by
   OTHER instances (never itself) — the `'./key'` relative-observer-path

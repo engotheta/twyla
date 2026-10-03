@@ -1,5 +1,6 @@
-import { Observable, Subject } from 'rxjs';
-import { ConfirmDialog } from './confirm-dialogue/confirm-dialog.interface';
+import { Subject } from 'rxjs';
+import { ConfirmDialog } from '@services/view/confirm-dialog/confirm-dialog.interface';
+import type { DynamicValue } from '@utils/dynamic-value.helpers';
 
 export type ButtonType = 'button' | 'fab' | 'mini-fab' | 'icon' | 'mini-icon';
 
@@ -7,7 +8,8 @@ export type IconType = 'material' | 'SVG' | 'src' | 'base64' | 'url';
 
 export type IconPosition = 'before' | 'after';
 
-export type DynamicValue<T, D = any> = T | Observable<T> | ((data: D) => T | Observable<T>);
+// defined beside `resolveDynamicValue$` in utils; re-exported here, where most code meets it
+export type { DynamicValue };
 
 export interface ActionButton<D = any> {
   data?: D;

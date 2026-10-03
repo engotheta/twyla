@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { AppLayoutComponent, MenuService } from '../../layout';
+import { AppLayoutComponent, MenuService } from '@layout';
 import { LAYOUT_DEMO_ROUTES } from './layout-demo.routes';
 
 /** The Layout module's shell: its routes become the side menu, plus one entry added by hand. */

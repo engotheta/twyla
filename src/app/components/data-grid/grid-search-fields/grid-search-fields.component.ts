@@ -17,7 +17,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   controlStatus,
-  FieldComponent,
+  FormFieldComponent,
   FieldType,
   FormEngineService,
   FormField,
@@ -27,7 +27,7 @@ import {
   Option,
   observe,
   SelectField,
-} from '../../generic-form';
+} from '@components/generic-form';
 import { GridInstance } from '../grid-engine.service';
 import {
   DEFAULT_ENABLED_SEARCH_TYPES,
@@ -61,7 +61,7 @@ const SEARCH_TYPE_LABELS: Record<SearchType, string> = {
  */
 @Component({
   selector: 'grid-search-fields',
-  imports: [FieldComponent, MatBadgeModule, MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [FormFieldComponent, MatBadgeModule, MatButtonModule, MatIconModule, MatTooltipModule],
   templateUrl: './grid-search-fields.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

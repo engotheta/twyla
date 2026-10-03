@@ -2,10 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, effect, input, signal } f
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { DetailsHeaderComponent } from './details-header/details-header.component';
-import { FieldGroupComponent } from './field/field-group/field-group.component';
-import { DetailsParameter } from './detail.interface';
-import { resolveDetailGroups, toObservableSource } from './detail.helpers';
-import { MergeClassesPipe } from './util/class-name/merge-classes.pipe';
+import { FieldGroupComponent } from './field-group/field-group.component';
+import { DetailsParameter } from './interfaces/details.interface';
+import { resolveDetailGroups, toObservableSource } from './helpers/details.helpers';
+import { MergeClassesPipe } from '@utils/pipes/merge-classes.pipe';
 
 /**
  * Renders a resolved `DetailsParameter` (`[params]`). To show it in a dialog, host it with

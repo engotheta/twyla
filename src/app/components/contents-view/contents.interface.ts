@@ -1,9 +1,9 @@
 import { Observable } from 'rxjs';
 import { TemplateRef, Type } from '@angular/core';
-import { ActionButton, DynamicValue } from '../action-buttons/action-button.interface';
-import { GridParameter } from '../data-grid';
-import { DetailsParameter } from '../details/detail.interface';
-import { FormParameter } from '../generic-form';
+import { ActionButton, DynamicValue } from '@components/action-buttons/action-button.interface';
+import { GridParameter } from '@components/data-grid';
+import { DetailsParameter } from '@components/details/interfaces/details.interface';
+import { FormParameter } from '@components/generic-form';
 
 export type ContentType = 'group' | 'table' | 'details' | 'form' | 'html' | 'component';
 

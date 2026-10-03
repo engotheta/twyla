@@ -1,4 +1,4 @@
-import { ActionButton } from '../../components/action-buttons/action-button.interface';
+import { ActionButton } from '@components/action-buttons/action-button.interface';
 
 export interface Breadcrumb {
   label: string;

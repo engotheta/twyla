@@ -22,7 +22,7 @@ import {
   Router,
   RouterLink,
 } from '@angular/router';
-import { ActionButtonsComponent } from '../../components/action-buttons/action-buttons.component';
+import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
 import { BrandLogoComponent } from '../brand-logo.component';
 import { LAYOUT_CONFIG, LayoutNotification } from '../layout-config.token';
 import { LayoutService } from '../layout.service';

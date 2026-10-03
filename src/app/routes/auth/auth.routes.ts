@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-import { guestGuard } from '../../services/session';
-import { AuthLayoutComponent } from './auth-layout.component';
+import { guestGuard } from '@services/session';
+import { AuthLayoutComponent } from '@layout/auth-layout/auth-layout.component';
 
 /**
  * The session pages (GASCO `auth.routes.ts`), each inside the auth layout. Signing in, signing up
@@ -16,7 +16,7 @@ export const AUTH_ROUTES: Routes = [
     children: [
       {
         path: '',
-        loadComponent: () => import('./login/login.component').then((m) => m.LoginComponent),
+        loadComponent: () => import('./login.page').then((m) => m.LoginPage),
       },
     ],
   },
@@ -28,8 +28,7 @@ export const AUTH_ROUTES: Routes = [
     children: [
       {
         path: '',
-        loadComponent: () =>
-          import('./register/register.component').then((m) => m.RegisterComponent),
+        loadComponent: () => import('./register.page').then((m) => m.RegisterPage),
       },
     ],
   },
@@ -41,10 +40,7 @@ export const AUTH_ROUTES: Routes = [
     children: [
       {
         path: '',
-        loadComponent: () =>
-          import('./forgot-password/forgot-password.component').then(
-            (m) => m.ForgotPasswordComponent,
-          ),
+        loadComponent: () => import('./forgot-password.page').then((m) => m.ForgotPasswordPage),
       },
     ],
   },
@@ -55,8 +51,7 @@ export const AUTH_ROUTES: Routes = [
     children: [
       {
         path: '',
-        loadComponent: () =>
-          import('./reset-password/reset-password.component').then((m) => m.ResetPasswordComponent),
+        loadComponent: () => import('./reset-password.page').then((m) => m.ResetPasswordPage),
       },
     ],
   },

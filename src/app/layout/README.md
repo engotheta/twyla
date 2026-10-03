@@ -20,7 +20,9 @@ module rail │ sidebar (brand, module card, menu) │ header
 | `MenuService` | — | `modules`, `module`, `menu` and `trail`, all signals. |
 | `PageTitleStrategy` | — | Document titles such as "Data grid · Studio". |
 
-Page headers (`<page-header>`) live in `components/page-header`.
+Page headers (`<page-header>`) live in `layout/page-header`, imported from `@layout/page-header`.
+The public pages share `AuthLayoutComponent` (`layout/auth-layout`): the auth header, the page
+and the footer in one scroll area.
 
 ## Adding a module
 
@@ -136,4 +138,4 @@ A barrel loads every component it re-exports into the initial bundle.
 | ngx-permissions plus a `visibleFor` filter in the sidemenu | One `LayoutConfig.canAccess`. |
 | `findFirstAccessibleRoute` via the static `HasPermissionDirective` | `findFirstAccessibleRoute(ROUTES)` inside the `redirectTo` function. It now includes group paths too (`settings/groups`). |
 | `matchRoute(url, slug, param)` | Unchanged. |
-| Staff landing (`/staff-landing`) | `routes/modules` (`/modules`). |
+| Staff landing (`/staff-landing`) | `routes/modules.page.ts` (`/modules`). |

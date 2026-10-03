@@ -16,7 +16,7 @@ import {
   readPersistedSelection,
   releasePersistedSelectionKey,
   writePersistedSelection,
-} from '../contents-view/persisted-selection.util';
+} from '@utils/persisted-selection.helpers';
 
 @Directive({
   selector: '[stepperProgressIndicator]',

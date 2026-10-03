@@ -1,5 +1,5 @@
 import { TemplateRef } from '@angular/core';
-import { FieldType, FormParameter, validators } from '../../components/generic-form';
+import { FieldType, FormParameter, validators } from '@components/generic-form';
 
 // ─────────────────────────────────────────────
 // The session pages' forms, as generic-form configs (like EWURA's register.form.ts). All are

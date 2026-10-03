@@ -21,7 +21,7 @@ import {
   throwError,
   timer,
 } from 'rxjs';
-import { LoadingService } from '../loading';
+import { LoadingService } from '@services/loading';
 import { FETCH_CONFIG } from './fetch-config.token';
 import { FetchFailedError } from './fetch-failed.error';
 import { FETCH_NOTIFIER } from './fetch-notifier.token';

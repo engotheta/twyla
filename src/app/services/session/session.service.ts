@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { computed, DestroyRef, DOCUMENT, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom, isObservable } from 'rxjs';
-import { NotificationService } from '../notification/notification.service';
+import { NotificationService } from '@services/notification/notification.service';
 // guards ↔ service import each other, but only inside functions run later — no load-order issue
 import { requiresSession } from './session.guards';
 import { SESSION_CONFIG } from './session-config.token';
