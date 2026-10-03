@@ -21,21 +21,28 @@
     </mat-button-toggle-group>
   }
 
-  @if (showSearch()) {
-    <grid-search-fields
-      [instance]="instance()"
-      (instanceChange)="onSearchFormInstance($event)"
-      (openDialogRequested)="openSearchDialog()"
-    />
+  @if (showBar()) {
+    <!-- search and filters in one box; it takes the row's free space, so no spacer follows -->
+    <grid-search-bar class="basis-64 grow" [instance]="instance()" [search]="barSearch()" />
+  } @else {
+    @if (!unified()) {
+      @if (showSearch()) {
+        <grid-search-fields
+          [instance]="instance()"
+          (instanceChange)="onSearchFormInstance($event)"
+          (openDialogRequested)="openSearchDialog()"
+        />
+      }
+
+      @if (filtersInline() && instance().params().gridFilters?.length) {
+        <grid-filter-panel [instance]="instance()" [inline]="true" />
+      }
+    }
+
+    <span class="flex-1"></span>
   }
 
-  @if (filtersInline() && instance().params().gridFilters?.length) {
-    <grid-filter-panel [instance]="instance()" [inline]="true" />
-  }
-
-  <span class="flex-1"></span>
-
-  @if (!filtersInline() && instance().params().gridFilters?.length) {
+  @if (!unified() && !filtersInline() && instance().params().gridFilters?.length) {
     <button
       #filtersOrigin="cdkOverlayOrigin"
       cdkOverlayOrigin

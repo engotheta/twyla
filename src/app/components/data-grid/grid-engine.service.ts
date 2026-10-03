@@ -117,6 +117,8 @@ export interface GridInstance<RowType = any> {
   setSort(sort: GridSort | undefined): void;
   toggleSort(column: GridColumn_<RowType>): void;
   setSearchFields(fields: SearchField[]): void;
+  /** back to the single empty entry the grid starts with — the search counterpart of `clearFilters` */
+  clearSearch(): void;
   setFilters(filters: Record<string, any>): void;
   clearFilters(): void;
   refetch(): void;
@@ -670,8 +672,13 @@ export class GridEngineService {
       if (serverMode()) return fetchedContent();
       let list = fetchedContent();
       const fields = searchFieldsSig();
-      if (fields.some((f) => f.value))
-        list = list.filter((r) => matchesSearchFields(r, fields, leafColumns()));
+      if (fields.some((f) => f.value)) {
+        // the unified search bar narrows with every token; the classic search fields widen
+        const combination =
+          activeParams().searchConfig?.searchCombination ??
+          (activeParams().unifiedSearch !== false ? 'and' : 'or');
+        list = list.filter((r) => matchesSearchFields(r, fields, leafColumns(), combination));
+      }
       const filters = filtersSig();
       if (Object.keys(filters).length) {
         const cfg = activeParams().filterConfig;
@@ -887,6 +894,11 @@ export class GridEngineService {
       },
       setSearchFields: (fields) => {
         searchFieldsSig.set(fields);
+        page.set(1);
+        manualRowOrder.set([]);
+      },
+      clearSearch: () => {
+        searchFieldsSig.set(seedSearchFields(configColumns(), activeParams().searchConfig));
         page.set(1);
         manualRowOrder.set([]);
       },

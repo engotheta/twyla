@@ -1,8 +1,12 @@
 // searchable columns: compound multi-field search (GridState.searchFields), replacing the old
 // single flat `searchTerm`. Distinct from grid-filter.interface.ts's `filters`/`GridFilterConfig`
 // — that's the separate, coexisting advanced-filter-panel feature; don't conflate the two.
+//
+// Two front ends write `searchFields`: the unified search bar (`GridParameter.unifiedSearch`, the
+// default — grid-search-bar.interface.ts, SPEC.md §12) and the classic search fields. The bar
+// also writes `filters`, so there the two features share one box; their state stays separate.
 
-import { GridFilterOperator } from './grid-filter.interface';
+import { GridFilterCombination, GridFilterOperator } from './grid-filter.interface';
 
 /** reuses GridFilterOperator's 12 cases — `matchesOperator` (grid-row.helpers.ts) is already the
  *  single source of truth for both `filters` and `searchFields`. `GridSearchConfig.enabledSearchTypes`
@@ -21,9 +25,26 @@ export interface SearchField {
 }
 
 export interface GridSearchConfig {
-  /** default 'inline': instances beyond the first grow directly in the toolbar row.
-   *  'modal' routes instances beyond the first into a dialog instead (mirrors grid-filters). */
+  /** classic search fields only. default 'inline': instances beyond the first grow directly in
+   *  the toolbar row. 'modal' routes instances beyond the first into a dialog instead (mirrors
+   *  grid-filters). */
   searchFieldsMode?: 'inline' | 'modal';
+  /**
+   * unified search bar only — WHEN what's in the bar reaches the grid (search and filters alike;
+   * the bar ignores `GridFilterConfig.filtersTrigger`). default 'live': a finished token applies
+   * at once and typed text applies after `changeDebounce`. 'manual': nothing applies until Enter
+   * or the search button. Clearing the bar always applies at once.
+   */
+  searchTrigger?: 'live' | 'manual';
+  /**
+   * How `searchFields` entries combine on local (non-`serverPaginated`) data. default 'and' with
+   * the unified search bar (every token narrows), 'or' with the classic search fields (a row
+   * matching any instance shows). A `fetchFn` decides for itself.
+   */
+  searchCombination?: GridFilterCombination;
+  /** unified search bar only: the input's placeholder. default "Search or filter…", "Search…" or
+   *  "Filter…", by what the grid offers */
+  searchPlaceholder?: string;
   /** default 'like'; a column's own `GridColumn_.searchType` wins over this when set */
   defaultSearchType?: SearchType;
   /** options offered by the optional per-instance searchType override (see `searchTypeChangeable`).
@@ -32,8 +53,10 @@ export interface GridSearchConfig {
    *  `isNull`/`isNotNull` need none, so none of those are offered by default. */
   enabledSearchTypes?: SearchType[];
   /** default false: shows a toggle that reveals a per-instance searchType dropdown, letting the
-   *  user override the default/column-declared searchType for that one instance */
+   *  user override the default/column-declared searchType for that one instance. In the unified
+   *  search bar it makes a column token's operator pickable; off, the operator is fixed. */
   searchTypeChangeable?: boolean;
+  /** ms; default 300 */
   changeDebounce?: number;
 }
 

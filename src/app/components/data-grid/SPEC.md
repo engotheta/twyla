@@ -173,16 +173,26 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
 
 ## 5. Search: `searchFields`
 
+`searchFields` has two front ends. The default is the unified search bar
+(§12). The search fields this section's UI notes describe — add/remove,
+`searchFieldsMode`, the dialog — are the **classic** view, shown when
+`GridParameter.unifiedSearch` is `false`. Everything here about the state
+itself (`key: undefined`, `searchType` resolution, coercion, server mode)
+holds for both.
+
 - `GridState.searchFields` / `PageDetails.searchFields` fully replaced the
   old single-string `searchTerm` — there is no grid mode that still uses a
   flat string. When zero columns are marked `GridColumn_.searchable`, the
   array holds exactly one entry with `key: undefined`, which searches
   across every leaf column (the same substring match `searchTerm` used to
   do) — `matchesSearchFields` special-cases this via `matchesSearchTerm`.
-- Combination across `fields` entries is **OR** ("does this row match ANY
-  active search instance") — the opposite default of `filters`'s **AND**
-  (`matchesFilters`, `grid-filter.interface.ts`/`GridFilterConfig`). These
-  are two separate, coexisting features; don't conflate them.
+- Combination across `fields` entries is **OR** under the classic search
+  fields ("does this row match ANY active search instance") — the opposite
+  default of `filters`'s **AND** (`matchesFilters`,
+  `grid-filter.interface.ts`/`GridFilterConfig`) — and **AND** under the
+  unified search bar, where every token narrows (§12).
+  `GridSearchConfig.searchCombination` sets it explicitly. Search and
+  filters are still two separate states; don't conflate them.
 - `showSearch` (`data-grid.component.ts`) is never hidden purely because
   the result set narrowed below one page — it's the paginator-driven
   default OR'd with "any searchFields entry currently has a value". Root
@@ -310,6 +320,11 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
 
 ## 8. Filters: display mode
 
+This is the **classic** view's filter panel (`unifiedSearch: false`). Under
+the unified search bar (§12) the same `gridFilters` are offered as tokens,
+and `filtersMode` / `filtersTrigger` / the Apply and Clear labels are not
+used.
+
 - `GridFilterConfig.filtersMode` (`'modal'` default, `'inline'`) controls
   WHERE `gridFilters` renders — a toggle button opening a
   `cdkConnectedOverlay` panel, or directly in the toolbar row with no
@@ -428,3 +443,113 @@ Vocabulary: "the engine" = `GridEngineService` + `GridInstance`. "instance"
   STATIC config tree is walked (group columns never get their own
   `GridColumnState` entry — only leaves do), so this isn't something
   toggleable at runtime the way a leaf's own visibility is.
+
+## 12. Unified search bar (`unifiedSearch`)
+
+- `GridParameter.unifiedSearch` (default `true`) makes the toolbar render
+  ONE box, `grid-search-bar`, in place of both `grid-search-fields` (§5) and
+  `grid-filter-panel` (§8). It is modelled on GitLab's filtered search
+  (`GlFilteredSearch`, GitLab UI): field / operator / value tokens, a list
+  guiding each step, free-text pills, a clear-all button and a search
+  button. `false` renders the classic pair, unchanged.
+- It is a front end only. It writes the SAME engine state the classic pair
+  writes — `setSearchFields` and `setFilters` — so `PageDetails`, `fetchFn`,
+  export and toolbar buttons are unaffected by which view is on. The two
+  views are never shown together, and switching between them at runtime
+  (`grid-toolbar`) clears search and filters (`GridInstance.clearSearch()`,
+  `clearFilters()`): each view only shows state it put there itself.
+- **What it offers** (`helpers/grid-search-bar.helpers.ts`):
+  - one token per `searchable` column → an entry in `searchFields`. Its
+    operator is the column's `searchType` → `defaultSearchType` → `'like'`,
+    fixed unless `searchTypeChangeable` is on, then pickable from
+    `enabledSearchTypes`. Only operators a single text value can express
+    (`GRID_SEARCH_COLUMN_OPERATORS`). The value is text (`SearchField.value`
+    is a string whatever the column holds, §5), or Yes / No for a `boolean`
+    column.
+  - one token per top-level `gridFilters` field → a key of `filters`. Its
+    operator is `filterOperators[key]` (default `equals`) and is never
+    asked for. A select offers its options (static, observed, a bare
+    Observable, or `optionsParameter`), several when `multiple`; a
+    checkbox / toggle / radio is a **flag** — picking it completes it with
+    `true`, since `matchesFilters` reads `false` as "not set"; an input or
+    textarea is typed, a numeric input as a number; a date field is typed
+    into a native date / time input and holds the local-time `Date` the
+    date picker would.
+  - free text → a keyless `searchFields` entry (searches every column).
+  - NOT offered: object, list and attachment filter fields, and the
+    `between` operator. A grid needing those sets `unifiedSearch: false`.
+  - One token per column or filter, as in the classic view; a used field
+    leaves the list. With both kinds present the list groups them under
+    "Columns" and "Filters".
+- **Filters run through a headless generic-form** built from `gridFilters`
+  (`GridSearchFilters`, `grid-search-bar/grid-search-filters.ts` — it calls
+  `FormEngineService.build`, as `grid-search-fields` does for its own form),
+  so `label`, `visible`, `disabled`, options depending on another filter,
+  `valueFn`, `toSubmit` and validators behave as in the filter panel. A
+  filter token IS its control's value, kept in step both ways: the bar
+  writes a token's value to its control at once (in either trigger mode, so
+  a dependent filter appears as soon as the one it depends on is set), and
+  a control that gains or loses a value on its own (`clearOnHide`, an
+  observed `value`) gains or loses its token. Applying is the panel's
+  Apply — `FormInstance.submitValue()` — or `{}` when no filter token is
+  left; a refused submit (a failing validator) applies no filters and
+  flags the token, or names the field in the bar when it has no token.
+  The form's own initial values are the bar's first tokens and ARE applied
+  (the classic panel shows them without applying).
+- **The form is built from copies of the declared fields**
+  (`cloneFormFields`), in the bar and in `grid-filter-panel` alike. The
+  engine writes resolved values over observed props (`visible: obs(…)`)
+  on the objects it is given, so a second form built from the same objects
+  finds plain values and nothing to observe — a filter panel reopened, or
+  the bar after the panel, would lose every dependent filter.
+- **`searchTrigger`** (`'live'` default, `'manual'`): live, a finished token
+  applies at once and typed text after `changeDebounce`; manual, nothing
+  applies until Enter in the text box or the search button. Clear-all
+  applies at once in either. Several changes in one turn are one apply, and
+  search and filters are set in the same turn (one fetch, not two).
+  Live, text typed in the box is searched as typed only while Enter would
+  search it too — not while it reads as the start of a field's name (Enter
+  would pick that field, and the grid would otherwise empty out under
+  someone typing "dep" on the way to Department). Left in the box when
+  focus leaves, it is searched whatever it reads as: the box shows what is
+  searched.
+- **`searchCombination`** defaults to `'and'` here (§5).
+- **What `fetchFn` receives**: free-text entries first (pills in order,
+  then text still in the box), then one entry per column token. Never
+  empty: an empty bar is one keyless entry with an empty value.
+- **The bar follows the engine**: `searchFields` or `filters` set from
+  code (not by the bar) show up as tokens; `clearFilters()` removes them.
+- **Keys** (a port of GitLab's token segment and suggestion list): ↓ / ↑
+  move the highlight, wrapping; Enter takes the highlighted row, or with
+  none submits; `:` takes a highlighted field; Esc closes the list, then
+  leaves the part; Backspace in an empty part steps back (the box → the
+  last token's value → its operator → the token is removed); ← at the start
+  and → at the end move to the neighbouring part. The highlight follows
+  GitLab's rule: the field named exactly what is typed, else the first
+  containing it, else "Search for this text". A picked part (a field, an
+  operator, a listed value) opened with the pointer has its text selected,
+  so typing replaces it. In the operator part only text that can still
+  become an operator may be typed; Space takes the highlighted one, and a
+  character past the list goes to the value.
+- **Deliberate differences from GitLab**: live by default; one Enter turns
+  text into a pill AND searches (GitLab's pill mode takes two); text is one
+  pill, not one term per word; Backspace on an emptied operator removes the
+  token (GitLab turns it back into its field's name as text, which would
+  run as a search here); operators include words (`contains`), so a value
+  typed straight past the operator list is recognised as the value when
+  what was typed holds letters or digits; no recent-searches history.
+- **Rendering is synchronous** (`GridSearchBarComponent.flush`): each
+  handled event ends with `detectChanges()` and the focus moved to the part
+  now being edited. Left to the scheduled render, a key pressed straight
+  after another would be decided on the previous list ("dep", Enter) or
+  land in the box being left. For the same reason the segment's open /
+  highlighted state is derived, not set by effects. A blur caused by that
+  render itself (the focused box being taken away) is not the user leaving.
+- **Accessibility**: the box is a `search` landmark; each input with a list
+  is a `combobox` whose list (`listbox` / `option`, headings as `group`s)
+  stays out of the tab order, the highlighted row being its
+  `aria-activedescendant`; a token is a `group` named by its full sentence
+  ("Department is Sales"), its parts buttons named for what they change;
+  Tab stops are the remove buttons, the text box, clear and search — the
+  parts are reached with the keys above; a polite status line announces
+  what was added, changed, removed or cleared.

@@ -1,0 +1,62 @@
+<!-- one row of tokens that scrolls sideways when it overflows (GitLab's), ending in the text box -->
+<div
+  class="flex min-w-0 flex-1 cursor-text items-center gap-1.5 overflow-x-auto overflow-y-hidden px-2 py-1"
+  (mousedown)="onBoxMouseDown($event)"
+>
+  @for (item of items(); track item.id) {
+    <grid-search-token
+      [item]="item"
+      [token]="tokenOf(item)"
+      [part]="partOf(item)"
+      [query]="query()"
+      [session]="session()"
+      [suggestions]="partSuggestions()"
+      [highlight]="partHighlight()"
+      [loading]="isLoading(item)"
+      [error]="errorOf(item)"
+      (segment)="onTokenEvent(item, $event.part, $event.event)"
+      (remove)="onRemove(item)"
+    />
+  }
+
+  <grid-search-segment
+    variant="input"
+    [persistent]="true"
+    [active]="active() === 'input'"
+    [query]="text()"
+    [label]="inputLabel()"
+    [placeholder]="items().length ? '' : placeholder()"
+    [suggestions]="inputSuggestions()"
+    [highlight]="inputHighlight()"
+    [session]="session()"
+    (event)="onInputEvent($event)"
+  />
+
+  @if (problem(); as message) {
+    <span role="alert" class="shrink-0 text-xs text-red-700">{{ message }}</span>
+  }
+</div>
+
+@if (hasContent()) {
+  <button
+    type="button"
+    class="inline-flex w-8 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent text-gray-600 hover:text-gray-900 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+    aria-label="Clear search"
+    matTooltip="Clear"
+    (click)="clear()"
+  >
+    <mat-icon aria-hidden="true" class="!text-xl">cancel</mat-icon>
+  </button>
+}
+
+<button
+  type="button"
+  class="inline-flex w-10 shrink-0 cursor-pointer items-center justify-center border-0 border-l border-(--mat-sys-outline) bg-transparent text-gray-700 hover:bg-black/5 hover:text-gray-900 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+  aria-label="Search"
+  matTooltip="Search"
+  (click)="submit()"
+>
+  <mat-icon aria-hidden="true" class="!text-xl">search</mat-icon>
+</button>
+
+<span class="sr-only" role="status">{{ announcement() }}</span>

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { MatButtonModule } from '@angular/material/button';
 import { FormInstance, FormParameter, GenericFormComponent } from '@components/generic-form';
 import { GridInstance } from '../grid-engine.service';
+import { cloneFormFields } from '../helpers/grid-search-bar.helpers';
 
 /**
  * Wraps `gridFilters` (a `FormField[]`) in `<generic-form>` — 'manual' mode (default) shows
@@ -27,12 +28,19 @@ export class GridFilterPanelComponent<RowType = any> {
     () => (this.instance().params().filterConfig?.filtersTrigger ?? 'manual') === 'live',
   );
 
+  // The form engine writes resolved values over observed props (`visible: obs(…)`) on the field
+  // objects it's given — built from the declared `gridFilters` themselves, a panel opened a
+  // second time (or the unified search bar, building its own form from the same config) would
+  // find plain values and nothing left to observe. Copies, made once per `gridFilters` array.
+  private readonly declaredFilters = computed(() => this.instance().params().gridFilters);
+  private readonly fields = computed(() => cloneFormFields(this.declaredFilters() ?? []));
+
   protected readonly formParams = computed<FormParameter>(() => {
     const cfg = this.instance().params().filterConfig;
     const live = this.isLive();
 
     return {
-      fields: this.instance().params().gridFilters ?? [],
+      fields: this.fields(),
       showFooter: false,
       // inline mode sits in the toolbar's own flex row — lay fields out the same way
       // grid-search-fields does, instead of generic-form's default vertical stack, and free the

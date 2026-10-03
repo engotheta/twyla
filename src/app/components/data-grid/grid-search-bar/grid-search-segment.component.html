@@ -1,0 +1,124 @@
+@if (active() || persistent()) {
+  <!-- data-grid-search-active: how the bar finds the input to focus -->
+  <input
+    #origin="cdkOverlayOrigin"
+    cdkOverlayOrigin
+    [attr.data-grid-search-active]="active() ? '' : null"
+    [type]="inputType()"
+    [class]="inputClass()"
+    [style.width]="inputWidth()"
+    [value]="query()"
+    [placeholder]="placeholder()"
+    [attr.inputmode]="inputMode()"
+    [attr.aria-label]="label()"
+    [attr.role]="hasList() ? 'combobox' : null"
+    [attr.aria-autocomplete]="hasList() ? 'list' : null"
+    [attr.aria-haspopup]="hasList() ? 'listbox' : null"
+    [attr.aria-expanded]="hasList() ? listOpen() : null"
+    [attr.aria-controls]="listOpen() ? listId : null"
+    [attr.aria-activedescendant]="listOpen() ? activeRowId() : null"
+    autocomplete="off"
+    autocapitalize="off"
+    spellcheck="false"
+    (input)="onInput($event)"
+    (keydown)="onKeydown($event)"
+    (click)="onInputClick()"
+    (focus)="onFocus()"
+    (blur)="onBlur()"
+  />
+
+  <!-- Esc is the input's to handle (it closes the list, then leaves the part), not the overlay's -->
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="origin"
+    [cdkConnectedOverlayOpen]="listOpen()"
+    [cdkConnectedOverlayPositions]="positions"
+    [cdkConnectedOverlayDisableClose]="true"
+  >
+    <!-- A named region around the list: the overlay renders under <body>, outside every landmark
+         of the page, which AXE's `region` rule reports. The press never reaches the page, so the
+         input keeps the focus while a row is clicked. -->
+    <div
+      role="region"
+      [attr.aria-label]="label() + ' suggestions'"
+      (mousedown)="$event.preventDefault()"
+    >
+      <div
+        role="listbox"
+        [id]="listId"
+        [attr.aria-label]="label() + ' suggestions'"
+        [attr.aria-multiselectable]="multiple() ? true : null"
+        [attr.aria-busy]="loading() ? true : null"
+        class="max-h-72 max-w-80 min-w-48 overflow-y-auto rounded-md border border-black/10 bg-white py-1 text-sm text-gray-900 shadow-lg"
+      >
+        @for (group of groups(); track group.name ?? $index) {
+          @if (group.name; as name) {
+            <div role="group" [attr.aria-label]="name">
+              <div role="presentation" class="px-3 pt-2 pb-1 text-xs font-medium text-gray-600">
+                {{ name }}
+              </div>
+              <ng-container
+                [ngTemplateOutlet]="options"
+                [ngTemplateOutletContext]="{ $implicit: group.rows }"
+              />
+            </div>
+          } @else {
+            <ng-container
+              [ngTemplateOutlet]="options"
+              [ngTemplateOutletContext]="{ $implicit: group.rows }"
+            />
+          }
+        }
+
+        @if (loading() && !rows().length) {
+          <div role="presentation" class="px-3 py-1.5 text-gray-600">Loading…</div>
+        }
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template #options let-entries>
+    @for (entry of entries; track entry.index) {
+      <div
+        role="option"
+        [id]="rowId(entry.index)"
+        [attr.aria-selected]="multiple() ? isSelected(entry.row) : entry.index === activeIndex()"
+        [attr.aria-disabled]="entry.row.disabled ? true : null"
+        class="flex cursor-pointer items-center gap-2 px-3 py-1.5 hover:bg-black/[0.04]"
+        [class.bg-gray-200]="entry.index === activeIndex()"
+        [class.opacity-50]="entry.row.disabled"
+        [class.cursor-default]="entry.row.disabled"
+        (click)="take(entry.row)"
+      >
+        @if (multiple()) {
+          <mat-icon
+            aria-hidden="true"
+            class="shrink-0 !text-base text-primary"
+            [class.invisible]="!isSelected(entry.row)"
+            >check</mat-icon
+          >
+        }
+        @if (entry.row.icon; as icon) {
+          <mat-icon aria-hidden="true" class="shrink-0 !text-base text-gray-600">
+            {{ icon }}
+          </mat-icon>
+        }
+        <span class="truncate">{{ entry.row.label }}</span>
+        @if (entry.row.description; as description) {
+          <span class="truncate text-gray-600">{{ description }}</span>
+        }
+      </div>
+    }
+  </ng-template>
+} @else {
+  <button
+    type="button"
+    tabindex="-1"
+    [class]="viewClass()"
+    [attr.aria-label]="viewLabel() ?? null"
+    (mousedown)="onViewMouseDown($event)"
+    (click)="onViewClick($event)"
+  >
+    {{ text() }}
+  </button>
+}

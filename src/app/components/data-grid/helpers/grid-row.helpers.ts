@@ -129,26 +129,31 @@ function coerceSearchValue(raw: string, columnType?: GridColumn_['type']): unkno
 }
 
 /**
- * Compound multi-field search (GridState.searchFields) — OR-combined across `fields` (searching
- * across several fields is inclusive), unlike `matchesFilters`'s AND-default below (a separate,
- * unrelated feature — don't copy its combination semantics here). A `key: undefined` entry (the
- * zero-searchable-columns fallback) reuses `matchesSearchTerm`'s all-columns substring match.
+ * Compound multi-field search (GridState.searchFields). `combination` defaults to 'or' — the
+ * classic search fields' rule (searching across several fields is inclusive), unlike
+ * `matchesFilters`'s AND-default below. The unified search bar passes 'and', so every token
+ * narrows the result (`GridSearchConfig.searchCombination`, SPEC.md §12). A `key: undefined`
+ * entry (free text, or the zero-searchable-columns fallback) reuses `matchesSearchTerm`'s
+ * all-columns substring match.
  */
 export function matchesSearchFields<RowType = any>(
   row: RowType,
   fields: SearchField[],
   columns: GridColumn_<RowType>[],
+  combination: 'and' | 'or' = 'or',
 ): boolean {
   const active = fields.filter((f) => f.value !== undefined && f.value !== null && f.value !== '');
   if (!active.length) return true;
 
-  return active.some((f) => {
+  const matches = (f: SearchField): boolean => {
     if (f.key === undefined) return matchesSearchTerm(row, columns, f.value);
     const column = columns.find((c) => c.key === f.key);
     const value = column ? getCellValue(row, column) : getPathValue(row, f.key);
     const target = f.searchType === 'like' ? f.value : coerceSearchValue(f.value, column?.type);
     return matchesOperator(value, f.searchType, target);
-  });
+  };
+
+  return combination === 'and' ? active.every(matches) : active.some(matches);
 }
 
 export function matchesFilters<RowType = any>(

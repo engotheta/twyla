@@ -132,15 +132,27 @@ export const gridParameter: GridParameter<Employee> = {
     },
   ],
 
+  // the classic view's settings: where the filter panel and the search fields render, and when
+  // filters apply. The unified search bar ignores these (it has its own `searchTrigger`).
   filterConfig: {
     filtersTrigger: 'live',
     filtersMode: 'inline',
   },
 
+  // searchTypeChangeable: both views let the user pick a column's operator
   searchConfig: {
     searchTypeChangeable: true,
     searchFieldsMode: 'modal',
   },
+
+  // The two search front ends, side by side on one grid: the toolbar's own option switch flips
+  // `unifiedSearch` (on by default — one bar for search and filters; off — the search fields and
+  // the filter panel). `label` is excluded so the grid stays "Employees" under either option.
+  gridOptions: [
+    { slug: 'unified', label: 'Unified' },
+    { slug: 'classic', label: 'Classic', unifiedSearch: false },
+  ],
+  excludedOptionKeys: ['label'],
 
   // addIndexColumn: false,
 

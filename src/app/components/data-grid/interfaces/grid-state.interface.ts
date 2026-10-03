@@ -18,7 +18,10 @@ export interface PageDetails {
   page: number;
   size: number;
   /** always at least one entry — a `key: undefined` entry means "search all columns", the
-   *  fallback used when the grid has zero `searchable` columns. See grid-search.interface.ts. */
+   *  fallback used when the grid has zero `searchable` columns. See grid-search.interface.ts.
+   *  From the unified search bar: its free text comes first (`key: undefined`, one entry per text
+   *  pill), then one entry per column token; an empty bar sends a single `key: undefined` entry
+   *  with an empty value. */
   searchFields: SearchField[];
   filters?: Record<string, any>;
   sort?: GridSort;

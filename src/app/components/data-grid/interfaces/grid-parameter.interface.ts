@@ -41,6 +41,15 @@ export interface GridParameter<RowType = any> {
    *  input searching every column, same as before. */
   searchConfig?: GridSearchConfig;
 
+  /**
+   * default true: the toolbar shows ONE search bar doing the job of both the search fields and
+   * `gridFilters` — field / operator / value tokens in a single box, modelled on GitLab's
+   * filtered search (SPEC.md §12). It writes the same `searchFields` and `filters`, so `fetchFn`
+   * and everything else reading them is unaffected. false brings back the classic pair: the
+   * search fields and the filter panel.
+   */
+  unifiedSearch?: boolean;
+
   // if true, the grid will show the table controls toggle button, default is true
   // toggle panel will list all the columns defined in the grid, and allow the user to
   // show/hide columns, pin/unpin columns, sort columns by dragging
