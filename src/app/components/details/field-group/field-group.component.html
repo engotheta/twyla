@@ -205,9 +205,7 @@
                         ...childParameter(),
                         isArrayItem: true,
                         expanded: f.expanded ?? arrayConfig?.expanded ?? false,
-                        group: f.itemButtons?.length
-                          ? { ...fg, actionButtons: f.itemButtons }
-                          : fg,
+                        group: f.itemButtons?.length ? { ...fg, actionButtons: f.itemButtons } : fg,
                         layout: nestedLayout(f),
                         data: fg.object ?? resolvedData(),
                       }"

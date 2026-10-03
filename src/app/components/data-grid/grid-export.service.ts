@@ -6,7 +6,11 @@ import {
   GridInstance,
   SYNTHETIC_COLUMN_KEYS,
 } from './grid-engine.service';
-import { buildHeaderRows, flattenLeafColumns, orderColumnsForHeader } from './helpers/grid-column.helpers';
+import {
+  buildHeaderRows,
+  flattenLeafColumns,
+  orderColumnsForHeader,
+} from './helpers/grid-column.helpers';
 import { GridColumn_ } from './interfaces/grid-column.interface';
 import { GridExportConfig, GridExportFormat } from './interfaces/grid-export.interface';
 import { formatCellValue } from './helpers/grid-format.helpers';
@@ -98,14 +102,25 @@ export class GridExportService {
       ? new Map(columns.map((c, i) => [c.key, i]))
       : new Map(instance.columnState().map((s) => [s.key, s.order]));
     const visibleKeys = new Set(treeColumns.map((c) => c.key));
-    const headerRows = buildHeaderRows(orderColumnsForHeader(instance.columns(), orderByKey), visibleKeys);
+    const headerRows = buildHeaderRows(
+      orderColumnsForHeader(instance.columns(), orderByKey),
+      visibleKeys,
+    );
 
     if (!extraColumns.length) return headerRows;
 
     const depth = headerRows.length || 1;
-    const rows = headerRows.length ? headerRows.map((r) => ({ cells: [...r.cells] })) : [{ cells: [] as GridHeaderCell[] }];
+    const rows = headerRows.length
+      ? headerRows.map((r) => ({ cells: [...r.cells] }))
+      : [{ cells: [] as GridHeaderCell[] }];
     rows[0].cells.push(
-      ...extraColumns.map((c) => ({ label: c.label ?? c.key, colspan: 1, rowspan: depth, column: c, isLeaf: true })),
+      ...extraColumns.map((c) => ({
+        label: c.label ?? c.key,
+        colspan: 1,
+        rowspan: depth,
+        column: c,
+        isLeaf: true,
+      })),
     );
     return rows;
   }

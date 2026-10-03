@@ -86,7 +86,10 @@ describe('TabNavComponent', () => {
   });
 
   it('a disabled tab takes focus but is never selected', () => {
-    const { tabs, selected } = mount({ tabs: [tab('a'), tab('b', { disabled: true })], activeKey: 'a' });
+    const { tabs, selected } = mount({
+      tabs: [tab('a'), tab('b', { disabled: true })],
+      activeKey: 'a',
+    });
     tabs()[0].focus();
     press(tabs()[0], 'ArrowRight', 39);
     expect(document.activeElement).toBe(tabs()[1]); // not skipped — as Material's tabs
@@ -114,7 +117,9 @@ describe('TabNavComponent', () => {
     fixture.detectChanges();
     expect(tabs().map((t) => t.tabIndex)).toEqual([-1, 0, -1]);
 
-    tabs()[1].dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: document.body }));
+    tabs()[1].dispatchEvent(
+      new FocusEvent('focusout', { bubbles: true, relatedTarget: document.body }),
+    );
     fixture.detectChanges();
     expect(tabs().map((t) => t.tabIndex)).toEqual([0, -1, -1]);
   });
@@ -132,7 +137,9 @@ describe('TabNavComponent', () => {
 
     const arrows = () => Array.from(el.querySelectorAll<HTMLButtonElement>(':scope > button'));
     expect(arrows().length).toBe(2);
-    expect(arrows().every((a) => a.getAttribute('aria-hidden') === 'true' && a.tabIndex === -1)).toBe(true);
+    expect(
+      arrows().every((a) => a.getAttribute('aria-hidden') === 'true' && a.tabIndex === -1),
+    ).toBe(true);
     expect(arrows().map((a) => a.disabled)).toEqual([true, false]); // at the start
 
     arrows()[1].dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }));

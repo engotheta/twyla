@@ -11,7 +11,9 @@ describe('dummyJsonSessionApi', () => {
   let backend: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     api = runInInjectionContext(TestBed.inject(Injector), () => dummyJsonSessionApi());
     backend = TestBed.inject(HttpTestingController);
   });
@@ -52,7 +54,9 @@ describe('dummyJsonSessionApi', () => {
   });
 
   it('turns a rejected sign-in into a message for the user', async () => {
-    const result = firstValueFrom(api.login({ username: 'x', password: 'y' }) as Observable<Session>);
+    const result = firstValueFrom(
+      api.login({ username: 'x', password: 'y' }) as Observable<Session>,
+    );
     backend
       .expectOne('https://dummyjson.com/auth/login')
       .flush({ message: 'Invalid credentials' }, { status: 400, statusText: 'Bad Request' });

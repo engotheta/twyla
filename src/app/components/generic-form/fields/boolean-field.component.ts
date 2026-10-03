@@ -11,7 +11,13 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
 
 @Component({
   selector: 'boolean-field',
-  imports: [ReactiveFormsModule, MatCheckboxModule, MatSlideToggleModule, MatRadioModule, MatTooltipModule],
+  imports: [
+    ReactiveFormsModule,
+    MatCheckboxModule,
+    MatSlideToggleModule,
+    MatRadioModule,
+    MatTooltipModule,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let f = state();
@@ -60,7 +66,9 @@ export class BooleanFieldComponent {
   protected readonly status = controlStatus(this.control);
 
   protected readonly errorMessage = computed(() =>
-    this.status().touched ? firstErrorMessage(this.status().errors, this.state().validations) : null,
+    this.status().touched
+      ? firstErrorMessage(this.status().errors, this.state().validations)
+      : null,
   );
 
   protected selectRadio(): void {

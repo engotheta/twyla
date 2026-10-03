@@ -16,7 +16,11 @@ import { fromHex, toHex } from './color.helpers';
   template: `
     @let f = state();
 
-    <div class="flex items-end gap-2" [matTooltip]="f.tooltip ?? ''" [matTooltipDisabled]="!f.tooltip">
+    <div
+      class="flex items-end gap-2"
+      [matTooltip]="f.tooltip ?? ''"
+      [matTooltipDisabled]="!f.tooltip"
+    >
       <input
         type="color"
         class="h-10 w-12 shrink-0 cursor-pointer rounded border border-black/20 disabled:cursor-not-allowed disabled:opacity-50"
@@ -27,7 +31,11 @@ import { fromHex, toHex } from './color.helpers';
         (blur)="control().markAsTouched()"
       />
 
-      <mat-form-field [appearance]="appearance()" class="w-full" [class.hide-subscript]="!showSubscript()">
+      <mat-form-field
+        [appearance]="appearance()"
+        class="w-full"
+        [class.hide-subscript]="!showSubscript()"
+      >
         @if (f.showLabel !== false && f.label) {
           <mat-label>{{ f.label }}</mat-label>
         }
@@ -67,7 +75,9 @@ export class ColorFieldComponent {
   );
 
   protected readonly errorMessage = computed(() =>
-    this.status().touched ? firstErrorMessage(this.status().errors, this.state().validations) : null,
+    this.status().touched
+      ? firstErrorMessage(this.status().errors, this.state().validations)
+      : null,
   );
 
   protected onPick(event: Event): void {

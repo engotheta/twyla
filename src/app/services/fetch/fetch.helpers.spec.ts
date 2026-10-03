@@ -53,7 +53,10 @@ describe('fetch helpers', () => {
   });
 
   it("httpErrorMessage prefers the server's words, then a network message", () => {
-    const withBody = new HttpErrorResponse({ status: 400, error: { error_description: 'Bad token' } });
+    const withBody = new HttpErrorResponse({
+      status: 400,
+      error: { error_description: 'Bad token' },
+    });
     const offline = new HttpErrorResponse({ status: 0, error: new ProgressEvent('error') });
     const htmlPage = new HttpErrorResponse({ status: 502, error: '<html>Bad gateway</html>' });
 

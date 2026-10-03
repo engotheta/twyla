@@ -36,7 +36,10 @@ export function toSelectionSet(fields: readonly string[]): string {
 
   for (const field of fields) {
     let node = root;
-    for (const part of field.split('.').map((p) => p.trim()).filter(Boolean)) {
+    for (const part of field
+      .split('.')
+      .map((p) => p.trim())
+      .filter(Boolean)) {
       let child = node.get(part);
       if (!child) {
         child = new Map();

@@ -37,9 +37,7 @@ export function formatCellValue(value: unknown, type?: GridValueType, locale?: s
   if (value == null || value === '') return '';
 
   if (Array.isArray(value)) {
-    const items = value
-      .map((v) => formatCellValue(v, type, locale))
-      .filter((s) => s !== '');
+    const items = value.map((v) => formatCellValue(v, type, locale)).filter((s) => s !== '');
     return new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' }).format(items);
   }
   if (isObject(value)) {

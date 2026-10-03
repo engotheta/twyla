@@ -40,7 +40,12 @@
               {{ item.label }}
             </span>
             @if (canRemove()) {
-              <button type="button" mat-icon-button aria-label="Remove item" (click)="removeItem(item.index)">
+              <button
+                type="button"
+                mat-icon-button
+                aria-label="Remove item"
+                (click)="removeItem(item.index)"
+              >
                 <mat-icon aria-hidden="true">delete</mat-icon>
               </button>
             }

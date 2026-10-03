@@ -1,4 +1,8 @@
-<div class="w-72 max-h-96 overflow-y-auto p-2 bg-white" role="group" aria-label="Column visibility, order, and pinning">
+<div
+  class="w-72 max-h-96 overflow-y-auto p-2 bg-white"
+  role="group"
+  aria-label="Column visibility, order, and pinning"
+>
   <div
     cdkDropList
     [cdkDropListData]="entries()"
@@ -11,7 +15,10 @@
         [cdkDragData]="entry"
         class="flex items-center gap-1 rounded px-1 py-1 hover:bg-black/5"
       >
-        <div *cdkDragPlaceholder class="h-9 rounded border-2 border-dashed border-black/20 bg-black/5"></div>
+        <div
+          *cdkDragPlaceholder
+          class="h-9 rounded border-2 border-dashed border-black/20 bg-black/5"
+        ></div>
         <div
           *cdkDragPreview
           class="flex items-center gap-2 rounded border border-black/10 bg-white px-2 py-1 text-sm shadow-lg"

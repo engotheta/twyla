@@ -14,7 +14,9 @@ class ProbeComponent {
 
 @Component({
   selector: 'dialog-aware-probe',
-  template: `<button type="button" class="finish" (click)="dialogRef()?.close('done')">finish</button>`,
+  template: `<button type="button" class="finish" (click)="dialogRef()?.close('done')">
+    finish
+  </button>`,
 })
 class DialogAwareProbeComponent {
   readonly dialogRef = input<MatDialogRef<unknown>>();

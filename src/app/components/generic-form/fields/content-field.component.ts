@@ -13,7 +13,10 @@ import { ContentField } from '../interfaces/static-fields.interface';
 
     <div [class]="f.class ?? ''" [style.opacity]="f.opacity ?? null">
       @if (isTemplateRef(value)) {
-        <ng-container [ngTemplateOutlet]="value" [ngTemplateOutletContext]="{ $implicit: contentParameter() }" />
+        <ng-container
+          [ngTemplateOutlet]="value"
+          [ngTemplateOutletContext]="{ $implicit: contentParameter() }"
+        />
       } @else if (isString(value)) {
         <!-- Angular sanitizes innerHTML bindings by default; this is form-config-authored
              content (a developer wrote it), not raw end-user input. -->

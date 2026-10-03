@@ -96,7 +96,9 @@ export class LoadingOverlayRef {
     this.showTimer = undefined;
 
     // the overlay is `position: absolute`, so a static host must become its containing block
-    const position = this.element.ownerDocument.defaultView?.getComputedStyle(this.element).position;
+    const position = this.element.ownerDocument.defaultView?.getComputedStyle(
+      this.element,
+    ).position;
     if (!position || position === 'static') {
       this.restorePosition = this.element.style.position;
       renderer.setStyle(this.element, 'position', 'relative');

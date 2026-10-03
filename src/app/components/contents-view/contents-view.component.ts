@@ -111,7 +111,12 @@ const TABS_NAMESPACE = 'tabs';
 /** move `deltaPx` between two adjacent panes (`a`, `b` px) keeping their sum and clamping each
  *  to `>= minPx`. Returns the new pair — the caller converts back to fractions. Pure/exported
  *  for unit testing (jsdom has no layout, so the live drag path can't be integration-tested). */
-export function redistributePx(a: number, b: number, deltaPx: number, minPx: number): [number, number] {
+export function redistributePx(
+  a: number,
+  b: number,
+  deltaPx: number,
+  minPx: number,
+): [number, number] {
   const total = a + b;
   const na = Math.min(total - minPx, Math.max(minPx, a + deltaPx));
   return [na, total - na];
@@ -509,7 +514,10 @@ export class ContentsViewComponent implements OnInit {
    *  of `listItemClass`/`bodyClass` — so a consumer can rearrange it (`flex-row`, …). */
   protected headerClass(rc: ResolvedContent): string {
     return mergeClasses(
-      mergeClasses('flex flex-col flex-none bg-white p-2 mb-2 rounded-lg', this.params().headersClass ?? ''),
+      mergeClasses(
+        'flex flex-col flex-none bg-white p-2 mb-2 rounded-lg',
+        this.params().headersClass ?? '',
+      ),
       rc.content.headerClass ?? '',
     );
   }
@@ -596,7 +604,9 @@ export class ContentsViewComponent implements OnInit {
    *  sat at drag start (px, signed). Re-measurement is frozen for the duration so the handle
    *  tracks the pointer exactly off this offset instead of lagging a frame behind a re-measure;
    *  cleared once drag-end has re-measured the final layout. */
-  private readonly activeDrag = signal<{ axis: 'x' | 'y'; g: number; shiftPx: number } | null>(null);
+  private readonly activeDrag = signal<{ axis: 'x' | 'y'; g: number; shiftPx: number } | null>(
+    null,
+  );
 
   /** measurement is frozen during a drag (see `activeDrag`) and while a pane is full screen — the
    *  full-screen element leaves the grid's flow, so a re-measure would see a different shape */
@@ -647,7 +657,9 @@ export class ContentsViewComponent implements OnInit {
 
   /** live once the grid has actually been measured — gutters render only then, so the
    *  pre-measurement fallback count can never paint a gutter in the wrong place */
-  protected readonly resizeReady = computed(() => this.resizeActive() && this.gridMetrics() !== null);
+  protected readonly resizeReady = computed(
+    () => this.resizeActive() && this.gridMetrics() !== null,
+  );
 
   /** actual column / row counts — measured, else the built-in grid's responsive default
    *  (`grid-cols-1 lg:grid-cols-2`, wrapped into rows) so jsdom tests and the first frame
@@ -670,8 +682,10 @@ export class ContentsViewComponent implements OnInit {
 
   /** where to paint gutter `g` — its measured boundary, plus the live drag offset while THIS
    *  gutter is the one being dragged (measurement is frozen then, so the boundary alone is stale) */
-  protected colGutterPos = (g: number): number | undefined => this.gutterPos('x', g, this.colBoundaries());
-  protected rowGutterPos = (g: number): number | undefined => this.gutterPos('y', g, this.rowBoundaries());
+  protected colGutterPos = (g: number): number | undefined =>
+    this.gutterPos('x', g, this.colBoundaries());
+  protected rowGutterPos = (g: number): number | undefined =>
+    this.gutterPos('y', g, this.rowBoundaries());
   private gutterPos(axis: 'x' | 'y', g: number, boundaries: number[]): number | undefined {
     const base = boundaries[g];
     const d = this.activeDrag();
@@ -1355,7 +1369,10 @@ export class ContentsViewComponent implements OnInit {
         content.tabsContainerClass ?? '',
       ),
       tabClass: mergeClasses(this.params().tabClass ?? '', content.tabClass ?? ''),
-      activeTabClass: mergeClasses(this.params().activeTabClass ?? '', content.activeTabClass ?? ''),
+      activeTabClass: mergeClasses(
+        this.params().activeTabClass ?? '',
+        content.activeTabClass ?? '',
+      ),
       tabIndicatorClass: mergeClasses(
         this.params().tabIndicatorClass ?? '',
         content.tabIndicatorClass ?? '',

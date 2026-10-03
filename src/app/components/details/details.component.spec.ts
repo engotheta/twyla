@@ -90,7 +90,7 @@ describe('DetailsComponent — fetchFn', () => {
     expect(state(fixture).error()).toBeInstanceOf(Error);
   });
 
-  it("a dynamic field resolver (icon/class/tooltip) sees the FETCHED entity, not a stale/undefined one", async () => {
+  it('a dynamic field resolver (icon/class/tooltip) sees the FETCHED entity, not a stale/undefined one', async () => {
     const fixture = mount({
       fetchFn: () => of({ name: 'Vip Vince', vip: true }),
       fieldsProperties: {
@@ -181,7 +181,9 @@ describe('DetailsComponent — field values', () => {
       fieldsProperties: { completion: { type: 'percentage' } },
     });
 
-    const fills = Array.from(el.querySelectorAll<HTMLElement>('[aria-hidden="true"] > .bg-primary'));
+    const fills = Array.from(
+      el.querySelectorAll<HTMLElement>('[aria-hidden="true"] > .bg-primary'),
+    );
     expect(fills.map((fill) => fill.style.width)).toEqual(['50%', '45%']);
   });
 

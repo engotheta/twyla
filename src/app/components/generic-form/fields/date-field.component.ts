@@ -31,7 +31,11 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
 
     @switch (f.dateType ?? 'date') {
       @case ('time') {
-        <mat-form-field [appearance]="appearance()" class="w-full" [class.hide-subscript]="!showSubscript()">
+        <mat-form-field
+          [appearance]="appearance()"
+          class="w-full"
+          [class.hide-subscript]="!showSubscript()"
+        >
           @if (f.showLabel !== false && f.label) {
             <mat-label>{{ f.label }}</mat-label>
           }
@@ -54,7 +58,11 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
       }
       @case ('dateTime') {
         <div class="flex gap-2">
-          <mat-form-field [appearance]="appearance()" class="flex-1" [class.hide-subscript]="!showSubscript()">
+          <mat-form-field
+            [appearance]="appearance()"
+            class="flex-1"
+            [class.hide-subscript]="!showSubscript()"
+          >
             @if (f.showLabel !== false && f.label) {
               <mat-label>{{ f.label }}</mat-label>
             }
@@ -74,9 +82,18 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
               <mat-error>{{ message }}</mat-error>
             }
           </mat-form-field>
-          <mat-form-field [appearance]="appearance()" class="w-32" [class.hide-subscript]="!showSubscript()">
+          <mat-form-field
+            [appearance]="appearance()"
+            class="w-32"
+            [class.hide-subscript]="!showSubscript()"
+          >
             <mat-label>Time</mat-label>
-            <input matInput type="time" [formControl]="timePartControl" [readonly]="f.readonly === true" />
+            <input
+              matInput
+              type="time"
+              [formControl]="timePartControl"
+              [readonly]="f.readonly === true"
+            />
           </mat-form-field>
         </div>
         @if (f.hint) {
@@ -84,7 +101,11 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
         }
       }
       @default {
-        <mat-form-field [appearance]="appearance()" class="w-full" [class.hide-subscript]="!showSubscript()">
+        <mat-form-field
+          [appearance]="appearance()"
+          class="w-full"
+          [class.hide-subscript]="!showSubscript()"
+        >
           @if (f.showLabel !== false && f.label) {
             <mat-label>{{ f.label }}</mat-label>
           }
@@ -103,7 +124,9 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
           <mat-datepicker-toggle matIconSuffix [for]="picker" />
           <mat-datepicker
             #picker
-            [startView]="f.dateType === 'year' || f.dateType === 'monthYear' ? 'multi-year' : 'month'"
+            [startView]="
+              f.dateType === 'year' || f.dateType === 'monthYear' ? 'multi-year' : 'month'
+            "
             (yearSelected)="onYearSelected($event, picker)"
             (monthSelected)="onMonthSelected($event, picker)"
           />
@@ -140,7 +163,9 @@ export class DateFieldComponent {
   );
 
   protected readonly errorMessage = computed(() =>
-    this.status().touched ? firstErrorMessage(this.status().errors, this.state().validations) : null,
+    this.status().touched
+      ? firstErrorMessage(this.status().errors, this.state().validations)
+      : null,
   );
 
   // 'dateTime': the real control holds one combined Date; these two local controls are the
@@ -155,9 +180,12 @@ export class DateFieldComponent {
       if (this.syncingParts) return;
       const date = value ? new Date(value) : null;
       this.datePartControl.setValue(date, { emitEvent: false });
-      this.timePartControl.setValue(date && !Number.isNaN(date.getTime()) ? this.toTimeString(date) : null, {
-        emitEvent: false,
-      });
+      this.timePartControl.setValue(
+        date && !Number.isNaN(date.getTime()) ? this.toTimeString(date) : null,
+        {
+          emitEvent: false,
+        },
+      );
     });
 
     merge(this.datePartControl.valueChanges, this.timePartControl.valueChanges)

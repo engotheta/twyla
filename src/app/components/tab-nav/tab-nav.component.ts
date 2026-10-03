@@ -304,7 +304,9 @@ export class TabNavComponent {
     }
     const style = getComputedStyle(this.host);
     const room =
-      this.host.clientWidth - parseFloat(style.paddingLeft || '0') - parseFloat(style.paddingRight || '0');
+      this.host.clientWidth -
+      parseFloat(style.paddingLeft || '0') -
+      parseFloat(style.paddingRight || '0');
     this.paginated.set(this.tablist().nativeElement.scrollWidth > room + 1);
   }
 

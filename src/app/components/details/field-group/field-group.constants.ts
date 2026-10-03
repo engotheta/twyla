@@ -82,7 +82,11 @@ const ARRAY_CONFIG_CLASS_KEYS: (keyof ArrayConfig)[] = [
   'indexClass',
 ];
 
-function mergeConfig<T extends object>(base: T, override: T | undefined, classKeys: (keyof T)[]): T {
+function mergeConfig<T extends object>(
+  base: T,
+  override: T | undefined,
+  classKeys: (keyof T)[],
+): T {
   const b: any = base;
   const o: any = override ?? {};
   const merged: any = { ...b, ...o };

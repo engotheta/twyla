@@ -15,5 +15,9 @@ export interface GridEditingConfig<RowType = any> {
   ) => boolean | void | Promise<boolean | void>;
 
   /** returning a string blocks the commit and shows it as a validation message */
-  validateFn?: (row: RowType, key: string, value: any) => string | undefined | Promise<string | undefined>;
+  validateFn?: (
+    row: RowType,
+    key: string,
+    value: any,
+  ) => string | undefined | Promise<string | undefined>;
 }

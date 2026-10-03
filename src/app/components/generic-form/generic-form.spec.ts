@@ -1,10 +1,4 @@
-import {
-  ANIMATION_MODULE_TYPE,
-  ApplicationRef,
-  Component,
-  Injector,
-  signal,
-} from '@angular/core';
+import { ANIMATION_MODULE_TYPE, ApplicationRef, Component, Injector, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Validators } from '@angular/forms';
 import { map, tap, timer } from 'rxjs';
@@ -44,7 +38,15 @@ describe('FormEngineService (logic)', () => {
 
   it('excludeHiddenOnSubmit drops the field while hidden', async () => {
     const params: FormParameter<Record<string, unknown>> = {
-      fields: [{ type: FieldType.input, key: 'secret', value: 'shh', visible: false, excludeHiddenOnSubmit: true }],
+      fields: [
+        {
+          type: FieldType.input,
+          key: 'secret',
+          value: 'shh',
+          visible: false,
+          excludeHiddenOnSubmit: true,
+        },
+      ],
     };
     const instance = engine.build(signal(params), injector);
     const value = await instance.submitValue();
@@ -59,12 +61,18 @@ describe('FormEngineService (logic)', () => {
         {
           type: FieldType.object,
           key: 'address',
-          fields: [{ type: FieldType.input, key: 'city' }, { type: FieldType.input, key: 'zip' }],
+          fields: [
+            { type: FieldType.input, key: 'city' },
+            { type: FieldType.input, key: 'zip' },
+          ],
         },
       ],
     };
     const instance = engine.build(signal(params), injector);
-    expect(instance.form.getRawValue()).toEqual({ name: 'Grace', address: { city: 'NYC', zip: null } });
+    expect(instance.form.getRawValue()).toEqual({
+      name: 'Grace',
+      address: { city: 'NYC', zip: null },
+    });
   });
 
   it('resolves Dynamic (observe) props, including cascades', async () => {
@@ -74,7 +82,9 @@ describe('FormEngineService (logic)', () => {
         {
           type: FieldType.select,
           key: 'city',
-          options: observe('country', (country: string) => (country === 'us' ? [{ label: 'NYC', value: 'nyc' }] : [])),
+          options: observe('country', (country: string) =>
+            country === 'us' ? [{ label: 'NYC', value: 'nyc' }] : [],
+          ),
           visible: observe('country', (country: string) => !!country),
         },
       ],
@@ -98,8 +108,14 @@ describe('FormEngineService (logic)', () => {
           key: 'contacts',
           isList: true,
           // isList value is V[] at runtime; see the type-gap note on ValueField.value
-          value: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] as unknown as Record<string, unknown>,
-          fields: [{ type: FieldType.input, key: 'name' }, { type: FieldType.input, key: 'phone' }],
+          value: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] as unknown as Record<
+            string,
+            unknown
+          >,
+          fields: [
+            { type: FieldType.input, key: 'name' },
+            { type: FieldType.input, key: 'phone' },
+          ],
         },
       ],
     });
@@ -110,7 +126,11 @@ describe('FormEngineService (logic)', () => {
 
     it('gives each initial item its own control at the right index (not a shared/colliding one)', () => {
       expect(instance.form.getRawValue()).toEqual({
-        contacts: [{ name: 'A', phone: null }, { name: 'B', phone: null }, { name: 'C', phone: null }],
+        contacts: [
+          { name: 'A', phone: null },
+          { name: 'B', phone: null },
+          { name: 'C', phone: null },
+        ],
       });
 
       const contactsField = instance.fields.find((f) => f.key === 'contacts')!;
@@ -118,14 +138,21 @@ describe('FormEngineService (logic)', () => {
       const nameControl = instance.control(item1Fields.find((f) => f.key === 'name')!);
       nameControl?.setValue('B-edited');
       expect(instance.form.getRawValue()).toEqual({
-        contacts: [{ name: 'A', phone: null }, { name: 'B-edited', phone: null }, { name: 'C', phone: null }],
+        contacts: [
+          { name: 'A', phone: null },
+          { name: 'B-edited', phone: null },
+          { name: 'C', phone: null },
+        ],
       });
     });
 
     it('reindexes remaining items after removing a middle item', () => {
       instance.removeListItem('contacts', 1); // remove 'B'
       expect(instance.form.getRawValue()).toEqual({
-        contacts: [{ name: 'A', phone: null }, { name: 'C', phone: null }],
+        contacts: [
+          { name: 'A', phone: null },
+          { name: 'C', phone: null },
+        ],
       });
 
       const contactsField = instance.fields.find((f) => f.key === 'contacts')!;
@@ -134,7 +161,10 @@ describe('FormEngineService (logic)', () => {
       expect(nameField.path).toBe('contacts.1.name');
       instance.control(nameField)?.setValue('C-edited');
       expect(instance.form.getRawValue()).toEqual({
-        contacts: [{ name: 'A', phone: null }, { name: 'C-edited', phone: null }],
+        contacts: [
+          { name: 'A', phone: null },
+          { name: 'C-edited', phone: null },
+        ],
       });
 
       // the removed item's own (now stale-pathed) field objects must not linger in `flat` —
@@ -150,7 +180,9 @@ describe('FormEngineService (logic)', () => {
       const contactsField = instance.fields.find((f) => f.key === 'contacts')!;
       const newItemFields = instance.listItemFields(contactsField, 3);
       instance.control(newItemFields.find((f) => f.key === 'name')!)?.setValue('D');
-      expect((instance.form.getRawValue() as { contacts: { name: string }[] }).contacts[3].name).toBe('D');
+      expect(
+        (instance.form.getRawValue() as { contacts: { name: string }[] }).contacts[3].name,
+      ).toBe('D');
     });
   });
 
@@ -174,7 +206,8 @@ describe('FormEngineService (logic)', () => {
       await Promise.resolve();
 
       const rowsField = instance.fields.find((f) => f.key === 'rows')!;
-      const canAddItem = () => (instance.fieldState(rowsField)() as { canAddItem?: boolean }).canAddItem;
+      const canAddItem = () =>
+        (instance.fieldState(rowsField)() as { canAddItem?: boolean }).canAddItem;
       expect(canAddItem()).toBe(false);
 
       const item0Fields = instance.listItemFields(rowsField, 0);
@@ -195,7 +228,11 @@ describe('FormEngineService (logic)', () => {
             value: [{ key: 'age' }, { key: 'name' }] as unknown as Record<string, unknown>,
             fields: [
               { type: FieldType.input, key: 'key' },
-              { type: FieldType.input, key: 'label', value: observe('./key', (key: string) => `label-for-${key}`) },
+              {
+                type: FieldType.input,
+                key: 'label',
+                value: observe('./key', (key: string) => `label-for-${key}`),
+              },
             ],
           },
         ],
@@ -509,7 +546,10 @@ describe('FormEngineService (logic)', () => {
       });
 
       it('reorders items via itemKey, moving the SAME control instance and preserving its live value', () => {
-        const field = rowsField([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]);
+        const field = rowsField([
+          { id: 'a', name: 'A' },
+          { id: 'b', name: 'B' },
+        ]);
         const paramsSig = signal<FormParameter<Record<string, unknown>>>({ fields: [field] });
         const instance = buildAndFlush(paramsSig);
 
@@ -520,13 +560,19 @@ describe('FormEngineService (logic)', () => {
 
         const reordered = {
           ...field,
-          value: [{ id: 'b', name: 'B' }, { id: 'a', name: 'A' }] as unknown as Record<string, unknown>,
+          value: [
+            { id: 'b', name: 'B' },
+            { id: 'a', name: 'A' },
+          ] as unknown as Record<string, unknown>,
         };
         paramsSig.set({ fields: [reordered] });
         appRef.tick();
 
         expect(instance.form.getRawValue()).toEqual({
-          rows: [{ id: 'b', name: 'B-edited' }, { id: 'a', name: 'A' }],
+          rows: [
+            { id: 'b', name: 'B-edited' },
+            { id: 'a', name: 'A' },
+          ],
         });
 
         const liveField2 = instance.fields.find((f) => f.key === 'rows')!;
@@ -563,7 +609,11 @@ describe('FormEngineService (logic)', () => {
         appRef.tick();
 
         expect(instance.form.getRawValue()).toEqual({
-          rows: [{ id: 'c', name: 'C' }, { id: 'a', name: 'A-edited' }, { id: 'd', name: 'D' }],
+          rows: [
+            { id: 'c', name: 'C' },
+            { id: 'a', name: 'A-edited' },
+            { id: 'd', name: 'D' },
+          ],
         });
 
         const liveField2 = instance.fields.find((f) => f.key === 'rows')!;
@@ -591,7 +641,10 @@ describe('FormEngineService (logic)', () => {
         // tail-append a 3rd item; the first two keep their positions
         const appended = {
           ...field,
-          value: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] as unknown as Record<string, unknown>,
+          value: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] as unknown as Record<
+            string,
+            unknown
+          >,
         };
         paramsSig.set({ fields: [appended] });
         appRef.tick();
@@ -602,7 +655,9 @@ describe('FormEngineService (logic)', () => {
 
         const liveField2 = instance.fields.find((f) => f.key === 'rows')!;
         const item0FieldsAfter = instance.listItemFields(liveField2, 0);
-        expect(instance.control(item0FieldsAfter.find((f) => f.key === 'name')!)).toBe(aNameControl);
+        expect(instance.control(item0FieldsAfter.find((f) => f.key === 'name')!)).toBe(
+          aNameControl,
+        );
       });
 
       it("3b: resyncs a kept item's own sub-field template when the item template changes (value unchanged)", async () => {
@@ -644,7 +699,9 @@ describe('FormEngineService (logic)', () => {
 
         expect(instance.control(nameField0After)).toBe(originalControl); // same control instance
         expect(instance.control(nameField0After)?.value).toBe('A-edited'); // value undisturbed
-        expect((instance.fieldState(nameField0After)() as { label?: string }).label).toBe('Label B');
+        expect((instance.fieldState(nameField0After)() as { label?: string }).label).toBe(
+          'Label B',
+        );
       });
     });
   });
@@ -765,33 +822,41 @@ describe('GenericFormComponent (render)', () => {
     expect(instanceAfter.form.get('name')?.value).toBe('Ada Lovelace'); // not wiped
   });
 
-  it('the motivating scenario: a fresh-reference field set (e.g. a computed() rebuilding its ' +
-    'fields array) does not throw, and a typed value survives', async () => {
-    const nameField = { type: FieldType.input, key: 'name' } as const;
-    const params: FormParameter<Record<string, unknown>> = { fields: [nameField] };
-    const fixture = TestBed.createComponent(GenericFormComponent);
-    fixture.componentRef.setInput('params', params);
-    fixture.detectChanges();
-    await fixture.whenStable();
+  it(
+    'the motivating scenario: a fresh-reference field set (e.g. a computed() rebuilding its ' +
+      'fields array) does not throw, and a typed value survives',
+    async () => {
+      const nameField = { type: FieldType.input, key: 'name' } as const;
+      const params: FormParameter<Record<string, unknown>> = { fields: [nameField] };
+      const fixture = TestBed.createComponent(GenericFormComponent);
+      fixture.componentRef.setInput('params', params);
+      fixture.detectChanges();
+      await fixture.whenStable();
 
-    const input = (fixture.nativeElement as HTMLElement).querySelector('input') as HTMLInputElement;
-    input.value = 'Ada Lovelace';
-    input.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
+      const input = (fixture.nativeElement as HTMLElement).querySelector(
+        'input',
+      ) as HTMLInputElement;
+      input.value = 'Ada Lovelace';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
 
-    // exactly what grid-filter-panel's formParams computed()/grid-cell's editFormParams do on
-    // every recompute — a brand-new field object, same shape
-    fixture.componentRef.setInput('params', { fields: [{ ...nameField }] });
-    expect(() => fixture.detectChanges()).not.toThrow();
-    await fixture.whenStable();
-    fixture.detectChanges();
+      // exactly what grid-filter-panel's formParams computed()/grid-cell's editFormParams do on
+      // every recompute — a brand-new field object, same shape
+      fixture.componentRef.setInput('params', { fields: [{ ...nameField }] });
+      expect(() => fixture.detectChanges()).not.toThrow();
+      await fixture.whenStable();
+      fixture.detectChanges();
 
-    const instance = (fixture.componentInstance as unknown as { instance: FormInstance }).instance;
-    expect(instance.form.get('name')?.value).toBe('Ada Lovelace');
+      const instance = (fixture.componentInstance as unknown as { instance: FormInstance })
+        .instance;
+      expect(instance.form.get('name')?.value).toBe('Ada Lovelace');
 
-    const nameInput = (fixture.nativeElement as HTMLElement).querySelector('input') as HTMLInputElement;
-    expect(nameInput.value).toBe('Ada Lovelace');
-  });
+      const nameInput = (fixture.nativeElement as HTMLElement).querySelector(
+        'input',
+      ) as HTMLInputElement;
+      expect(nameInput.value).toBe('Ada Lovelace');
+    },
+  );
 
   it('clicking Add on a list-of-objects renders a new item row', async () => {
     const params: FormParameter<Record<string, unknown>> = {
@@ -811,9 +876,9 @@ describe('GenericFormComponent (render)', () => {
 
     expect((fixture.nativeElement as HTMLElement).querySelectorAll('input').length).toBe(0);
 
-    const addButton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) =>
-      b.getAttribute('aria-label')?.startsWith('Add'),
-    ) as HTMLButtonElement;
+    const addButton = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
+    ).find((b) => b.getAttribute('aria-label')?.startsWith('Add')) as HTMLButtonElement;
     expect(addButton).toBeTruthy();
     addButton.click();
     fixture.detectChanges();

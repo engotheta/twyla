@@ -181,11 +181,15 @@
     <button
       type="button"
       class="cv-pane-control"
-      [attr.aria-label]="(isFullscreen(key) ? 'Exit full screen: ' : 'Full screen: ') + paneLabel(rc)"
+      [attr.aria-label]="
+        (isFullscreen(key) ? 'Exit full screen: ' : 'Full screen: ') + paneLabel(rc)
+      "
       [matTooltip]="isFullscreen(key) ? 'Exit full screen' : 'Full screen'"
       (click)="toggleFullscreen(key, item)"
     >
-      <mat-icon aria-hidden="true">{{ isFullscreen(key) ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+      <mat-icon aria-hidden="true">{{
+        isFullscreen(key) ? 'fullscreen_exit' : 'fullscreen'
+      }}</mat-icon>
     </button>
   }
 </ng-template>

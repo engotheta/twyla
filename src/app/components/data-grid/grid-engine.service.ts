@@ -365,7 +365,9 @@ export class GridEngineService {
     // ── columns: static config, or auto-generated once the first row of data is known ──
     const configColumns = computed<GridColumn_<RowType>[] | undefined>(() => {
       const params = activeParams();
-      return params.columns?.length ? normalizeColumns(params.columns, params.lastDotAsName) : undefined;
+      return params.columns?.length
+        ? normalizeColumns(params.columns, params.lastDotAsName)
+        : undefined;
     });
     const autoColumnsSig = signal<GridColumn_<RowType>[]>([]);
     // SPEC §2b: columns discovered from the data via `addColumnsFromData()` (GridParameter.canAddColumns)

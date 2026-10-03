@@ -205,7 +205,9 @@ export class ToastStackComponent {
   }
 
   protected onFocusOut(event: FocusEvent): void {
-    this.syncPause(event.relatedTarget instanceof Node && this.element.contains(event.relatedTarget));
+    this.syncPause(
+      event.relatedTarget instanceof Node && this.element.contains(event.relatedTarget),
+    );
   }
 
   /** Keyboard users keep their place: focus moves to the next toast, or back where it came from. */

@@ -12,7 +12,10 @@ import { Validator } from './interfaces/form-state.interface';
 
 /** the message a field shows for `value` — the same lookup the inputs use */
 function messageFor(value: unknown, ...rules: Validator[]): string | null {
-  const control = new FormControl(value, rules.map((rule) => rule.validator as never));
+  const control = new FormControl(
+    value,
+    rules.map((rule) => rule.validator as never),
+  );
   return firstErrorMessage(control.errors, rules);
 }
 

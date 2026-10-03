@@ -70,13 +70,17 @@ function discoverExtraKeys(rows: unknown[], knownKeys: Set<string>): string[] {
 })
 export class GridExportPanelComponent<RowType = any> {
   protected readonly data = inject<GridExportPanelData<RowType>>(MAT_DIALOG_DATA);
-  private readonly dialogRef = inject(MatDialogRef<GridExportPanelComponent<RowType>, GridColumn_[] | undefined>);
+  private readonly dialogRef = inject(
+    MatDialogRef<GridExportPanelComponent<RowType>, GridColumn_[] | undefined>,
+  );
 
   private readonly columnByKey = new Map(this.data.instance.leafColumns().map((c) => [c.key, c]));
 
   protected readonly entries = signal<ExportEntry[]>(this.buildInitialEntries());
 
-  protected readonly selectedCount = computed(() => this.entries().filter((e) => e.selected).length);
+  protected readonly selectedCount = computed(
+    () => this.entries().filter((e) => e.selected).length,
+  );
 
   private buildInitialEntries(): ExportEntry[] {
     const inst = this.data.instance;
@@ -88,12 +92,11 @@ export class GridExportPanelComponent<RowType = any> {
     const extraKeys = discoverExtraKeys(inst.rows(), new Set(allLeafKeys));
     const hiddenDeclaredKeys = allLeafKeys.filter((k) => !visibleKeys.includes(k));
 
-    const label = (key: string): string => this.columnByKey.get(key)?.label ?? labelFromFieldString(key);
+    const label = (key: string): string =>
+      this.columnByKey.get(key)?.label ?? labelFromFieldString(key);
 
     const initialKeys = inst.params().export?.initialKeys;
-    const preselected = initialKeys?.length
-      ? initialKeys
-      : visibleKeys;
+    const preselected = initialKeys?.length ? initialKeys : visibleKeys;
     const preselectedSet = new Set(preselected);
     const rest = [...visibleKeys, ...hiddenDeclaredKeys, ...extraKeys].filter(
       (k) => !preselectedSet.has(k),

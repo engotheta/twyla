@@ -27,7 +27,10 @@ function expandShortHex(hex3: string): string {
 }
 
 function rgbToHex({ r, g, b }: Rgb): string {
-  const channel = (n: number) => Math.round(clamp(n, 0, 255)).toString(16).padStart(2, '0');
+  const channel = (n: number) =>
+    Math.round(clamp(n, 0, 255))
+      .toString(16)
+      .padStart(2, '0');
   return `#${channel(r)}${channel(g)}${channel(b)}`;
 }
 
@@ -145,7 +148,8 @@ function normalizeHex(hex: string): string {
 export function fromHex(hex: string, format: ColorFormat): string {
   if (format === 'hex') return hex;
   const rgb = hexToRgb(hex);
-  if (format === 'rgb') return `rgb(${Math.round(rgb.r)}, ${Math.round(rgb.g)}, ${Math.round(rgb.b)})`;
+  if (format === 'rgb')
+    return `rgb(${Math.round(rgb.r)}, ${Math.round(rgb.g)}, ${Math.round(rgb.b)})`;
   if (format === 'hsl') {
     const { h, s, l } = rgbToHsl(rgb);
     return `hsl(${h}, ${s}%, ${l}%)`;

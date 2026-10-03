@@ -24,9 +24,7 @@ class HostComponent {
 function mount(rtl = false) {
   TestBed.configureTestingModule({
     imports: [HostComponent],
-    providers: rtl
-      ? [{ provide: Directionality, useValue: { value: 'rtl', change: EMPTY } }]
-      : [],
+    providers: rtl ? [{ provide: Directionality, useValue: { value: 'rtl', change: EMPTY } }] : [],
   });
   const fixture = TestBed.createComponent(HostComponent);
   fixture.detectChanges();

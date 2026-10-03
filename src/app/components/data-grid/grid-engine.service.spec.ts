@@ -39,10 +39,7 @@ describe('GridEngineService (parameter reactivity)', () => {
 
     params.set({
       columns: ['id', 'name', 'role'],
-      gridData: [
-        { id: 1, name: 'Ada' },
-        { id: 2, name: 'Grace' } as Row,
-      ],
+      gridData: [{ id: 1, name: 'Ada' }, { id: 2, name: 'Grace' } as Row],
     });
 
     await vi.waitFor(() =>
@@ -77,9 +74,7 @@ describe('GridEngineService (parameter reactivity)', () => {
     expect(instance.visibleColumns().map((c) => c.key)).not.toContain('city');
     expect(instance.visibleColumns().map((c) => c.key)).not.toContain('street');
     // the group header cell itself disappears too — no descendant left to span
-    const allHeaderLabels = instance
-      .headerRows()
-      .flatMap((row) => row.cells.map((c) => c.label));
+    const allHeaderLabels = instance.headerRows().flatMap((row) => row.cells.map((c) => c.label));
     expect(allHeaderLabels).not.toContain('Address');
     expect(allHeaderLabels).not.toContain('City');
     expect(allHeaderLabels).not.toContain('Street');
@@ -118,9 +113,7 @@ describe('GridEngineService (parameter reactivity)', () => {
     expect(instance.visibleColumns().map((c) => c.key)).not.toContain('extra');
 
     instance.setColumnVisible('extra', true);
-    await vi.waitFor(() =>
-      expect(instance.visibleColumns().map((c) => c.key)).toContain('extra'),
-    );
+    await vi.waitFor(() => expect(instance.visibleColumns().map((c) => c.key)).toContain('extra'));
   });
 
   it('does NOT reset page/selection/sort just because parameter() re-emits an unrelated change', async () => {
@@ -154,7 +147,11 @@ describe('GridEngineService (parameter reactivity)', () => {
 
   it('resets page/manual order once gridData genuinely changes identity', async () => {
     const pageOneData = Array.from({ length: 20 }, (_, i) => ({ id: i + 1, name: `Row ${i + 1}` }));
-    const params = signal<GridParameter<Row>>({ columns: ['id', 'name'], gridData: pageOneData, size: 5 });
+    const params = signal<GridParameter<Row>>({
+      columns: ['id', 'name'],
+      gridData: pageOneData,
+      size: 5,
+    });
     const instance = engine.build(params, injector);
     await vi.waitFor(() => expect(instance.rows().length).toBe(5));
 
@@ -254,7 +251,10 @@ describe('GridEngineService (parameter reactivity)', () => {
       expect(instance.leafColumns().map((c) => c.key)).toContain('name');
 
       // a fundamentally different dataset — mirrors the existing page/manualRowOrder reset test
-      params.set({ ...params(), gridData: [{ id: 9, name: 'Only row now' } as unknown as RichRow] });
+      params.set({
+        ...params(),
+        gridData: [{ id: 9, name: 'Only row now' } as unknown as RichRow],
+      });
 
       await vi.waitFor(() =>
         expect(instance.leafColumns().map((c) => c.key)).not.toContain('name'),
@@ -402,9 +402,9 @@ describe('DataGridComponent — headerButtons', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const btn = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('th button')).find(
-      (b) => b.textContent?.includes('Refresh'),
-    );
+    const btn = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('th button'),
+    ).find((b) => b.textContent?.includes('Refresh'));
     expect(btn).toBeTruthy();
     btn?.dispatchEvent(new Event('click', { bubbles: true }));
 

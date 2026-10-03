@@ -33,7 +33,11 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
     @let f = state();
 
     @if (f.type === 'textarea') {
-      <mat-form-field [appearance]="appearance()" class="w-full" [class.hide-subscript]="!showSubscript()">
+      <mat-form-field
+        [appearance]="appearance()"
+        class="w-full"
+        [class.hide-subscript]="!showSubscript()"
+      >
         @if (f.showLabel !== false && f.label) {
           <mat-label>{{ f.label }}</mat-label>
         }
@@ -152,7 +156,9 @@ export class TextareaFieldComponent {
   );
 
   protected readonly errorMessage = computed(() =>
-    this.status().touched ? firstErrorMessage(this.status().errors, this.state().validations) : null,
+    this.status().touched
+      ? firstErrorMessage(this.status().errors, this.state().validations)
+      : null,
   );
 
   constructor() {

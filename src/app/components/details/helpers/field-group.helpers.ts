@@ -1,5 +1,10 @@
 import { ArrayConfig, DetailsParameter } from '../interfaces/details.interface';
-import { FieldsGroupsMap, FieldGroup, GROUP_PROPS, FieldGroupData } from '../interfaces/field-group.interface';
+import {
+  FieldsGroupsMap,
+  FieldGroup,
+  GROUP_PROPS,
+  FieldGroupData,
+} from '../interfaces/field-group.interface';
 import { camelToSpaced } from './field-labels.helpers';
 import { propsFromString } from './field-string.helpers';
 import { DataField, FieldData } from '../interfaces/field.interface';
@@ -120,11 +125,15 @@ export function attachFieldsToGroups(
 
   const resolved = groups.map((group) => {
     const keys = group.keys?.filter((k) => k !== '...') ?? [];
-    const matched = keys.length ? fields.filter((f) => keys.includes(f.key) || keys.includes(f.path ?? '')) : [];
+    const matched = keys.length
+      ? fields.filter((f) => keys.includes(f.key) || keys.includes(f.path ?? ''))
+      : [];
 
     matched.forEach((f) => used.add(fieldId(f)));
 
-    const groups_ = group.groups?.length ? attachFieldsToGroups(group.groups, fields, used) : group.groups;
+    const groups_ = group.groups?.length
+      ? attachFieldsToGroups(group.groups, fields, used)
+      : group.groups;
 
     return { ...group, fields: matched, groups: groups_ };
   });

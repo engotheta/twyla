@@ -375,7 +375,15 @@ describe('ContentsViewComponent', () => {
 
   it("title heads the header in place of the label; without one only header: 'full' uses the label", async () => {
     const contents: ContentView[] = [
-      { type: 'html', slug: 'a', label: 'Label A', title: 'Title A', icon: 'home', badge: 7, html: 'a' },
+      {
+        type: 'html',
+        slug: 'a',
+        label: 'Label A',
+        title: 'Title A',
+        icon: 'home',
+        badge: 7,
+        html: 'a',
+      },
       { type: 'html', slug: 'b', label: 'Label B', html: 'b' },
       { type: 'html', slug: 'c', label: 'Label C', html: 'c', header: 'full' },
       { type: 'html', slug: 'd', label: 'Label D', title: 'Title D', html: 'd', header: 'full' },
@@ -402,7 +410,15 @@ describe('ContentsViewComponent', () => {
 
   it('a title shows alone in a tab panel header — the tab button carries icon, label and badge', async () => {
     const contents: ContentView[] = [
-      { type: 'html', slug: 'a', label: 'Tab A', title: 'Panel title', icon: 'home', badge: 7, html: 'a' },
+      {
+        type: 'html',
+        slug: 'a',
+        label: 'Tab A',
+        title: 'Panel title',
+        icon: 'home',
+        badge: 7,
+        html: 'a',
+      },
     ];
     const fixture = mount({ contents, showContentsInTabs: true });
     fixture.detectChanges();
@@ -476,9 +492,7 @@ describe('ContentsViewComponent', () => {
         type: 'group',
         slug: 'g1',
         bodiesClass: 'level1-body-class',
-        contents: [
-          { type: 'html', slug: 'leaf', html: 'leaf-body', bodyClass: 'own-body-class' },
-        ],
+        contents: [{ type: 'html', slug: 'leaf', html: 'leaf-body', bodyClass: 'own-body-class' }],
       },
     ];
     const fixture = mount({ contents, bodiesClass: 'root-body-class' });
@@ -695,9 +709,12 @@ describe('ContentsViewComponent', () => {
   it("the owner's toggles switch the nested panels — by click, or arrow key and Enter", async () => {
     const { fixture } = await mountWithInstance({ contents: [tabbedGroup()] });
     const item = (fixture.nativeElement as HTMLElement).querySelector('.contents-view-item')!;
-    const tabs = () => Array.from(item.firstElementChild!.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    const tabs = () =>
+      Array.from(item.firstElementChild!.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
     const panels = () =>
-      Array.from(item.querySelector('contents-view')!.querySelectorAll<HTMLElement>('[role="tabpanel"]'));
+      Array.from(
+        item.querySelector('contents-view')!.querySelectorAll<HTMLElement>('[role="tabpanel"]'),
+      );
 
     expect(panels().map((p) => p.hidden)).toEqual([false, true]);
     tabs()[1].click();
@@ -726,7 +743,9 @@ describe('ContentsViewComponent', () => {
 
     // no header — nothing but the toggles would have called for one — and a [sidebar | body] row
     const frame = item.firstElementChild as HTMLElement;
-    expect(frame.querySelector('[role="tablist"]')!.getAttribute('aria-orientation')).toBe('vertical');
+    expect(frame.querySelector('[role="tablist"]')!.getAttribute('aria-orientation')).toBe(
+      'vertical',
+    );
     expect(frame.querySelector('.contents-view-body')!.contains(nested)).toBe(true);
 
     listeners.forEach((l) => l({ matches: false } as MediaQueryListEvent));
@@ -948,8 +967,9 @@ describe('ContentsViewComponent', () => {
   it('renders no gutters unless resizable + cover + list + >1 content', async () => {
     expect(gutters(await mountSettled({ contents: threeContents })).length).toBe(0); // resizable unset
     expect(
-      gutters(await mountSettled({ contents: threeContents, resizable: true, showContentsInTabs: true }))
-        .length,
+      gutters(
+        await mountSettled({ contents: threeContents, resizable: true, showContentsInTabs: true }),
+      ).length,
     ).toBe(0); // tabs
     expect(
       gutters(await mountSettled({ contents: threeContents, resizable: true, contentsFit: 'flow' }))
@@ -966,7 +986,10 @@ describe('ContentsViewComponent', () => {
   });
 
   it('a measured 2×2 grid → one width + one height gutter, ARIA-wired, positioning context', async () => {
-    const four = [...threeContents, { type: 'html', slug: 'd', label: 'D', html: 'd' } as ContentView];
+    const four = [
+      ...threeContents,
+      { type: 'html', slug: 'd', label: 'D', html: 'd' } as ContentView,
+    ];
     const { fixture } = await measuredLayout({ contents: four, resizable: true }, 2, 2);
 
     expect(gutterCounts(fixture)).toEqual({ vertical: 1, horizontal: 1 });
@@ -1154,7 +1177,11 @@ describe('ContentsViewComponent', () => {
     expect(controls(await mountSettled({ contents: threeContents, collapsible: true }))).toBe(3);
     expect(
       controls(
-        await mountSettled({ contents: threeContents, collapsible: true, showContentsInTabs: true }),
+        await mountSettled({
+          contents: threeContents,
+          collapsible: true,
+          showContentsInTabs: true,
+        }),
       ),
     ).toBe(0);
   });

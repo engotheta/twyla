@@ -109,7 +109,9 @@ describe('FetchService', () => {
   it('lets onException mark an error handled, suppressing the toast', async () => {
     onException.mockReturnValue(true);
     const promise = api.fetch({ url: 'private' });
-    http.expectOne('https://api.test/private').flush(null, { status: 401, statusText: 'Unauthorized' });
+    http
+      .expectOne('https://api.test/private')
+      .flush(null, { status: 401, statusText: 'Unauthorized' });
 
     await promise;
     expect(notifier.error).not.toHaveBeenCalled();
@@ -117,7 +119,9 @@ describe('FetchService', () => {
 
   it('retries network/5xx errors, but not 4xx', async () => {
     const flaky = api.fetch({ url: 'flaky', retry: 2 });
-    http.expectOne('https://api.test/flaky').flush(null, { status: 503, statusText: 'Unavailable' });
+    http
+      .expectOne('https://api.test/flaky')
+      .flush(null, { status: 503, statusText: 'Unavailable' });
     await tick();
     http.expectOne('https://api.test/flaky').flush({ data: 'ok' });
     await expect(flaky).resolves.toBe('ok');
@@ -152,7 +156,9 @@ describe('FetchService', () => {
 
     const loading = signal(false);
     const values: unknown[] = [];
-    api.fetch$({ ...params, loading: { signal: loading } }).subscribe((value) => values.push(value));
+    api
+      .fetch$({ ...params, loading: { signal: loading } })
+      .subscribe((value) => values.push(value));
 
     expect(values).toEqual(['old']);
     expect(loading()).toBe(false);
@@ -169,8 +175,18 @@ describe('FetchService', () => {
   });
 
   it("'switch' cancels the previous call of the same operation", async () => {
-    const first = api.fetch({ url: 'search', method: 'GET', variables: { q: 'a' }, concurrency: 'switch' });
-    const second = api.fetch({ url: 'search', method: 'GET', variables: { q: 'ab' }, concurrency: 'switch' });
+    const first = api.fetch({
+      url: 'search',
+      method: 'GET',
+      variables: { q: 'a' },
+      concurrency: 'switch',
+    });
+    const second = api.fetch({
+      url: 'search',
+      method: 'GET',
+      variables: { q: 'ab' },
+      concurrency: 'switch',
+    });
 
     const [cancelled, live] = http.match((r) => r.url === 'https://api.test/search');
     expect(cancelled.cancelled).toBe(true);
@@ -183,7 +199,12 @@ describe('FetchService', () => {
   it("'exhaust' ignores calls while one of the same operation is in flight", async () => {
     const finalFn = vi.fn();
     const first = api.fetch({ url: 'submit', variables: { n: 1 }, concurrency: 'exhaust' });
-    const ignored = api.fetch({ url: 'submit', variables: { n: 2 }, concurrency: 'exhaust', finalFn });
+    const ignored = api.fetch({
+      url: 'submit',
+      variables: { n: 2 },
+      concurrency: 'exhaust',
+      finalFn,
+    });
 
     await expect(ignored).resolves.toBeUndefined();
     expect(finalFn).not.toHaveBeenCalled();
