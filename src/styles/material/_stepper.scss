@@ -1,3 +1,8 @@
+// The horizontal stepper — the steps of a generic form (`FormParameter.steps`): a pill-shaped
+// header whose steps share the width, and a bar that fills as far as the current step.
+// `StepperProgressIndicatorDirective` (generic-form) adds `.mat-stepper-progress` and sets
+// `--progress-x` / `--progress-width` on it.
+
 :root {
   --mat-stepper-header-height: 42px;
   --mat-stepper-container-color: none;
@@ -94,21 +99,24 @@
   line-height: normal;
 }
 
+// The step circles. Each colour is a palette property with its light value as the fallback
+// (Tailwind only emits the properties its own utilities use), so the circles turn with the theme
+// — and each pairing keeps its number or tick at 4.5:1 or better in both.
 .mat-step-icon {
-  background: #e2e8f0 !important;
-  color: #64748b !important;
-  border: 1px solid #cbd5e1;
+  background: var(--color-gray-200, #e5e7eb) !important;
+  color: var(--color-gray-700, #374151) !important;
+  border: 1px solid var(--color-gray-300, #d1d5db);
 }
 
 .mat-step-icon-selected,
 .mat-step-icon-state-edit {
-  background: var(--color-primary-500) !important;
-  color: #fff !important;
-  border-color: var(--color-primary-500) !important;
+  background: var(--color-primary) !important;
+  color: var(--color-white, #fff) !important;
+  border-color: var(--color-primary) !important;
 }
 
 .mat-step-icon-state-done {
-  background: #16a34a !important;
-  color: #fff !important;
-  border-color: #16a34a !important;
+  background: var(--color-green-700, #15803d) !important;
+  color: var(--color-white, #fff) !important;
+  border-color: var(--color-green-700, #15803d) !important;
 }

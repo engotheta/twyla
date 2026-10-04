@@ -24,10 +24,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatStepperModule } from '@angular/material/stepper';
 import { Observable, Subscription, firstValueFrom, isObservable } from 'rxjs';
+import { provideMaterialIntl } from '@services/i18n/material-intl';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { controlStatus } from './helpers/control-status.helpers';
 import { FormFieldComponent } from './fields/form-field.component';
 import { StepField } from './interfaces/container-fields.interface';
-import { FormEngineService, FormInstance } from './form-engine.service';
+import { fieldIdentity, FormEngineService, FormInstance } from './form-engine.service';
+import { FORM_MESSAGES } from './form.messages';
 import { FormField, isStepField, isValueField } from './interfaces/form-field.interface';
 import { FormParameter } from './interfaces/form-parameter.interface';
 import { StepState } from './interfaces/form-state.interface';
@@ -67,6 +70,8 @@ interface DisplayStep {
     StepperProgressIndicatorDirective,
     FormFieldComponent,
   ],
+  // the stepper's own labels ("Optional", "Completed", "Editable"), in the user's language
+  providers: [provideMaterialIntl()],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './generic-form.component.html',
 })
@@ -93,6 +98,9 @@ export class GenericFormComponent implements OnInit, OnDestroy {
   );
 
   private readonly engine = inject(FormEngineService);
+  protected readonly t = injectMessages(FORM_MESSAGES);
+  /** what the template tracks a field by: stable when the form is given a fresh config */
+  protected readonly identity = fieldIdentity;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   // ngOnInit is NOT a valid injection context (only the constructor/field initializers are) —
   // `controlStatus()` needs one (it calls `toObservable()`), so `buildSteps()`/`makeBannerSignal()`
@@ -194,9 +202,8 @@ export class GenericFormComponent implements OnInit, OnDestroy {
     }));
 
     if (nonStepFields.length) {
-      const mixedLabel = this.params().mixedStepLabel ?? 'More Info';
       const mixed: DisplayStep = {
-        label: computed(() => mixedLabel),
+        label: computed(() => this.params().mixedStepLabel ?? this.t().moreInfo),
         optional: false,
         fields: nonStepFields,
         valid: this.makeStepValiditySignal(nonStepFields),

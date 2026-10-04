@@ -1,5 +1,5 @@
 import { HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { DEFAULT_FETCH_CONFIG } from './fetch-config.token';
+import { FETCH_EN } from './fetch.messages';
 import {
   appendQueryParams,
   defaultResFn,
@@ -9,7 +9,7 @@ import {
 } from './fetch.helpers';
 import { applyFieldSelection, toSelectionSet, unwrapGraphqlResponse } from './graphql.helpers';
 
-const messages = DEFAULT_FETCH_CONFIG.messages;
+const messages = FETCH_EN;
 
 describe('fetch helpers', () => {
   it('stableStringify ignores key order at every depth', () => {

@@ -110,6 +110,33 @@ const signIn: FormParameter<{ username: string; password: string }> = {
 };
 ```
 
+## Text and languages
+
+The form's own text — Next, Back, Submit, "This field is required", the attachment field's
+prompts, the stepper's labels — is `FORM_MESSAGES` (`form.messages.ts`, Swahili in
+`form.messages.sw.ts`), and follows the user's language. An app rewords it with
+`provideMessages(FORM_MESSAGES, { … })`; see the i18n README.
+
+- **Validators.** `validators.required()` and the rest say their default message in the user's
+  language, at the moment it is shown. A message passed in wins:
+  `validators.required('Enter your email')`. A message may also be a function of the form's text
+  and the error: `{ name: 'minlength', validator, message: (text, error) => … }`.
+- **A config built from a page's text.** Labels and messages a page writes itself come from the
+  page's own messages, so the config is built in the language of the moment — in a `computed`,
+  which builds it again when the language changes:
+
+  ```typescript
+  protected readonly t = injectMessages(AUTH_MESSAGES);
+  protected readonly params = computed(() =>
+    forgotPasswordForm(this.t, (value) => this.send(value)),
+  );
+  ```
+
+  The form takes the new config without starting over (SPEC §16): the controls, what was typed,
+  the focus and the errors on screen stay, and the labels and messages change.
+- **Cross rules** are attached once, when the form is built. Give one a function for a message
+  that should follow the language: `message: () => t().errors.mismatch` (SPEC §9).
+
 ## `fieldsClass` vs `fieldsContainerClass`
 
 Every container that has a `fields` list (`ObjectField`, `StepField`,

@@ -71,11 +71,19 @@ export interface SessionApi {
   logout?(session: Session): SessionResult<unknown>;
 }
 
-/** A failure whose message is written for the user — "Incorrect username or password." */
+/** the failures the session's own text covers (`SESSION_MESSAGES.errors`) */
+export type SessionErrorKey = 'incorrectCredentials' | 'invalidResetLink';
+
+/**
+ * A failure whose message is written for the user — "Incorrect username or password." An API
+ * that can't answer in the user's language names one of the session's own messages with `key`,
+ * and that is shown, translated, in place of `message`.
+ */
 export class SessionError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    readonly key?: SessionErrorKey,
   ) {
     super(message);
     this.name = 'SessionError';

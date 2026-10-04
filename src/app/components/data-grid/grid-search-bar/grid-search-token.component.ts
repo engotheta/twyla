@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
-import { GRID_SEARCH_OPERATORS } from '../helpers/grid-search-bar.constants';
+import { I18nService } from '@services/i18n/i18n.service';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { GRID_MESSAGES } from '../grid.messages';
 import {
   hasValuePart,
   inputTypeFor,
@@ -37,8 +39,8 @@ import { GridSearchSegmentComponent } from './grid-search-segment.component';
         [active]="part() === 'field'"
         [text]="t.title"
         [query]="query()"
-        [label]="t.title + ', field'"
-        [viewLabel]="'Change the field of ' + name()"
+        [label]="msg().search.part.field(t.title)"
+        [viewLabel]="msg().search.change.field(name())"
         [suggestions]="part() === 'field' ? suggestions() : null"
         [highlight]="highlight()"
         [session]="session()"
@@ -53,8 +55,8 @@ import { GridSearchSegmentComponent } from './grid-search-segment.component';
           [active]="part() === 'operator'"
           [text]="operatorText()"
           [query]="query()"
-          [label]="t.title + ', operator'"
-          [viewLabel]="'Change the operator of ' + name()"
+          [label]="msg().search.part.operator(t.title)"
+          [viewLabel]="msg().search.change.operator(name())"
           [suggestions]="part() === 'operator' ? suggestions() : null"
           [highlight]="highlight()"
           [session]="session()"
@@ -78,8 +80,8 @@ import { GridSearchSegmentComponent } from './grid-search-segment.component';
           [active]="part() === 'value'"
           [text]="valueText()"
           [query]="query()"
-          [label]="t.title + ', value'"
-          [viewLabel]="'Change the value of ' + name()"
+          [label]="msg().search.part.value(t.title)"
+          [viewLabel]="msg().search.change.value(name())"
           [suggestions]="part() === 'value' ? suggestions() : null"
           [highlight]="highlight()"
           [selected]="selected()"
@@ -97,8 +99,8 @@ import { GridSearchSegmentComponent } from './grid-search-segment.component';
         [active]="part() === 'value'"
         [text]="valueText()"
         [query]="query()"
-        label="Search text"
-        [viewLabel]="'Change the text ' + valueText()"
+        [label]="msg().search.part.text"
+        [viewLabel]="msg().search.change.text(valueText())"
         [session]="session()"
         (event)="segment.emit({ part: 'value', event: $event })"
       />
@@ -107,10 +109,10 @@ import { GridSearchSegmentComponent } from './grid-search-segment.component';
     <button
       type="button"
       class="-ml-px inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center border-0 bg-gray-100 text-gray-700 hover:bg-gray-300 hover:text-gray-900 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
-      [attr.aria-label]="'Remove ' + name()"
+      [attr.aria-label]="msg().search.remove(name())"
       (click)="remove.emit()"
     >
-      <mat-icon aria-hidden="true" class="!text-base">close</mat-icon>
+      <mat-icon aria-hidden="true" class="!size-6 !text-base">close</mat-icon>
     </button>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -125,32 +127,51 @@ import { GridSearchSegmentComponent } from './grid-search-segment.component';
 })
 export class GridSearchTokenComponent {
   readonly item = input.required<GridSearchBarItem>();
+
   /** what the item is a token of; undefined for a free-text pill */
   readonly token = input<GridSearchToken>();
+
   /** the part being edited, if any */
   readonly part = input<GridSearchPart | null>(null);
+
   /** the text in that part's input */
   readonly query = input('');
+
   /** see `GridSearchSegmentComponent.session` */
   readonly session = input(0);
+
   /** that part's list */
   readonly suggestions = input<GridSearchSuggestion[] | null>(null);
+
   readonly highlight = input<unknown>(undefined);
+
   /** the value part's options are still loading */
   readonly loading = input(false);
+
   /** why the filter's value was refused — the token is flagged and not applied */
   readonly error = input<string | null>(null);
 
   readonly segment = output<{ part: GridSearchPart; event: GridSearchSegmentEvent }>();
   readonly remove = output<void>();
 
-  protected readonly name = computed(() => itemLabel(this.item(), this.token()));
+  private readonly i18n = inject(I18nService);
+  /** the grid's text (`t` is the token, in the template) */
+  protected readonly msg = injectMessages(GRID_MESSAGES);
+
+  protected readonly name = computed(() =>
+    itemLabel(this.item(), this.token(), this.msg().search, this.i18n.locale()),
+  );
+
   protected readonly operatorText = computed(() => {
     const operator = this.item().operator ?? this.token()?.defaultOperator;
-    return operator ? GRID_SEARCH_OPERATORS[operator].text : '';
+    return operator ? this.msg().search.operators[operator].text : '';
   });
-  protected readonly valueText = computed(() => valueLabel(this.token(), this.item().value));
+
+  protected readonly valueText = computed(() =>
+    valueLabel(this.token(), this.item().value, this.msg().search, this.i18n.locale()),
+  );
   protected readonly empty = computed(() => isEmptyValue(this.item().value));
+
   /** a flag has no value part: it's complete the moment its field is picked */
   protected readonly editable = computed(() => hasValuePart(this.token()));
 
@@ -162,6 +183,7 @@ export class GridSearchTokenComponent {
   });
 
   protected readonly inputType = computed(() => inputTypeFor(this.token()?.valueKind));
+
   protected readonly inputMode = computed(() => {
     const kind = this.token()?.valueKind;
     return kind === 'number' ? 'decimal' : kind === 'year' ? 'numeric' : null;

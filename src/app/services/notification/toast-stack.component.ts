@@ -9,7 +9,9 @@ import {
   Signal,
 } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { NotificationType, Toast } from './notification.interface';
+import { NOTIFICATION_MESSAGES } from './notification.messages';
 
 /** What `ToastStackComponent` needs from whoever mounts it — `NotificationService`. */
 export interface ToastStackHost {
@@ -39,7 +41,7 @@ const ICONS: Record<NotificationType, string> = {
   imports: [MatIcon],
   host: {
     '[attr.role]': 'host.toasts().length ? "region" : null',
-    '[attr.aria-label]': 'host.toasts().length ? "Notifications" : null',
+    '[attr.aria-label]': 'host.toasts().length ? t().region : null',
     '(mouseenter)': 'onPointer(true)',
     '(mouseleave)': 'onPointer(false)',
     '(focusin)': 'onFocusIn($event)',
@@ -57,7 +59,7 @@ const ICONS: Record<NotificationType, string> = {
         <button
           type="button"
           class="toast-dismiss"
-          aria-label="Dismiss notification"
+          [attr.aria-label]="t().dismiss"
           [attr.data-toast-id]="toast.id"
           (click)="dismiss(toast.id)"
         >
@@ -100,10 +102,11 @@ const ICONS: Record<NotificationType, string> = {
       color: var(--mat-sys-on-error-container);
     }
 
-    /* Material has no warning role — amber-100 / amber-900, ~11:1 contrast */
+    /* Material has no warning role — amber-100 / amber-900, ~11:1 contrast. The palette's own
+       properties (light values as fallbacks), so in dark mode the pair trades places. */
     .toast-warning {
-      background: #fef3c7;
-      color: #78350f;
+      background: var(--color-amber-100, #fef3c7);
+      color: var(--color-amber-900, #78350f);
     }
 
     .toast-message {
@@ -177,6 +180,7 @@ const ICONS: Record<NotificationType, string> = {
 export class ToastStackComponent {
   protected readonly host = inject(TOAST_STACK_HOST);
   protected readonly icons = ICONS;
+  protected readonly t = injectMessages(NOTIFICATION_MESSAGES);
 
   private readonly element: HTMLElement = inject(ElementRef).nativeElement;
   private readonly document = inject(DOCUMENT);

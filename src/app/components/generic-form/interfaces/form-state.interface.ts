@@ -1,15 +1,23 @@
 import { FormGroup, ValidatorFn, AsyncValidatorFn } from '@angular/forms';
 import { Observable } from 'rxjs';
+import type { FormMessages } from '../form.messages';
 import type { FormField } from './form-field.interface';
 
 // ─────────────────────────────────────────────
 // Core shared shapes: state, changes, validation, options
 // ─────────────────────────────────────────────
 
+/**
+ * What a field shows when its validator fails: the text itself, or — so it follows the user's
+ * language — a pick from the form's own text (`FORM_MESSAGES`), given the error the validator
+ * reported. The ready-made `validators` use the second form unless handed a message.
+ */
+export type ValidatorMessage = string | ((text: FormMessages, error: unknown) => string);
+
 export interface Validator {
   name: string;
   validator: ValidatorFn | AsyncValidatorFn;
-  message: string;
+  message: ValidatorMessage;
   /** REQUIRED for AsyncValidatorFn — sync/async can't be told apart at runtime. SPEC §12 */
   async?: boolean;
 }

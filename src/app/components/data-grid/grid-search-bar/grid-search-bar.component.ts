@@ -15,11 +15,11 @@ import {
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { I18nService } from '@services/i18n/i18n.service';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { GridInstance } from '../grid-engine.service';
-import {
-  GRID_SEARCH_OPERATORS,
-  GRID_SEARCH_TEXT_VALUE,
-} from '../helpers/grid-search-bar.constants';
+import { GRID_MESSAGES } from '../grid.messages';
+import { GRID_SEARCH_TEXT_VALUE } from '../helpers/grid-search-bar.constants';
 import {
   fieldSuggestions,
   hasValuePart,
@@ -82,7 +82,7 @@ function searchKey(fields: SearchField[]): string {
   host: {
     role: 'search',
     class:
-      'flex min-h-10 min-w-0 items-stretch overflow-hidden rounded-md border border-(--mat-sys-outline) bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary',
+      'flex min-h-10 min-w-0 items-stretch overflow-hidden rounded-lg border border-(--field-outline) bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary',
     '[attr.aria-label]': 'regionLabel()',
   },
 })
@@ -94,6 +94,8 @@ export class GridSearchBarComponent<RowType = any> {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly document = inject(DOCUMENT);
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly i18n = inject(I18nService);
+  protected readonly t = injectMessages(GRID_MESSAGES);
 
   private readonly params = computed(() => this.instance().params());
   private readonly cfg = computed(() => this.params().searchConfig);
@@ -146,7 +148,9 @@ export class GridSearchBarComponent<RowType = any> {
   // ── what the bar offers ──
 
   private readonly searchTokens = computed(() =>
-    this.search() ? searchTokensFromColumns(this.instance().leafColumns(), this.cfg()) : [],
+    this.search()
+      ? searchTokensFromColumns(this.instance().leafColumns(), this.cfg(), this.t().search)
+      : [],
   );
   protected readonly tokens = computed(() => [...this.searchTokens(), ...this.filters.tokens()]);
   private readonly tokenMap = computed(
@@ -161,23 +165,22 @@ export class GridSearchBarComponent<RowType = any> {
 
   // ── texts ──
 
-  protected readonly placeholder = computed(
-    () =>
+  protected readonly placeholder = computed(() => {
+    const text = this.t().search.placeholder;
+    return (
       this.cfg()?.searchPlaceholder ??
-      (!this.canTokenize() ? 'Search…' : this.search() ? 'Search or filter…' : 'Filter…'),
-  );
-  protected readonly inputLabel = computed(() => this.placeholder().replace(/…$/, ''));
-  protected readonly regionLabel = computed(() => {
-    const label = this.params().label;
-    return label ? `Search ${label}` : 'Search';
+      (!this.canTokenize() ? text.search : this.search() ? text.searchOrFilter : text.filter)
+    );
   });
+  protected readonly inputLabel = computed(() => this.placeholder().replace(/…$/, ''));
+  protected readonly regionLabel = computed(() => this.t().search.region(this.params().label));
   protected readonly hasContent = computed(() => this.items().length > 0 || this.text() !== '');
 
   // ── lists ──
 
   protected readonly inputSuggestions = computed(() =>
     this.canTokenize()
-      ? fieldSuggestions(this.tokens(), this.used(), this.text(), this.search())
+      ? fieldSuggestions(this.tokens(), this.used(), this.text(), this.search(), this.t().search)
       : null,
   );
   protected readonly inputHighlight = computed(() =>
@@ -212,10 +215,10 @@ export class GridSearchBarComponent<RowType = any> {
         // title segment doesn't), only re-highlighted
         const others = new Set(this.used());
         others.delete(token.id);
-        return fieldSuggestions(this.tokens(), others, '', false);
+        return fieldSuggestions(this.tokens(), others, '', false, this.t().search);
       }
       case 'operator':
-        return operatorSuggestions(token);
+        return operatorSuggestions(token, this.t().search);
       case 'value':
         return token.valueKind === 'options'
           ? valueSuggestions(token, this.query(), this.query() !== this.opened())
@@ -377,7 +380,7 @@ export class GridSearchBarComponent<RowType = any> {
     const item: GridSearchBarItem = { id: this.nextId++, value };
     this.items.update((list) => [...list, item]);
     this.text.set('');
-    this.announce(`Added ${itemLabel(item, undefined)}`);
+    this.announce(this.t().search.added(this.labelOf(item, undefined)));
   }
 
   private startToken(id: string): void {
@@ -607,7 +610,7 @@ export class GridSearchBarComponent<RowType = any> {
    *  value; a flag is done */
   private advance(item: GridSearchBarItem, token: GridSearchToken): void {
     if (!hasValuePart(token)) {
-      this.announce(`Added ${itemLabel(item, token)}`);
+      this.announce(this.t().search.added(this.labelOf(item, token)));
       this.cursor = 'end';
       this.setActive('input');
     } else if (token.operators.length > 1 && isEmptyValue(item.value)) {
@@ -651,7 +654,7 @@ export class GridSearchBarComponent<RowType = any> {
       case 'field':
         return token.title;
       case 'operator':
-        return GRID_SEARCH_OPERATORS[item.operator ?? token.defaultOperator].text;
+        return this.t().search.operators[item.operator ?? token.defaultOperator].text;
       case 'value':
         // several values: an empty box to find the next one in (GitLab clears it too)
         return token.multiple ? '' : inputText(token, item.value);
@@ -691,7 +694,7 @@ export class GridSearchBarComponent<RowType = any> {
       const token = item && this.tokenOf(item);
       this.before = {
         id: next.id,
-        label: item && isItemComplete(item, token) ? itemLabel(item, token) : null,
+        label: item && isItemComplete(item, token) ? this.labelOf(item, token) : null,
       };
     }
     this.active.set(next);
@@ -736,11 +739,12 @@ export class GridSearchBarComponent<RowType = any> {
     this.before = undefined;
 
     if (isItemComplete(item, token)) {
-      const label = itemLabel(item, token);
-      if (label !== was) this.announce(`${was ? 'Changed to' : 'Added'} ${label}`);
+      const label = this.labelOf(item, token);
+      const text = this.t().search;
+      if (label !== was) this.announce(was ? text.changedTo(label) : text.added(label));
     } else {
       this.items.update((list) => list.filter((i) => i.id !== id));
-      if (was) this.announce(`Removed ${was}`);
+      if (was) this.announce(this.t().search.removed(was));
     }
     this.changed('items');
   }
@@ -751,11 +755,18 @@ export class GridSearchBarComponent<RowType = any> {
     if (this.before?.id === item.id) this.before = undefined;
     const token = this.tokenOf(item);
     this.items.update((list) => list.filter((i) => i.id !== item.id));
-    if (isItemComplete(item, token)) this.announce(`Removed ${itemLabel(item, token)}`);
+    if (isItemComplete(item, token)) {
+      this.announce(this.t().search.removed(this.labelOf(item, token)));
+    }
   }
 
   private announce(message: string): void {
     this.announcement.set(message);
+  }
+
+  /** the token said in full, in the user's language */
+  private labelOf(item: GridSearchBarItem, token: GridSearchToken | undefined): string {
+    return itemLabel(item, token, this.t().search, this.i18n.locale());
   }
 
   // ── applying ──
@@ -769,7 +780,7 @@ export class GridSearchBarComponent<RowType = any> {
     this.query.set('');
     this.refused.set(false);
     this.syncFilterControls();
-    this.announce('Search cleared');
+    this.announce(this.t().search.cleared);
     this.cursor = 'end';
     this.setActive('input');
     this.requestApply();

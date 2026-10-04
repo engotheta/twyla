@@ -2,10 +2,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { computed, DestroyRef, DOCUMENT, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom, isObservable } from 'rxjs';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { NotificationService } from '@services/notification/notification.service';
 // guards ↔ service import each other, but only inside functions run later — no load-order issue
 import { requiresSession } from './session.guards';
 import { SESSION_CONFIG } from './session-config.token';
+import { SESSION_MESSAGES } from './session.messages';
 import {
   AccessRule,
   ForgotPasswordRequest,
@@ -29,6 +31,7 @@ export class SessionService {
   private readonly config = inject(SESSION_CONFIG);
   private readonly router = inject(Router);
   private readonly notifications = inject(NotificationService);
+  private readonly t = injectMessages(SESSION_MESSAGES);
   private readonly window = inject(DOCUMENT).defaultView;
   private readonly local = storageOf(this.window, 'localStorage');
   private readonly perTab = storageOf(this.window, 'sessionStorage');
@@ -83,7 +86,7 @@ export class SessionService {
       }
     }
     await this.router.navigateByUrl(this.config.loginUrl);
-    this.notifications.info('You have been signed out.');
+    this.notifications.info(this.t().signedOut);
   }
 
   register(request: RegisterRequest): Promise<unknown> {
@@ -100,16 +103,15 @@ export class SessionService {
 
   /** a message for the user: the API's own (`SessionError`), else a plain one for the status */
   errorMessage(error: unknown): string {
-    if (error instanceof SessionError) return error.message;
+    const errors = this.t().errors;
+    if (error instanceof SessionError) return error.key ? errors[error.key] : error.message;
     if (error instanceof HttpErrorResponse) {
-      if (error.status === 0)
-        return "Couldn't reach the server. Check your connection and try again.";
-      if (error.status >= 500)
-        return 'The server ran into a problem. Please try again in a moment.';
+      if (error.status === 0) return errors.offline;
+      if (error.status >= 500) return errors.server;
       const message = (error.error as { message?: unknown } | null)?.message;
       if (typeof message === 'string' && message) return message;
     }
-    return 'Something went wrong. Please try again.';
+    return errors.unknown;
   }
 
   /** a stored session the API no longer accepts: drop it, and leave a page that needs one */
@@ -126,7 +128,7 @@ export class SessionService {
       (error: unknown) => {
         if (this.state() !== session || !isAuthFailure(error)) return; // offline: keep it
         this.clear();
-        this.notifications.warn('Your session has expired. Please sign in again.');
+        this.notifications.warn(this.t().expired);
         this.leaveProtectedPage();
       },
     );

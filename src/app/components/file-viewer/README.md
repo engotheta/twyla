@@ -73,6 +73,22 @@ Every viewer also has Download, Open in new tab and Fullscreen. Keyboard shortcu
 - `R`: rotate
 - ← / →: previous / next file
 
+## Text, languages and themes
+
+- **Text.** The toolbar, the find bar, loading and empty states, every notice and every error are
+  `FILE_VIEWER_MESSAGES` (`file-viewer.messages.ts`, Swahili beside it), and follow the user's
+  language. `provideMessages(FILE_VIEWER_MESSAGES, { … })` rewords them.
+- **Errors.** A `FileViewerError` the viewer raises itself carries a `code` (`'notFound'`,
+  `'forbidden'`, `'offline'`, …): the viewer shows that message in the user's language, and
+  `message` keeps the English for logs. An error of your own — thrown from `resolvePath`, say,
+  with no `code` — is shown as you wrote it. A failure on screen follows a change of language;
+  the `failed` output fires once, in the language of the moment.
+- **PDF pages** are named ("Page 3") from the viewer's text, not pdf.js's, which has no Swahili.
+  pdf.js's few other labels — a note icon's alt text, a date in an annotation's popup — stay
+  English.
+- **Themes.** The viewer's chrome turns with the theme. The page a document is shown on — a PDF
+  page, a Word page, a spreadsheet — stays white, as the file's own colours assume.
+
 ## Configuration
 
 ```ts

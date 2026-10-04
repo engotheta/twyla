@@ -4,6 +4,7 @@ export * from './menu/menu.interface';
 export * from './menu/menu.helpers';
 export * from './menu/menu.service';
 export * from './layout-config.token';
+export * from './layout.messages';
 export * from './layout.service';
 export * from './page-title.strategy';
 export * from './brand-logo.component';

@@ -9,7 +9,9 @@ import { NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { ActionButton } from '@components/action-buttons/action-button.interface';
 import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { LAYOUT_CONFIG } from '../layout-config.token';
+import { LAYOUT_MESSAGES } from '../layout.messages';
 import { urlPath } from '../menu/menu.helpers';
 import { MenuService } from '../menu/menu.service';
 import { pageName } from '../page-title.strategy';
@@ -43,8 +45,8 @@ import { Breadcrumb, PageHeaderParameter, PageHeaderToggle } from './page-header
           <button
             mat-icon-button
             type="button"
-            aria-label="Back"
-            matTooltip="Back"
+            [attr.aria-label]="t().page.back"
+            [matTooltip]="t().page.back"
             class="shrink-0"
             (click)="goBack()"
           >
@@ -107,7 +109,9 @@ export class PageHeaderComponent<D = unknown> {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly menu = inject(MenuService);
-  private readonly homeUrl = inject(LAYOUT_CONFIG).homeUrl;
+  private readonly config = inject(LAYOUT_CONFIG);
+  private readonly homeUrl = this.config.homeUrl;
+  protected readonly t = injectMessages(LAYOUT_MESSAGES);
 
   readonly params = input<PageHeaderParameter<D>>();
   readonly title = input<string>();
@@ -137,10 +141,11 @@ export class PageHeaderComponent<D = unknown> {
     { initialValue: this.router.url },
   );
 
-  /** the current route's menu name / title, re-read on each navigation */
+  /** the current route's menu name / title, in the user's language — re-read on each navigation */
   private readonly routeName = computed(() => {
     this.url();
-    return pageName(this.router.routerState.snapshot.root);
+    const name = pageName(this.router.routerState.snapshot.root);
+    return name === undefined ? undefined : this.config.translate(name);
   });
 
   protected readonly title_ = computed(
@@ -161,7 +166,7 @@ export class PageHeaderComponent<D = unknown> {
   );
   protected readonly value_ = computed(() => this.value() ?? this.params()?.value);
   protected readonly toggleLabel_ = computed(
-    () => this.toggleLabel() ?? this.params()?.toggleLabel ?? 'View',
+    () => this.toggleLabel() ?? this.params()?.toggleLabel ?? this.t().page.view,
   );
   protected readonly boxClass = computed(() => this.params()?.class ?? '');
   protected readonly headingLevel_ = computed(
@@ -170,7 +175,9 @@ export class PageHeaderComponent<D = unknown> {
 
   /** the page's own trail is "Breadcrumb"; a section header's names its section */
   protected readonly crumbsLabel = computed(() =>
-    this.headingLevel_() === 1 ? 'Breadcrumb' : `${this.title_()} breadcrumb`,
+    this.headingLevel_() === 1
+      ? this.t().page.breadcrumb
+      : this.t().page.breadcrumbOf(this.title_()),
   );
 
   /** explicit `nav`, else module › groups › page from the side menu (a detail page under its list) */

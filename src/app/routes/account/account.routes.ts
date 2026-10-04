@@ -18,7 +18,7 @@ export const ACCOUNT_ROUTES: TypedRoutes = [
   {
     path: 'preferences',
     data: { isMenu: true, name: 'Preferences', icon: 'tune' },
-    loadComponent: placeholder,
+    loadComponent: () => import('./preferences.page').then((m) => m.PreferencesPage),
   },
 ];
 

@@ -1,0 +1,13 @@
+// Angular Material, normalised — one partial per kind of component, each bringing Material's
+// look in line with the rest of the app (corners, heights, outlines, surfaces).
+//
+// A partial sets Material's own tokens first, through the `mat.*-overrides` mixins: a token is
+// part of Material's API and survives its upgrades. It reaches for a selector only where
+// Material has no token for the job (the select panel's corners, a backdrop blur).
+//
+// Global, like every override of Material's internals: Angular's view encapsulation keeps a
+// component's own styles out of Material's DOM.
+@use 'buttons';
+@use 'form-field';
+@use 'overlays';
+@use 'stepper';

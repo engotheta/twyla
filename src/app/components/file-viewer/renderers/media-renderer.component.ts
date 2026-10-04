@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { ResolvedFile } from '../file-viewer.interface';
+import { FileFailure } from '../file-viewer.messages';
 import { ViewerController } from '../viewer-controller';
 
 /** Audio / video in the browser's own player — streamed straight from its URL when it has one. */
@@ -19,13 +20,13 @@ import { ViewerController } from '../viewer-controller';
     @if (url(); as src) {
       @if (f.kind === 'video') {
         <video
-          class="max-h-full max-w-full rounded bg-black"
+          class="max-h-full max-w-full rounded bg-always-black"
           controls
           playsinline
           preload="metadata"
           [src]="src"
           [attr.aria-label]="label()"
-          (error)="failed.emit(unplayable)"
+          (error)="onError()"
         >
           @for (track of f.source.tracks ?? []; track track.src) {
             <track
@@ -51,7 +52,7 @@ import { ViewerController } from '../viewer-controller';
             preload="metadata"
             [src]="src"
             [attr.aria-label]="label()"
-            (error)="failed.emit(unplayable)"
+            (error)="onError()"
           ></audio>
         </div>
       }
@@ -64,13 +65,14 @@ export class MediaRendererComponent {
   readonly file = input.required<ResolvedFile>();
   readonly url = input<string>();
   readonly label = input('');
-  readonly failed = output<string>();
-
-  protected readonly unplayable =
-    "Your browser can't play this file — download it to play it elsewhere.";
+  readonly failed = output<FileFailure>();
 
   constructor() {
     const unregister = inject(ViewerController).register({ capabilities: {} });
     inject(DestroyRef).onDestroy(unregister);
+  }
+
+  protected onError(): void {
+    this.failed.emit((text) => text.media.unplayable);
   }
 }

@@ -6,6 +6,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormInstance } from '../../form-engine.service';
 import { ColorField } from '../../interfaces/control-fields.interface';
 import { controlStatus } from '../../helpers/control-status.helpers';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { FORM_MESSAGES } from '../../form.messages';
 import { firstErrorMessage } from '../../helpers/field-errors.helpers';
 import { fromHex, toHex } from './color.helpers';
 
@@ -23,8 +25,8 @@ import { fromHex, toHex } from './color.helpers';
     >
       <input
         type="color"
-        class="h-10 w-12 shrink-0 cursor-pointer rounded border border-black/20 disabled:cursor-not-allowed disabled:opacity-50"
-        [attr.aria-label]="(f.label ?? 'Color') + ' picker'"
+        class="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-(--field-outline) disabled:cursor-not-allowed disabled:opacity-50"
+        [attr.aria-label]="t().color.picker(f.label ?? t().color.color)"
         [value]="hexValue()"
         [disabled]="status().disabled"
         (input)="onPick($event)"
@@ -59,6 +61,8 @@ export class ColorFieldComponent {
   readonly field = input.required<ColorField>();
   readonly instance = input.required<FormInstance>();
 
+  protected readonly t = injectMessages(FORM_MESSAGES);
+
   protected readonly state = computed(() => this.instance().fieldState(this.field())());
   protected readonly control = computed(() => this.instance().control(this.field()) as FormControl);
   protected readonly status = controlStatus(this.control);
@@ -76,7 +80,7 @@ export class ColorFieldComponent {
 
   protected readonly errorMessage = computed(() =>
     this.status().touched
-      ? firstErrorMessage(this.status().errors, this.state().validations)
+      ? firstErrorMessage(this.status().errors, this.state().validations, this.t())
       : null,
   );
 

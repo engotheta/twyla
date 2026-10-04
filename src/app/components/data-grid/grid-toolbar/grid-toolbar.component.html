@@ -11,7 +11,7 @@
   @if (instance().gridOptions().length) {
     <mat-button-toggle-group
       [value]="instance().selectedOptionSlug()"
-      aria-label="Grid view options"
+      [attr.aria-label]="t().toolbar.viewOptions"
     >
       @for (option of instance().gridOptions(); track option.slug) {
         <mat-button-toggle [value]="option.slug" (click)="selectOption(option.slug!)">
@@ -48,8 +48,9 @@
       cdkOverlayOrigin
       type="button"
       mat-icon-button
+      aria-haspopup="dialog"
       [attr.aria-expanded]="filtersOpen()"
-      aria-label="Filters"
+      [attr.aria-label]="t().toolbar.filters"
       (click)="filtersOpen.set(!filtersOpen())"
     >
       <mat-icon>filter_list</mat-icon>
@@ -63,16 +64,31 @@
       (backdropClick)="filtersOpen.set(false)"
       (detach)="filtersOpen.set(false)"
     >
-      <div class="bg-white dark:bg-neutral-900 rounded shadow-lg border border-black/10">
+      <!-- a dialog: focus moves in when it opens and back to the button when it closes -->
+      <div
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="t().toolbar.filters"
+        cdkTrapFocus
+        [cdkTrapFocusAutoCapture]="true"
+        class="surface-glass overflow-hidden"
+      >
         <grid-filter-panel [instance]="instance()" />
       </div>
     </ng-template>
   }
 
   @if (renderModes().length > 1) {
-    <mat-button-toggle-group [value]="instance().renderMode()" aria-label="Display mode">
+    <mat-button-toggle-group
+      [value]="instance().renderMode()"
+      [attr.aria-label]="t().toolbar.displayMode"
+    >
       @for (mode of renderModes(); track mode) {
-        <mat-button-toggle [value]="mode" (click)="setRenderMode(mode)" [aria-label]="mode">
+        <mat-button-toggle
+          [value]="mode"
+          (click)="setRenderMode(mode)"
+          [aria-label]="t().toolbar.modes[mode]"
+        >
           <mat-icon>{{ renderModeIcons[mode] }}</mat-icon>
         </mat-button-toggle>
       }
@@ -80,7 +96,12 @@
   }
 
   @if (exportFormats().length) {
-    <button type="button" mat-icon-button [matMenuTriggerFor]="exportMenu" aria-label="Export">
+    <button
+      type="button"
+      mat-icon-button
+      [matMenuTriggerFor]="exportMenu"
+      [attr.aria-label]="t().toolbar.export"
+    >
       <mat-icon>download</mat-icon>
     </button>
     <mat-menu #exportMenu="matMenu">
@@ -98,8 +119,9 @@
       cdkOverlayOrigin
       type="button"
       mat-icon-button
+      aria-haspopup="dialog"
       [attr.aria-expanded]="columnsOpen()"
-      aria-label="Column settings"
+      [attr.aria-label]="t().toolbar.columnSettings"
       (click)="columnsOpen.set(!columnsOpen())"
     >
       <mat-icon>view_column</mat-icon>
@@ -113,7 +135,14 @@
       (backdropClick)="columnsOpen.set(false)"
       (detach)="columnsOpen.set(false)"
     >
-      <div class="bg-white dark:bg-neutral-900 rounded shadow-lg border border-black/10">
+      <div
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="t().toolbar.columnSettings"
+        cdkTrapFocus
+        [cdkTrapFocusAutoCapture]="true"
+        class="surface-glass overflow-hidden"
+      >
         <grid-column-panel [instance]="instance()" />
       </div>
     </ng-template>

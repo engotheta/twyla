@@ -3,6 +3,7 @@
 An Angular 21 starter built from reusable parts: an app layout with route-driven menus, session
 pages and guards, and config-driven components (data grid, generic form, details, contents view,
 file viewer, action buttons). Tailwind v4 and Angular Material for styling; Vitest for unit tests.
+Light and dark themes, English and Swahili, and settings each person keeps for themselves.
 
 ```bash
 npm start        # ng serve, http://localhost:4200
@@ -17,12 +18,14 @@ Sign in with the demo account `emilys` / `emilyspass` (dummyjson.com).
 ```
 src/
 ├─ index.html  main.ts  styles.scss  tailwind.css
-├─ styles/                  global Sass partials (design tokens)
+├─ styles/                  global Sass partials: design tokens, the dark palette, what the
+│                           settings change (text size, spacing, contrast, motion)
 └─ app/
    ├─ app.ts  app.config.ts  app.routes.ts
    ├─ configs/              app wiring that app.config.ts reads (today: the demo's)
    ├─ utils/                helpers and pipes that several features share
-   ├─ services/             app-wide features: fetch, loading, notification, session, view
+   ├─ services/             app-wide features: fetch, i18n, loading, notification, session,
+   │                        settings, view
    ├─ components/           reusable UI, one folder each
    ├─ layout/               the app frame: layout, header, sidebar, menu, page-header, auth-layout
    └─ routes/               pages, grouped into modules
@@ -34,6 +37,10 @@ offers, and its `README.md` or `SPEC.md`, where it has one, explains how to use 
 - [`layout/README.md`](src/app/layout/README.md): adding a module, menu entries, layout config.
 - [`services/session/README.md`](src/app/services/session/README.md): the session API, guards and
   token storage.
+- [`services/i18n/README.md`](src/app/services/i18n/README.md): languages, a feature's text and
+  its translations, route names.
+- [`services/settings/README.md`](src/app/services/settings/README.md): theme, language and the
+  accessibility settings; writing code that is ready for dark mode and larger text.
 - [`components/generic-form/README.md`](src/app/components/generic-form/README.md) and
   [`SPEC.md`](src/app/components/generic-form/SPEC.md).
 - [`components/data-grid/SPEC.md`](src/app/components/data-grid/SPEC.md).
@@ -62,6 +69,7 @@ offers, and its `README.md` or `SPEC.md`, where it has one, explains how to use 
    | `.interface.ts` | types |
    | `.helpers.ts` `.constants.ts` | pure functions, constants |
    | `.guards.ts` `.interceptor.ts` `.api.ts` `.forms.ts` | route guards, an HTTP interceptor, a backend adapter, form configs |
+   | `.messages.ts`, `.messages.<code>.ts` | a feature's built-in text in English, and in another language (`.messages.sw.ts`) |
    | `.demo.ts` | the config a demo page feeds its component |
 
    A file that is one named thing may go without a suffix (`validators.ts`,
@@ -81,13 +89,30 @@ offers, and its `README.md` or `SPEC.md`, where it has one, explains how to use 
    - `app.config.ts` and `app.routes.ts` import files, never barrels, so lazy code stays out of
      the initial bundle.
 
+8. **Text.** Whatever a feature shows or reads out — a label, a tooltip, an `aria-label`, an error,
+   an announcement — goes in its `<feature>.messages.ts`, with its Swahili beside it, and is read
+   through `injectMessages`. No English in a template or in a string a user will see. Route and
+   menu names stay in the routes, in English; their other languages are in
+   `configs/route-names.ts`. The demo pages' own content is the exception: it stays English.
+   `app.messages.spec.ts` holds both to account.
+9. **Colours.** Tailwind's own colour classes, which turn with the theme. `always-white` and
+   `always-black` only for what must not turn: a scrim, a video's backdrop, the paper a document
+   is shown on. No hex colours in templates or component styles.
+
 `ng generate` follows rules 5 and 6: the schematics defaults are set in `angular.json`.
 
 ## Starting an app from this
 
 - **Brand, user menu, footer:** `provideLayoutConfig` in `app.config.ts`.
+- **Languages:** `provideI18n` lists them. To offer English only, list only English and delete
+  nothing: the Language setting hides itself with one language. For another language, see the
+  i18n README.
+- **Settings:** `provideSettings({ storageKey, defaults })`. The inline script in `index.html`
+  that prevents a light flash reads the same key: change the two together. `showSettings: false`
+  in the layout config hides the settings button.
 - **Backend sign-in:** write a `SessionApi` and pass it to `provideSessionConfig`.
 - **Modules:** add `routes/<module>/` and its entry in `app.routes.ts`; see the layout README.
 - **Remove the demos:** delete `routes/components-demo/`, `routes/layout-demo/`,
-  `routes/shared/demo-log.component.ts`, `routes/shared/applog.ts` and the files in `configs/`,
-  then drop their entries from `app.routes.ts` and `app.config.ts`.
+  `routes/shared/demo-log.component.ts`, `routes/shared/applog.ts` and the demo files in
+  `configs/` (keep `route-names.ts`, and drop the demos' names from it), then drop their entries
+  from `app.routes.ts` and `app.config.ts`.

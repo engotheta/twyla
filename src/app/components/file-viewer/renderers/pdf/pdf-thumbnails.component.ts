@@ -12,7 +12,9 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { injectMessages } from '@services/i18n/message-bundle';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
+import { FILE_VIEWER_MESSAGES } from '../../file-viewer.messages';
 import { ViewerController } from '../../viewer-controller';
 
 const THUMB_WIDTH_PX = 112;
@@ -25,7 +27,11 @@ const THUMB_WIDTH_PX = 112;
 @Component({
   selector: 'file-viewer-pdf-thumbnails',
   template: `
-    <nav class="size-full overflow-y-auto bg-[#f3f4f6] p-3" aria-label="Page thumbnails" #rail>
+    <nav
+      class="size-full overflow-y-auto bg-gray-100 p-3"
+      [attr.aria-label]="t().pdf.thumbnails"
+      #rail
+    >
       <ol class="m-0 flex list-none flex-col items-center gap-3 p-0">
         @for (n of pages(); track n) {
           <li>
@@ -33,12 +39,12 @@ const THUMB_WIDTH_PX = 112;
               type="button"
               class="thumb flex cursor-pointer flex-col items-center gap-1 rounded-md border-0 bg-transparent p-1 text-xs text-black/70 outline-none hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-primary"
               [attr.data-page]="n"
-              [attr.aria-label]="'Page ' + n"
+              [attr.aria-label]="t().pdf.page(n)"
               [attr.aria-current]="n === controller.page() ? 'page' : null"
               (click)="controller.goToPage(n)"
             >
               <span
-                class="block overflow-hidden rounded-sm bg-white shadow ring-primary"
+                class="block overflow-hidden rounded-sm bg-always-white shadow ring-primary"
                 [class.ring-2]="n === controller.page()"
                 [style.width.px]="thumbWidth"
                 [style.height.px]="thumbHeight()"
@@ -59,6 +65,7 @@ export class PdfThumbnailsComponent {
   readonly pdf = input.required<PDFDocumentProxy>();
 
   protected readonly controller = inject(ViewerController);
+  protected readonly t = injectMessages(FILE_VIEWER_MESSAGES);
   private readonly rail = viewChild.required<ElementRef<HTMLElement>>('rail');
 
   protected readonly thumbWidth = THUMB_WIDTH_PX;

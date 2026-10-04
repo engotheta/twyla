@@ -105,6 +105,8 @@ provideLayoutConfig(() => {
     headerActions: [], // ActionButton[]
     notifications, onNotification, markAllRead, // the bell shows only when `notifications` is set
     footer: { owner: 'GASCO', links: [{ label: 'Help', route: '/help' }], version: '1.0.0' },
+    showSettings: true, // the settings button in the headers (theme, language, text size, …)
+    translate: injectPhrases(ROUTE_NAMES), // menu and page names in the user's language
   };
 });
 // plus { provide: TitleStrategy, useClass: PageTitleStrategy }
@@ -112,6 +114,20 @@ provideLayoutConfig(() => {
 
 Import the token and the strategy from their own files, not from this barrel, in `app.config.ts`.
 A barrel loads every component it re-exports into the initial bundle.
+
+## Languages
+
+- **The frame's own text** (skip link, "All modules", "Sign out", the notifications menu, the
+  breadcrumb's label, …) is `LAYOUT_MESSAGES`, and follows the user's language.
+- **Names you write** — route titles, `data.name`, module descriptions, tags, the user menu's
+  entries, the footer's links, the brand's tagline — stay English where they are written. The
+  layout passes each through `LayoutConfig.translate` before showing it: the side menu, the
+  module rail, breadcrumbs, page headers and the document title all follow. Their other
+  languages live in `configs/route-names.ts`; a name with no entry is shown as written.
+- **A page's subtitle** given to `<page-header>` is the page's own text: take it from the page's
+  messages.
+
+See the [i18n README](../services/i18n/README.md).
 
 ## Accessibility
 

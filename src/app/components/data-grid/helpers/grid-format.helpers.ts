@@ -1,5 +1,6 @@
 // value display formatting and GridClassMap (conditional formatting) resolution
 
+import { GRID_EN, GridMessages } from '../grid.messages';
 import { GridClassMap } from '../interfaces/grid-cell.interface';
 import { getLabelField } from '@components/details/helpers/field-labels.helpers';
 import { isObject } from '@utils/object.helpers';
@@ -32,16 +33,30 @@ export type GridValueType =
  * per-element the same way, then joins with `Intl.ListFormat`'s natural-language conjunction —
  * `[a]` -> `'a'`, `[a, b]` -> `'a and b'`, `[a, b, c]` -> `'a, b, and c'` — the same `Intl.*`
  * convention this function already uses for numbers/currency/dates.
+ *
+ * A `Date` instance is a value, not an object to look a label up in: it's formatted by `type`
+ * (`date` / `datetime` / `time`), and on any other column as its date — plus the time when it
+ * carries one.
+ *
+ * `locale` is what numbers, dates and lists are written in (the browser's own when left out),
+ * and `text` what a boolean reads as — `GRID_MESSAGES`'s `format`, English when left out.
  */
-export function formatCellValue(value: unknown, type?: GridValueType, locale?: string): string {
+export function formatCellValue(
+  value: unknown,
+  type?: GridValueType,
+  locale?: string,
+  text: GridMessages['format'] = GRID_EN.format,
+): string {
   if (value == null || value === '') return '';
 
+  if (value instanceof Date) return formatDate(value, type, locale);
+
   if (Array.isArray(value)) {
-    const items = value.map((v) => formatCellValue(v, type, locale)).filter((s) => s !== '');
+    const items = value.map((v) => formatCellValue(v, type, locale, text)).filter((s) => s !== '');
     return new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' }).format(items);
   }
   if (isObject(value)) {
-    return formatCellValue(getLabelField(value)?.value, type, locale);
+    return formatCellValue(getLabelField(value)?.value, type, locale, text);
   }
 
   try {
@@ -67,13 +82,30 @@ export function formatCellValue(value: unknown, type?: GridValueType, locale?: s
           new Date(value as string),
         );
       case 'boolean':
-        return value ? 'Yes' : 'No';
+        return value ? text.yes : text.no;
       default:
         return String(value);
     }
   } catch {
     return String(value);
   }
+}
+
+/** a `Date` cell: by the column's `type`, else its date — with the time when it carries one */
+function formatDate(date: Date, type: GridValueType | undefined, locale?: string): string {
+  if (Number.isNaN(date.getTime())) return '';
+
+  const hasTime =
+    date.getHours() || date.getMinutes() || date.getSeconds() || date.getMilliseconds();
+  const dateOnly = type === 'date' || (type !== 'datetime' && !hasTime);
+  const options: Intl.DateTimeFormatOptions =
+    type === 'time'
+      ? { timeStyle: 'short' }
+      : dateOnly
+        ? { dateStyle: 'medium' }
+        : { dateStyle: 'medium', timeStyle: 'short' };
+
+  return new Intl.DateTimeFormat(locale, options).format(date);
 }
 
 /** Resolves a `GridClassMap` (independent class predicates) into a single space-joined class string. */

@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { FormInstance, FormParameter, GenericFormComponent } from '@components/generic-form';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { GridInstance } from '../grid-engine.service';
+import { GRID_MESSAGES } from '../grid.messages';
 import { cloneFormFields } from '../helpers/grid-search-bar.helpers';
 
 /**
@@ -21,6 +23,8 @@ export class GridFilterPanelComponent<RowType = any> {
    *  rather than inside the overlay panel — drops the floating-panel box chrome (width cap,
    *  scroll, border/shadow) in favor of a plain flex row matching the toolbar's own layout */
   readonly inline = input(false);
+
+  private readonly t = injectMessages(GRID_MESSAGES);
 
   protected formInstance?: FormInstance;
 
@@ -56,10 +60,10 @@ export class GridFilterPanelComponent<RowType = any> {
   });
 
   protected readonly applyLabel = computed(
-    () => this.instance().params().filterConfig?.applyButtonLabel ?? 'Apply',
+    () => this.instance().params().filterConfig?.applyButtonLabel ?? this.t().filters.apply,
   );
   protected readonly clearLabel = computed(
-    () => this.instance().params().filterConfig?.clearButtonLabel ?? 'Clear',
+    () => this.instance().params().filterConfig?.clearButtonLabel ?? this.t().filters.clear,
   );
   protected readonly showClear = computed(() => {
     const explicit = this.instance().params().filterConfig?.showClearButton;

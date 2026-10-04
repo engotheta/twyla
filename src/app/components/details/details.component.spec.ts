@@ -198,3 +198,197 @@ describe('DetailsComponent — field values', () => {
     ).toBe('true');
   });
 });
+
+describe('DetailsComponent — groups in tabs', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({ imports: [DetailsComponent] });
+  });
+
+  const entity = { name: 'Ada', role: 'admin', city: 'London', zip: 'N1', notes: 'none' };
+
+  async function render(params: DetailsParameter) {
+    const fixture = TestBed.createComponent(DetailsComponent);
+    fixture.componentRef.setInput('params', params);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const settle = async () => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+    return { fixture, el, settle };
+  }
+
+  /** the tabs of one tablist, and the panels they control */
+  const tabsOf = (list: Element) => Array.from(list.querySelectorAll<HTMLElement>('[role="tab"]'));
+  const labels = (list: Element) =>
+    tabsOf(list).map((tab) => tab.querySelector('.cv-tab-nav-label')!.textContent);
+  const panelOf = (el: HTMLElement, tab: HTMLElement) =>
+    el.querySelector<HTMLElement>(`[id="${tab.getAttribute('aria-controls')}"]`)!;
+
+  it('shows the groups as tabs — the custom ones, not Material’s — one panel at a time', async () => {
+    const { el, settle } = await render({
+      entity,
+      header: { title: 'Speaker' },
+      showGroupsInTabs: true,
+      fieldGroups: [
+        { label: 'Person', icon: 'person', fields: ['name', 'role'] },
+        { fields: ['city', 'zip'] }, // no label of its own
+      ],
+    });
+
+    expect(el.querySelector('mat-tab-group')).toBeNull();
+    const list = el.querySelector('[role="tablist"]')!;
+    expect(list.getAttribute('aria-label')).toBe('Speaker'); // named after the heading
+    expect(labels(list)).toEqual(['Person', 'Group 2']);
+    const [person, second] = tabsOf(list);
+    expect(person.querySelector('mat-icon')!.textContent).toBe('person');
+
+    expect(person.getAttribute('aria-selected')).toBe('true');
+    expect(panelOf(el, person).hidden).toBe(false);
+    expect(panelOf(el, person).textContent).toContain('Ada');
+    expect(panelOf(el, second).hidden).toBe(true);
+    expect(panelOf(el, second).textContent).not.toContain('London'); // not rendered yet
+
+    second.click();
+    await settle();
+    expect(second.getAttribute('aria-selected')).toBe('true');
+    expect(panelOf(el, second).hidden).toBe(false);
+    expect(panelOf(el, second).textContent).toContain('London');
+    expect(panelOf(el, person).hidden).toBe(true);
+    expect(panelOf(el, person).textContent).toContain('Ada'); // kept, for when it is shown again
+  });
+
+  it('a group shown as a tab leaves its heading to the tab, and keeps its buttons', async () => {
+    const heading = (panel: HTMLElement) => panel.querySelector('.font-semibold')?.textContent;
+    const { el, settle } = await render({
+      entity,
+      showGroupsInTabs: true,
+      fieldGroups: [
+        {
+          label: 'Person',
+          icon: 'person',
+          fields: ['name'],
+          actionButtons: [{ label: 'Edit person' }],
+        },
+        { label: 'Place', fields: ['city'], showHeader: true }, // asks for its heading anyway
+      ],
+    });
+    const [person, place] = tabsOf(el.querySelector('[role="tablist"]')!);
+
+    expect(heading(panelOf(el, person))).toBeUndefined(); // the tab has said "Person"
+    expect(panelOf(el, person).textContent).toContain('Edit person');
+    expect(panelOf(el, person).textContent).toContain('Ada');
+
+    place.click();
+    await settle();
+    expect(heading(panelOf(el, place))).toBe('Place');
+  });
+
+  it('in a list, as before, every group has its heading', async () => {
+    const { el } = await render({
+      entity,
+      fieldGroups: [
+        { label: 'Person', fields: ['name'] },
+        { label: 'Place', fields: ['city'] },
+      ],
+    });
+    expect(el.querySelector('[role="tablist"]')).toBeNull();
+    expect(Array.from(el.querySelectorAll('.font-semibold')).map((h) => h.textContent)).toEqual([
+      'Person',
+      'Place',
+    ]);
+  });
+
+  it('names the tabs "Sections" when there is no heading to name them after', async () => {
+    const { el } = await render({
+      entity,
+      showGroupsInTabs: true,
+      fieldGroups: [{ label: 'Person', fields: ['name'] }],
+    });
+    expect(el.querySelector('[role="tablist"]')!.getAttribute('aria-label')).toBe('Sections');
+  });
+
+  it('takes the four tab class hooks, and a wrapper class from groupConfig', async () => {
+    const { el } = await render({
+      entity,
+      showGroupsInTabs: true,
+      tabsContainerClass: 'hook-strip',
+      tabClass: 'hook-tab',
+      activeTabClass: 'hook-active',
+      tabIndicatorClass: 'hook-indicator',
+      groupConfig: { containerClass: 'hook-wrapper' },
+      fieldGroups: [
+        { label: 'Person', fields: ['name'] },
+        { label: 'Place', fields: ['city'] },
+      ],
+    });
+
+    expect(el.querySelector('tab-panels')!.className).toContain('hook-wrapper');
+    expect(el.querySelector('tab-nav')!.className).toContain('hook-strip');
+    const [active, other] = tabsOf(el.querySelector('[role="tablist"]')!);
+    expect(active.className).toContain('hook-tab');
+    expect(active.className).toContain('hook-active');
+    expect(other.className).toContain('hook-tab');
+    expect(other.className).not.toContain('hook-active');
+    expect(el.querySelector('.cv-tab-nav-indicator')!.className).toContain('hook-indicator');
+  });
+
+  it('shows a group’s sub-groups as tabs of their own, restyled per group on top of the details’', async () => {
+    const { el, settle } = await render({
+      entity,
+      tabsContainerClass: 'from-details',
+      fieldGroups: [
+        {
+          label: 'Profile',
+          showGroupsInTabs: true,
+          tabsContainerClass: 'from-group',
+          groupsClass: 'sub-wrapper',
+          groupsContainerClass: 'sub-panel',
+          fields: ['name'],
+          groups: [
+            { label: 'Role', fields: ['role'] },
+            { label: 'Notes', fields: ['notes'] },
+          ],
+        },
+        { label: 'Place', fields: ['city'] },
+      ],
+    });
+
+    // the details' own groups are a list here: only "Profile" turns its sub-groups into tabs
+    const lists = el.querySelectorAll('[role="tablist"]');
+    expect(lists.length).toBe(1);
+    expect(lists[0].getAttribute('aria-label')).toBe('Profile');
+    expect(labels(lists[0])).toEqual(['Role', 'Notes']);
+
+    const strip = el.querySelector('tab-nav')!;
+    expect(strip.className).toContain('from-details');
+    expect(strip.className).toContain('from-group');
+    expect(el.querySelector('tab-panels')!.className).toContain('sub-wrapper');
+
+    const [role, notes] = tabsOf(lists[0]);
+    expect(panelOf(el, role).className).toContain('sub-panel');
+    expect(panelOf(el, role).textContent).toContain('admin');
+    notes.click();
+    await settle();
+    expect(panelOf(el, notes).textContent).toContain('none');
+    // the group's own field, outside its tabs, and its sibling group are there throughout
+    expect(el.textContent).toContain('Ada');
+    expect(el.textContent).toContain('London');
+  });
+
+  it('reads the tab hooks from a group’s props string too', async () => {
+    const { el } = await render({
+      entity,
+      fieldsGroupsMap: {
+        'Profile showGroupsInTabs(true) tabsContainerClass(from-string)': {
+          Role: ['role'],
+          Notes: ['notes'],
+        },
+      },
+    });
+    expect(el.querySelector('tab-nav')!.className).toContain('from-string');
+  });
+});

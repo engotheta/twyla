@@ -1,7 +1,9 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { Subject } from 'rxjs';
 import { ZoomValue } from './file-viewer.interface';
+import { FILE_VIEWER_MESSAGES } from './file-viewer.messages';
 
 /** What the active renderer supports — the toolbar shows only these controls. */
 export interface RendererCapabilities {
@@ -55,6 +57,7 @@ const IDLE_FIND: FindResult = { state: 'idle', current: 0, total: 0 };
 @Injectable()
 export class ViewerController {
   private readonly announcer = inject(LiveAnnouncer);
+  private readonly t = injectMessages(FILE_VIEWER_MESSAGES);
 
   /** requested zoom — a fit mode or a factor */
   readonly zoom = signal<ZoomValue>('fit');
@@ -105,13 +108,13 @@ export class ViewerController {
   setZoom(zoom: ZoomValue): void {
     const value = typeof zoom === 'number' ? Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom)) : zoom;
     this.zoom.set(value);
-    if (typeof value === 'number') this.announce(`Zoom ${Math.round(value * 100)}%`);
-    else this.announce(ZOOM_LABELS[value]);
+    if (typeof value === 'number') this.announce(this.t().zoom.level(Math.round(value * 100)));
+    else this.announce(this.t().zoom[value]);
   }
 
   rotate(delta = 90): void {
     this.rotation.update((r) => (((r + delta) % 360) + 360) % 360);
-    this.announce(`Rotated to ${this.rotation()} degrees`);
+    this.announce(this.t().zoom.rotated(this.rotation()));
   }
 
   goToPage(page: number): void {
@@ -153,9 +156,3 @@ export class ViewerController {
     void this.announcer.announce(message, 'polite');
   }
 }
-
-export const ZOOM_LABELS: Record<Exclude<ZoomValue, number>, string> = {
-  fit: 'Fit to view',
-  'fit-width': 'Fit width',
-  actual: 'Actual size',
-};

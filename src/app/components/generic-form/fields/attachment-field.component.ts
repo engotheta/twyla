@@ -8,6 +8,8 @@ import { ViewerAttachment } from '@components/file-viewer/file-viewer.interface'
 import { FormInstance } from '../form-engine.service';
 import { AttachmentField, AttachmentMeta } from '../interfaces/control-fields.interface';
 import { controlStatus } from '../helpers/control-status.helpers';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { FORM_MESSAGES } from '../form.messages';
 import { firstErrorMessage } from '../helpers/field-errors.helpers';
 
 @Component({
@@ -23,7 +25,7 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
       }
 
       <div
-        class="flex flex-col items-center justify-center gap-2 rounded border-2 border-dashed border-black/20 p-4 text-center"
+        class="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-black/20 p-4 text-center"
         [class.opacity-50]="status().disabled"
         (dragover)="$event.preventDefault()"
         (drop)="onDrop($event)"
@@ -36,11 +38,11 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
           [disabled]="status().disabled"
           (click)="fileInput.click()"
         >
-          Choose file{{ f.isList ? 's' : '' }}
+          {{ t().attachment.choose(f.isList === true) }}
         </button>
 
         <span class="text-xs text-black/60">
-          or drag &amp; drop{{ f.accept?.length ? ' — ' + f.accept!.join(', ') : '' }}
+          {{ t().attachment.dragDrop }}{{ f.accept?.length ? ' — ' + f.accept!.join(', ') : '' }}
         </span>
 
         <input
@@ -60,18 +62,25 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
 
       @if (f.isList) {
         @for (item of attachmentList(); track $index) {
-          <div class="flex items-center gap-2 rounded border border-black/10 p-2">
+          <div class="flex items-center gap-2 rounded-lg border border-black/10 p-2">
             <mat-icon aria-hidden="true">description</mat-icon>
 
             <div class="min-w-0 flex-1">
-              <div class="truncate text-sm">{{ $any(item?.name) ?? 'File ' + ($index + 1) }}</div>
+              <div class="truncate text-sm">
+                {{ $any(item?.name) ?? t().attachment.file($index + 1) }}
+              </div>
 
               @if (item?.size) {
                 <div class="text-xs text-black/60">{{ formatSize(item!.size) }}</div>
               }
 
               @if (item?.status === 'uploading') {
-                <mat-progress-bar mode="indeterminate" />
+                <mat-progress-bar
+                  mode="indeterminate"
+                  [attr.aria-label]="
+                    t().attachment.uploading($any(item?.name) ?? t().attachment.file($index + 1))
+                  "
+                />
               }
 
               @if (item?.status === 'error') {
@@ -82,18 +91,25 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
             <button
               type="button"
               mat-icon-button
-              [attr.aria-label]="'Preview ' + ($any(item?.name) ?? 'file ' + ($index + 1))"
+              [attr.aria-label]="
+                t().attachment.preview($any(item?.name) ?? t().attachment.file($index + 1))
+              "
               (click)="preview($index)"
             >
               <mat-icon aria-hidden="true">visibility</mat-icon>
             </button>
-            <button type="button" mat-icon-button aria-label="Remove file" (click)="clear($index)">
+            <button
+              type="button"
+              mat-icon-button
+              [attr.aria-label]="t().attachment.remove"
+              (click)="clear($index)"
+            >
               <mat-icon aria-hidden="true">close</mat-icon>
             </button>
           </div>
         }
       } @else if (singleAttachment(); as item) {
-        <div class="flex items-center gap-2 rounded border border-black/10 p-2">
+        <div class="flex items-center gap-2 rounded-lg border border-black/10 p-2">
           <mat-icon aria-hidden="true">description</mat-icon>
 
           <div class="min-w-0 flex-1">
@@ -101,7 +117,10 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
             <div class="text-xs text-black/60">{{ formatSize(item.size) }}</div>
 
             @if (item.status === 'uploading') {
-              <mat-progress-bar mode="indeterminate" />
+              <mat-progress-bar
+                mode="indeterminate"
+                [attr.aria-label]="t().attachment.uploading(item.name)"
+              />
             }
             @if (item.status === 'error') {
               <div class="text-xs text-red-600">{{ item.error }}</div>
@@ -111,12 +130,17 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
           <button
             type="button"
             mat-icon-button
-            [attr.aria-label]="'Preview ' + item.name"
+            [attr.aria-label]="t().attachment.preview(item.name)"
             (click)="preview()"
           >
             <mat-icon aria-hidden="true">visibility</mat-icon>
           </button>
-          <button type="button" mat-icon-button aria-label="Remove file" (click)="clear()">
+          <button
+            type="button"
+            mat-icon-button
+            [attr.aria-label]="t().attachment.remove"
+            (click)="clear()"
+          >
             <mat-icon aria-hidden="true">close</mat-icon>
           </button>
         </div>
@@ -134,6 +158,8 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
 export class AttachmentFieldComponent {
   readonly field = input.required<AttachmentField>();
   readonly instance = input.required<FormInstance>();
+
+  protected readonly t = injectMessages(FORM_MESSAGES);
 
   private readonly fileViewer = inject(FileViewerService);
 
@@ -157,7 +183,7 @@ export class AttachmentFieldComponent {
 
   protected readonly errorMessage = computed(() =>
     this.status().touched
-      ? firstErrorMessage(this.status().errors, this.state().validations)
+      ? firstErrorMessage(this.status().errors, this.state().validations, this.t())
       : null,
   );
 
@@ -181,7 +207,7 @@ export class AttachmentFieldComponent {
 
     for (const file of picked) {
       if (f.maxSizeMb && file.size > f.maxSizeMb * 1024 * 1024) {
-        this.rejectedMessage.set(`"${file.name}" exceeds the ${f.maxSizeMb}MB limit`);
+        this.rejectedMessage.set(this.t().attachment.tooLarge(file.name, f.maxSizeMb));
         continue;
       }
 

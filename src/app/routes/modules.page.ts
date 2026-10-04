@@ -4,11 +4,16 @@ import { RouterLink } from '@angular/router';
 import {
   AppFooterComponent,
   BrandLogoComponent,
+  LAYOUT_CONFIG,
   MenuIconComponent,
   MenuService,
   UserMenuComponent,
 } from '@layout';
+import { injectMessages } from '@services/i18n';
 import { SessionService } from '@services/session';
+import { SettingsButtonComponent } from '@services/settings';
+import { PAGES_MESSAGES } from './pages.messages';
+import { RichTextComponent } from './shared/rich-text.component';
 
 /** Where signing in lands (GASCO's staff landing): a card per module the user may open. */
 @Component({
@@ -19,6 +24,8 @@ import { SessionService } from '@services/session';
     AppFooterComponent,
     BrandLogoComponent,
     MenuIconComponent,
+    RichTextComponent,
+    SettingsButtonComponent,
     UserMenuComponent,
   ],
   template: `
@@ -32,14 +39,15 @@ import { SessionService } from '@services/session';
         <brand-logo />
       </a>
       <span class="flex-1"></span>
+      @if (showSettings) {
+        <settings-button />
+      }
       <user-menu />
     </header>
 
     <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-      <h1 class="text-2xl font-semibold text-gray-900">
-        Welcome back{{ firstName() ? ', ' + firstName() : '' }}
-      </h1>
-      <p class="mt-1 text-gray-600">Pick a module to get started.</p>
+      <h1 class="text-2xl font-semibold text-gray-900">{{ t().modules.welcome(firstName()) }}</h1>
+      <p class="mt-1 text-gray-600">{{ t().modules.lead }}</p>
 
       <ul class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @for (module of menu.modules(); track module.id) {
@@ -64,7 +72,7 @@ import { SessionService } from '@services/session';
             </a>
           </li>
         } @empty {
-          <li class="text-gray-600">You don't have access to any modules yet.</li>
+          <li class="text-gray-600">{{ t().modules.empty }}</li>
         }
       </ul>
 
@@ -73,40 +81,27 @@ import { SessionService } from '@services/session';
         aria-labelledby="getting-started-title"
       >
         <h2 id="getting-started-title" class="text-lg font-semibold text-gray-900">
-          Getting started
+          {{ t().modules.gettingStarted }}
         </h2>
         <ol class="mt-3 list-decimal space-y-2 ps-5 text-sm text-gray-700">
-          <li>
-            <strong>Modules</strong> are the <code>isMenu</code> routes in
-            <code>app.routes.ts</code>: each loads a shell (<code>*.module.ts</code>) and its own
-            routes (<code>*.routes.ts</code>).
-          </li>
-          <li>
-            <strong>Side menus</strong> come from each module's routes:
-            <code>data: {{ '{' }} isMenu, name, icon, permissions {{ '}' }}</code> — a
-            <code>path: ''</code> route with children is a group.
-          </li>
-          <li>
-            <strong>Brand, header and footer</strong>: <code>provideLayoutConfig()</code> in
-            <code>app.config.ts</code>.
-          </li>
-          <li>
-            <strong>Sign-in</strong>: point
-            <code>provideSessionConfig({{ '{' }} api {{ '}' }})</code> at your backend — the guards
-            and the token interceptor are already wired.
-          </li>
+          <li><rich-text [text]="t().modules.steps.modules" /></li>
+          <li><rich-text [text]="t().modules.steps.menus" /></li>
+          <li><rich-text [text]="t().modules.steps.brand" /></li>
+          <li><rich-text [text]="t().modules.steps.signIn" /></li>
         </ol>
       </section>
     </main>
 
     <app-footer class="border-t border-gray-200 bg-white" />
   `,
-  host: { class: 'flex h-full flex-col overflow-y-auto bg-gray-50' },
+  host: { class: 'flex h-full flex-col overflow-y-auto bg-gray-50 dark:bg-page' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModulesPage {
   protected readonly menu = inject(MenuService);
+  protected readonly showSettings = inject(LAYOUT_CONFIG).showSettings;
   private readonly session = inject(SessionService);
+  protected readonly t = injectMessages(PAGES_MESSAGES);
 
   protected readonly firstName = computed(() => this.session.user()?.name.split(/\s+/)[0] ?? '');
 }

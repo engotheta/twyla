@@ -1,10 +1,14 @@
 import { ValidatorFn, Validators } from '@angular/forms';
+import { FORM_EN, FormMessages } from './form.messages';
 import { Validator } from './interfaces/form-state.interface';
 
 // ─────────────────────────────────────────────
 // Ready-made `Validator`s (name + validator + message) for `validations: [...]`. The `name` must
 // equal the error key the validator sets — that's how `firstErrorMessage` finds the message — so
 // e.g. Angular's minLength is named 'minlength'.
+//
+// A validator given no message takes the form's own, in the user's language (`FORM_MESSAGES`);
+// a message passed in is shown as written.
 // ─────────────────────────────────────────────
 
 export interface PasswordRules {
@@ -31,83 +35,89 @@ export interface PasswordCheck {
   met: boolean;
 }
 
-/** Each password rule with whether `value` meets it — what a live checklist renders. */
+/**
+ * Each password rule with whether `value` meets it — what a live checklist renders. `labels` is
+ * the form's password text in the user's language (`FORM_MESSAGES`'s `password`); English when
+ * left out.
+ */
 export function passwordChecks(
   value: unknown,
   rules: Partial<PasswordRules> = {},
+  labels: FormMessages['password'] = FORM_EN.password,
 ): PasswordCheck[] {
   const r = { ...DEFAULT_PASSWORD_RULES, ...rules };
   const text = typeof value === 'string' ? value : '';
   const checks: PasswordCheck[] = [
-    {
-      key: 'minLength',
-      label: `At least ${r.minLength} characters`,
-      met: text.length >= r.minLength,
-    },
+    { key: 'minLength', label: labels.minLength(r.minLength), met: text.length >= r.minLength },
   ];
   if (r.lowercase)
-    checks.push({ key: 'lowercase', label: 'A lowercase letter', met: /\p{Ll}/u.test(text) });
+    checks.push({ key: 'lowercase', label: labels.lowercase, met: /\p{Ll}/u.test(text) });
   if (r.uppercase)
-    checks.push({ key: 'uppercase', label: 'An uppercase letter', met: /\p{Lu}/u.test(text) });
-  if (r.digit) checks.push({ key: 'digit', label: 'A number', met: /\p{Nd}/u.test(text) });
+    checks.push({ key: 'uppercase', label: labels.uppercase, met: /\p{Lu}/u.test(text) });
+  if (r.digit) checks.push({ key: 'digit', label: labels.digit, met: /\p{Nd}/u.test(text) });
   if (r.symbol) {
-    checks.push({
-      key: 'symbol',
-      label: 'A symbol, such as ! or #',
-      met: /[^\p{L}\p{N}\s]/u.test(text),
-    });
+    checks.push({ key: 'symbol', label: labels.symbol, met: /[^\p{L}\p{N}\s]/u.test(text) });
   }
   return checks;
 }
 
-/** The rules as one sentence: "Use at least 8 characters, with upper and lower case letters, a
- *  number and a symbol." */
-export function describePasswordRules(rules: Partial<PasswordRules> = {}): string {
-  const r = { ...DEFAULT_PASSWORD_RULES, ...rules };
-  const cases =
-    r.lowercase && r.uppercase
-      ? 'upper and lower case letters'
-      : r.uppercase
-        ? 'an uppercase letter'
-        : r.lowercase
-          ? 'a lowercase letter'
-          : '';
-  const parts = [cases, r.digit ? 'a number' : '', r.symbol ? 'a symbol' : ''].filter(Boolean);
-  const list =
-    parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
-  return `Use at least ${r.minLength} characters${list ? `, with ${list}` : ''}.`;
+/**
+ * The rules as one sentence: "Use at least 8 characters, with upper and lower case letters, a
+ * number and a symbol." `labels` as in `passwordChecks`.
+ */
+export function describePasswordRules(
+  rules: Partial<PasswordRules> = {},
+  labels: FormMessages['password'] = FORM_EN.password,
+): string {
+  return labels.rules({ ...DEFAULT_PASSWORD_RULES, ...rules });
 }
 
-function required(message = 'This field is required'): Validator {
-  return { name: 'required', validator: Validators.required, message };
+function required(message?: string): Validator {
+  return {
+    name: 'required',
+    validator: Validators.required,
+    message: message ?? ((text) => text.errors.required),
+  };
 }
 
 /** for a checkbox that must be ticked (terms, consent) — Angular reports it as `required` */
-function requiredTrue(message = 'Tick this box to continue'): Validator {
-  return { name: 'required', validator: Validators.requiredTrue, message };
+function requiredTrue(message?: string): Validator {
+  return {
+    name: 'required',
+    validator: Validators.requiredTrue,
+    message: message ?? ((text) => text.errors.requiredTrue),
+  };
 }
 
-function email(message = 'Enter a valid email address'): Validator {
-  return { name: 'email', validator: Validators.email, message };
+function email(message?: string): Validator {
+  return {
+    name: 'email',
+    validator: Validators.email,
+    message: message ?? ((text) => text.errors.email),
+  };
 }
 
-function minLength(length: number, message = `Use at least ${length} characters`): Validator {
-  return { name: 'minlength', validator: Validators.minLength(length), message };
+function minLength(length: number, message?: string): Validator {
+  return {
+    name: 'minlength',
+    validator: Validators.minLength(length),
+    message: message ?? ((text) => text.errors.minLength(length)),
+  };
 }
 
-function maxLength(length: number, message = `Use at most ${length} characters`): Validator {
-  return { name: 'maxlength', validator: Validators.maxLength(length), message };
+function maxLength(length: number, message?: string): Validator {
+  return {
+    name: 'maxlength',
+    validator: Validators.maxLength(length),
+    message: message ?? ((text) => text.errors.maxLength(length)),
+  };
 }
 
 /** `name` lets two patterns on one field carry their own messages */
-function pattern(
-  regex: RegExp | string,
-  message = 'Enter a valid value',
-  name = 'pattern',
-): Validator {
+function pattern(regex: RegExp | string, message?: string, name = 'pattern'): Validator {
   const check = Validators.pattern(regex);
   const validator: ValidatorFn = (control) => (check(control) ? { [name]: true } : null);
-  return { name, validator, message };
+  return { name, validator, message: message ?? ((text) => text.errors.pattern) };
 }
 
 /** Empty values pass (pair it with `required`); otherwise every rule must be met. The error
@@ -121,7 +131,11 @@ function strongPassword(rules: Partial<PasswordRules> = {}, message?: string): V
       .map((check) => check.key);
     return missing.length ? { strongPassword: { missing } } : null;
   };
-  return { name: 'strongPassword', validator, message: message ?? describePasswordRules(rules) };
+  return {
+    name: 'strongPassword',
+    validator,
+    message: message ?? ((text) => describePasswordRules(rules, text.password)),
+  };
 }
 
 /** `validations: [validators.required(), validators.email('Use your work email')]` */

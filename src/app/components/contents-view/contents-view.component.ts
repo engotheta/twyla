@@ -29,6 +29,7 @@ import { Router } from '@angular/router';
 import { combineLatest, isObservable, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { resolveDynamicValue$ } from '@utils/dynamic-value.helpers';
 import { DataGridComponent } from '@components/data-grid';
 import { DetailsComponent } from '@components/details/details.component';
@@ -41,6 +42,7 @@ import {
   ContentsParameter,
   ContentView,
 } from './contents.interface';
+import { CONTENTS_MESSAGES } from './contents.messages';
 import { PanelResizeDirective } from './panel-resize.directive';
 import {
   claimPersistedSelectionKey,
@@ -103,9 +105,10 @@ function flattenContents(contents: ContentView[]): ContentView[] {
 /** smallest a column / row pane may be dragged to, px */
 const MIN_COL_PX = 80;
 const MIN_ROW_PX = 60;
-/** localStorage namespaces for `persisted-selection.helpers`: a resizable level's pane sizes, and a
- *  tabs level's active tab */
+/** localStorage namespaces for `persisted-selection.helpers`: a resizable level's pane sizes, a
+ *  collapsible level's collapsed panes, and a tabs level's active tab */
 const SIZES_NAMESPACE = 'contents-sizes';
+const COLLAPSED_NAMESPACE = 'contents-collapsed';
 const TABS_NAMESPACE = 'tabs';
 
 /** move `deltaPx` between two adjacent panes (`a`, `b` px) keeping their sum and clamping each
@@ -246,6 +249,7 @@ export class ContentsViewComponent implements OnInit {
   private readonly document = inject(DOCUMENT);
   private readonly focusTrapFactory = inject(FocusTrapFactory);
   private readonly overlayContainer = inject(OverlayContainer);
+  protected readonly t = injectMessages(CONTENTS_MESSAGES);
 
   /** the ROOT mount has no contents-view ancestor — a nested one is rendered inside its parent's
    *  template, so the parent is on its element-injector path */
@@ -748,12 +752,33 @@ export class ContentsViewComponent implements OnInit {
   private fractionsAtStart: number[] = [];
   private rafPending = false;
   private pendingApply: (() => void) | null = null;
+  /** the track sizes the move in progress last asked for */
+  private lastPx?: number[];
+  /** per axis, where the last move left the tracks (px), which gutter it moved and how far from
+   *  its measured boundary — kept until the re-measure that follows a move lands, two frames on.
+   *  A move starting sooner (a held arrow key repeats faster than that) starts from these: the
+   *  measurement still describes the layout before that move, and starting from it would only
+   *  repeat the same step. */
+  private readonly unsettled: Partial<
+    Record<'x' | 'y', { g: number; px: number[]; shiftPx: number }>
+  > = {};
+  /** how far the handle already sits from its measured boundary when a move starts on top of an
+   *  unsettled one on the same gutter — the new move's own shift adds to it */
+  private shiftBasePx = 0;
+  /** numbers the re-measures that moves schedule as they end: only the latest one runs */
+  private settleTicket = 0;
 
   protected onGutterStart(axis: 'x' | 'y', g: number): void {
+    const pending = this.unsettled[axis];
     const m = this.gridMetrics();
-    this.trackStartPx = (axis === 'x' ? m?.cols.tracks : m?.rows.tracks)?.map((t) => t.size) ?? [];
+    this.trackStartPx =
+      pending?.px ?? (axis === 'x' ? m?.cols.tracks : m?.rows.tracks)?.map((t) => t.size) ?? [];
     this.fractionsAtStart = axis === 'x' ? this.colFractions() : this.rowFractions();
-    this.activeDrag.set({ axis, g, shiftPx: 0 });
+    this.shiftBasePx = pending?.g === g ? pending.shiftPx : 0;
+    this.lastPx = undefined;
+    // the re-measure still pending belongs to the last move: this one schedules its own
+    this.settleTicket++;
+    this.activeDrag.set({ axis, g, shiftPx: this.shiftBasePx });
   }
 
   protected onColResize(g: number, deltaPx: number): void {
@@ -778,7 +803,12 @@ export class ContentsViewComponent implements OnInit {
     const b = next[g + 1];
     if (!isFinite(a) || !isFinite(b)) return;
     [next[g], next[g + 1]] = redistributePx(a, b, deltaPx, minPx);
-    this.activeDrag.set({ axis, g, shiftPx: next[g] - this.trackStartPx[g] });
+    this.lastPx = next;
+    this.activeDrag.set({
+      axis,
+      g,
+      shiftPx: this.shiftBasePx + next[g] - this.trackStartPx[g],
+    });
     const collapsed = axis === 'x' ? this.collapsedTracks().cols : this.collapsedTracks().rows;
     this.scheduleApply(() => target.set(refitFractions(this.fractionsAtStart, next, collapsed)));
   }
@@ -800,14 +830,22 @@ export class ContentsViewComponent implements OnInit {
   protected onGutterEnd(): void {
     this.pendingApply?.();
     this.pendingApply = null;
+    const drag = this.activeDrag();
+    if (drag && this.lastPx) {
+      this.unsettled[drag.axis] = { g: drag.g, px: this.lastPx, shiftPx: drag.shiftPx };
+    }
     this.persistSizes();
     this.params().onSizesChange?.(this.currentSizes());
     // Two frames on the new `grid-template-*` is applied and laid out: re-measure the true
     // boundary, then drop the live offset. Because the boundary shifted by exactly `shiftPx`, the
     // handle is already sitting where the measurement puts it — no snap on release. Held until
-    // then so it never flicks back to its drag-start spot.
+    // then so it never flicks back to its drag-start spot. A move that starts before then takes
+    // over (`onGutterStart`), and its own end re-measures for both.
+    const ticket = ++this.settleTicket;
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
+        if (ticket !== this.settleTicket) return;
+        this.unsettled.x = this.unsettled.y = undefined;
         this.measureGrid();
         this.activeDrag.set(null);
       }),
@@ -924,9 +962,13 @@ export class ContentsViewComponent implements OnInit {
     this.visibleContents().map((rc, i) => contentKey(rc, i)),
   );
 
-  /** the collapsed panes' keys — written by `setCollapsed`, and re-checked whenever the visible
-   *  panes change: with `keepOneExpanded`, a level whose visible panes all end up collapsed (the
-   *  open one hidden since) reopens its first */
+  /** localStorage slot for the collapsed panes — claimed once the contents resolve, and only
+   *  while `persistCollapsed` is on */
+  private collapsedPersistKey?: string;
+
+  /** the collapsed panes' keys — written by `setCollapsed` (and, on mount, by what was saved),
+   *  and re-checked whenever the visible panes change: with `keepOneExpanded`, a level whose
+   *  visible panes all end up collapsed (the open one hidden since) reopens its first */
   private readonly collapsedKeys = linkedSignal<
     { visible: string[]; keepOne: boolean },
     ReadonlySet<string>
@@ -1002,7 +1044,7 @@ export class ContentsViewComponent implements OnInit {
   }
 
   protected paneLabel(rc: ResolvedContent): string {
-    return rc.content.label ?? rc.content.title ?? rc.content.slug ?? 'panel';
+    return rc.content.label ?? rc.content.title ?? rc.content.slug ?? this.t().panel;
   }
 
   protected bodyId(key: string): string {
@@ -1024,6 +1066,9 @@ export class ContentsViewComponent implements OnInit {
       else next.delete(key);
       return next;
     });
+    if (this.collapsedPersistKey) {
+      writePersistedSelection(this.collapsedPersistKey, JSON.stringify([...this.collapsedKeys()]));
+    }
     const focusId = this.controlId(collapsed ? 'strip' : 'collapse', key);
     afterNextRender(() => this.document.getElementById(focusId)?.focus(), {
       injector: this.injector,
@@ -1277,6 +1322,14 @@ export class ContentsViewComponent implements OnInit {
       if (list.length) untracked(() => this.restoreActiveTab(list));
     });
 
+    // …and, for a collapsible level, the panes that were left collapsed
+    effect(() => {
+      if (!this.canCollapse() || this.params().persistCollapsed === false) return;
+      if (this.collapsedPersistKey) return;
+      const list = this.visibleContents();
+      if (list.length) untracked(() => this.restoreCollapsed(list));
+    });
+
     // the owner renders this level's toggles only while this level is alive
     this.destroyRef.onDestroy(() => {
       const host = this.tabsHost();
@@ -1349,6 +1402,32 @@ export class ContentsViewComponent implements OnInit {
     if (saved !== null && saved !== this.effectiveActiveKey()) this.selectByKey(saved);
   }
 
+  /** claims this level's localStorage slot (route + its contents) and collapses again the panes
+   *  saved there that are still here — but one stays open, where that is the rule */
+  private restoreCollapsed(list: ResolvedContent[]): void {
+    const persistKey = claimPersistedSelectionKey(
+      COLLAPSED_NAMESPACE,
+      this.router.url,
+      list.map((rc) => rc.content.slug ?? rc.content.label ?? ''),
+    );
+    this.collapsedPersistKey = persistKey;
+    this.destroyRef.onDestroy(() => releasePersistedSelectionKey(persistKey));
+
+    const raw = readPersistedSelection(persistKey);
+    if (!raw) return;
+    try {
+      const visible = this.visibleKeys();
+      const saved = new Set(
+        (JSON.parse(raw) as unknown[]).filter(
+          (key): key is string => typeof key === 'string' && visible.includes(key),
+        ),
+      );
+      this.collapsedKeys.set(this.keepOneExpanded() ? keepFirstOpen(saved, visible) : saved);
+    } catch {
+      // a corrupt entry: nothing starts collapsed
+    }
+  }
+
   /** Builds the nested mount's `ContentsParameter` — cascading `contentsClass`/
    *  `contentsContainerClass`/`tabsContainerClass`/`tabClass`/`activeTabClass`/
    *  `tabIndicatorClass`/`bodiesClass`/`headersClass` by merging THIS level's
@@ -1385,16 +1464,17 @@ export class ContentsViewComponent implements OnInit {
       // section inside a 'cover' dashboard); each level defaults to 'auto' and consumes its own
       // value (see `resolvedFit` / `nestedContentsClass` / `resizeActive`).
       contentsFit: content.contentsFit,
-      // `flowOnSmallerView` / `resizable` / `persistSizes` / `collapsible` / `keepOneExpanded` /
-      // `fullscreenable` DO cascade — set once on an ancestor and every nested level follows (a
-      // resizable level still only shows gutters when its own measured layout has >1
-      // row/column); a child sets its own value (e.g. `resizable: false`) to opt its subtree
-      // out. `initialSizes` / `onSizesChange` stay root-only (a nested level persists via
-      // localStorage instead).
+      // `flowOnSmallerView` / `resizable` / `persistSizes` / `collapsible` / `persistCollapsed` /
+      // `keepOneExpanded` / `fullscreenable` DO cascade — set once on an ancestor and every
+      // nested level follows (a resizable level still only shows gutters when its own measured
+      // layout has >1 row/column); a child sets its own value (e.g. `resizable: false`) to opt
+      // its subtree out. `initialSizes` / `onSizesChange` stay root-only (a nested level
+      // persists via localStorage instead).
       flowOnSmallerView: content.flowOnSmallerView ?? this.params().flowOnSmallerView,
       resizable: content.resizable ?? this.params().resizable,
       persistSizes: content.persistSizes ?? this.params().persistSizes,
       collapsible: content.collapsible ?? this.params().collapsible,
+      persistCollapsed: content.persistCollapsed ?? this.params().persistCollapsed,
       keepOneExpanded: content.keepOneExpanded ?? this.params().keepOneExpanded,
       fullscreenable: content.fullscreenable ?? this.params().fullscreenable,
       preserveInactiveContent: content.preserveInactiveContent,

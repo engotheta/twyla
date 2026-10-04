@@ -11,7 +11,9 @@ import { NgTemplateOutlet } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { FormInstance } from '../../form-engine.service';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { fieldIdentity, FormInstance } from '../../form-engine.service';
+import { FORM_MESSAGES } from '../../form.messages';
 import { FormField } from '../../interfaces/form-field.interface';
 import { ObjectField } from '../../interfaces/container-fields.interface';
 import { joinClasses } from '../../helpers/class.helpers';
@@ -35,6 +37,10 @@ interface ListItemView {
 export class ObjectFieldComponent implements OnInit {
   readonly field = input.required<ObjectField>();
   readonly instance = input.required<FormInstance>();
+
+  protected readonly t = injectMessages(FORM_MESSAGES);
+  /** what the template tracks a child by: stable when the form is given a fresh config */
+  protected readonly identity = fieldIdentity;
   /** supplied by `form-field` so children can recurse without a circular component import */
   readonly fieldTemplate = input.required<TemplateRef<FieldChildContext>>();
 
@@ -98,6 +104,6 @@ export class ObjectFieldComponent implements OnInit {
 
   private itemLabel(f: ObjectField, rowValue: Record<string, unknown>, index: number): string {
     const value = rowValue?.[f.itemLabelKey ?? 'label'];
-    return value ? String(value) : `Item ${index + 1}`;
+    return value ? String(value) : this.t().list.itemLabel(index + 1);
   }
 }

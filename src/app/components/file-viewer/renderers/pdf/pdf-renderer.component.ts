@@ -17,10 +17,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { injectMessages } from '@services/i18n/message-bundle';
 import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist';
 import type { EventBus, PDFViewer } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { FILE_VIEWER_CONFIG } from '../../file-viewer-config.token';
 import { ResolvedFile, ZoomValue } from '../../file-viewer.interface';
+import { FILE_VIEWER_MESSAGES, FileFailure } from '../../file-viewer.messages';
 import { openInNewTab, printUrl } from '../../loader/file-actions.helpers';
 import { readBlob } from '../../loader/text-decode.helpers';
 import { ViewerController } from '../../viewer-controller';
@@ -53,23 +55,21 @@ interface PasswordPrompt {
       @if (controller.thumbnailsOpen() && pdf(); as doc) {
         <file-viewer-pdf-thumbnails class="w-40 shrink-0 border-e border-black/10" [pdf]="doc" />
       }
-      <div class="relative min-w-0 flex-1 bg-[#e5e7eb]">
+      <div class="relative min-w-0 flex-1 bg-gray-200">
         @if (native(); as fallback) {
           <div class="absolute inset-0 flex flex-col">
             <p
               class="m-0 flex items-center gap-2 border-b border-black/10 bg-amber-50 px-3 py-1.5 text-xs text-amber-950"
             >
-              <mat-icon class="!size-4 shrink-0 !text-base" aria-hidden="true">info</mat-icon>
-              <span
-                >Shown with your browser's PDF viewer — the built-in viewer couldn't open it ({{
-                  fallback.reason
-                }}).</span
+              <mat-icon class="!size-4 shrink-0 !text-base !leading-4" aria-hidden="true"
+                >info</mat-icon
               >
+              <span>{{ t().pdf.native(fallback.reason) }}</span>
             </p>
             <iframe
-              class="min-h-0 w-full flex-1 border-0 bg-white"
+              class="min-h-0 w-full flex-1 border-0 bg-always-white"
               [src]="fallback.url"
-              [title]="label() + ' — PDF'"
+              [title]="t().pdf.frame(label())"
             ></iframe>
           </div>
         }
@@ -80,7 +80,7 @@ interface PasswordPrompt {
           tabindex="0"
           role="region"
           data-viewer-scroll
-          [attr.aria-label]="label() + ' — PDF document'"
+          [attr.aria-label]="t().pdf.document(label())"
           (wheel)="onWheel($event)"
         >
           <div #viewer class="pdfViewer"></div>
@@ -93,30 +93,36 @@ interface PasswordPrompt {
           >
             <div class="flex w-full max-w-sm flex-col gap-3">
               <label class="text-sm font-medium" for="pdf-password-{{ uid }}">
-                “{{ label() }}” is password-protected. Enter its password to open it.
+                {{ t().pdf.passwordPrompt(label()) }}
               </label>
               <input
                 #passwordInput
                 id="pdf-password-{{ uid }}"
                 type="password"
                 autocomplete="off"
-                class="h-10 rounded border border-black/30 px-3 outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40"
+                class="h-10 rounded-lg border border-(--field-outline) px-3 outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40"
                 [attr.aria-invalid]="prompt.incorrect || null"
                 [attr.aria-describedby]="prompt.incorrect ? 'pdf-password-error-' + uid : null"
               />
               @if (prompt.incorrect) {
                 <p id="pdf-password-error-{{ uid }}" class="m-0 text-sm text-red-700" role="alert">
-                  Incorrect password — try again.
+                  {{ t().pdf.wrongPassword }}
                 </p>
               }
-              <button type="submit" matButton="filled" class="self-start">Open</button>
+              <button type="submit" matButton="filled" class="self-start">
+                {{ t().pdf.open }}
+              </button>
             </div>
           </form>
         }
 
         @if (busy()) {
           <div class="absolute inset-0 grid place-items-center" role="status">
-            <mat-progress-spinner mode="indeterminate" diameter="40" aria-label="Opening PDF" />
+            <mat-progress-spinner
+              mode="indeterminate"
+              diameter="40"
+              [attr.aria-label]="t().pdf.opening"
+            />
           </div>
         }
       </div>
@@ -131,9 +137,10 @@ export class PdfRendererComponent {
   readonly url = input<string>();
   readonly label = input('');
   readonly initialPage = input(1);
-  readonly failed = output<string>();
+  readonly failed = output<FileFailure>();
   readonly opened = output<number>();
 
+  protected readonly t = injectMessages(FILE_VIEWER_MESSAGES);
   protected readonly controller = inject(ViewerController);
   private readonly config = inject(FILE_VIEWER_CONFIG);
   private readonly document = inject(DOCUMENT);
@@ -199,6 +206,11 @@ export class PdfRendererComponent {
     effect(() => {
       if (this.password())
         untracked(() => setTimeout(() => this.passwordInput()?.nativeElement.focus()));
+    });
+    // the pages' names follow the language
+    effect(() => {
+      this.t();
+      untracked(() => this.namePages());
     });
 
     const finds = this.controller.findRequests.subscribe((request) =>
@@ -326,8 +338,26 @@ export class PdfRendererComponent {
     return true;
   }
 
+  /**
+   * Names each page region ("Page 3") in the user's language. pdf.js would name them through its
+   * own translations, which are English here and include no Swahili: its marks come off the
+   * pages — on `pagesinit`, the same turn they were made in, so before it gets to them — and the
+   * name is the viewer's own text.
+   */
+  private namePages(): void {
+    if (!this.viewer) return;
+    const pages =
+      this.viewerElement().nativeElement.querySelectorAll<HTMLElement>('.page[data-page-number]');
+    for (const page of pages) {
+      page.removeAttribute('data-l10n-id');
+      page.removeAttribute('data-l10n-args');
+      page.setAttribute('aria-label', this.t().pdf.page(Number(page.dataset['pageNumber'])));
+    }
+  }
+
   private listen(eventBus: EventBus): void {
     eventBus.on('pagesinit', () => {
+      this.namePages();
       const viewer = this.viewer!;
       viewer.currentScaleValue = scaleValue(this.controller.zoom());
       viewer.pagesRotation = this.controller.rotation();
@@ -414,14 +444,15 @@ function scaleValue(zoom: ZoomValue): string {
   return zoom === 'fit' ? 'page-fit' : zoom === 'fit-width' ? 'page-width' : 'page-actual';
 }
 
-function describe(error: unknown): string {
+function describe(error: unknown): FileFailure {
   const name = (error as { name?: string } | null)?.name;
-  if (name === 'InvalidPDFException') return 'This PDF is damaged or not a PDF at all.';
-  if (name === 'PasswordException') return 'This PDF could not be unlocked.';
+  if (name === 'InvalidPDFException') return (text) => text.pdf.damaged;
+  if (name === 'PasswordException') return (text) => text.pdf.locked;
   if (name === 'ResponseException' || name === 'MissingPDFException')
-    return 'The PDF could not be downloaded.';
-  if (isMissingAsset(error)) return 'The PDF viewer could not start (its assets are missing).';
-  return `This PDF could not be opened (${reasonOf(error)}).`;
+    return (text) => text.pdf.notDownloaded;
+  if (isMissingAsset(error)) return (text) => text.pdf.missingAssets;
+  const reason = reasonOf(error);
+  return (text) => text.pdf.failed(reason);
 }
 
 /** the worker / css / a lazy chunk didn't load — a deployment problem, not the file's */

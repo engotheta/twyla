@@ -2,6 +2,7 @@ import { NgComponentOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   reflectComponentType,
   Type,
@@ -9,7 +10,9 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { ViewDialogData } from './view.interface';
+import { VIEW_MESSAGES } from './view.messages';
 
 /** The input a hosted component declares to learn that IT is the dialog's content — the shell
  *  binds its own `MatDialogRef` there (see `GenericFormComponent`'s Cancel / close-on-submit). */
@@ -31,15 +34,15 @@ function acceptsDialogRef(component: Type<unknown>): boolean {
   selector: 'view-dialog',
   imports: [NgComponentOutlet, MatDialogModule, MatButtonModule, MatIconModule],
   template: `
-    @if (data.title || data.showClose) {
+    @if (title() || data.showClose) {
       <div class="flex items-center gap-1 pe-2">
-        @if (data.title) {
+        @if (title()) {
           <h2 mat-dialog-title class="grow">
             <span class="inline-flex items-center gap-2">
               @if (data.icon) {
                 <mat-icon aria-hidden="true">{{ data.icon }}</mat-icon>
               }
-              <span>{{ data.title }}</span>
+              <span>{{ title() }}</span>
             </span>
           </h2>
         }
@@ -49,7 +52,7 @@ function acceptsDialogRef(component: Type<unknown>): boolean {
             mat-dialog-close
             type="button"
             class="ms-auto shrink-0"
-            aria-label="Close dialog"
+            [aria-label]="t().closeDialog"
           >
             <mat-icon aria-hidden="true">close</mat-icon>
           </button>
@@ -74,6 +77,13 @@ function acceptsDialogRef(component: Type<unknown>): boolean {
 export class ViewDialogComponent {
   protected readonly data = inject<ViewDialogData>(MAT_DIALOG_DATA);
   private readonly dialogRef = inject(MatDialogRef<ViewDialogComponent>);
+  protected readonly t = injectMessages(VIEW_MESSAGES);
+
+  /** a title given as a function is re-read as its signals change */
+  protected readonly title = computed(() => {
+    const title = this.data.title;
+    return typeof title === 'function' ? title() : title;
+  });
 
   /** `data.inputs`, plus this dialog's ref when the hosted component declares a `dialogRef` input */
   protected readonly inputs: Record<string, unknown> = acceptsDialogRef(this.data.component)

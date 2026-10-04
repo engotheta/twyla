@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, effect, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { provideNativeDateAdapter } from '@angular/material/core';
+import { DateAdapter, provideNativeDateAdapter } from '@angular/material/core';
 import { MatDatepicker, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -11,6 +11,10 @@ import { merge } from 'rxjs';
 import { FormInstance } from '../form-engine.service';
 import { DateField } from '../interfaces/control-fields.interface';
 import { controlStatus } from '../helpers/control-status.helpers';
+import { I18nService } from '@services/i18n/i18n.service';
+import { provideMaterialIntl } from '@services/i18n/material-intl';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { FORM_MESSAGES } from '../form.messages';
 import { firstErrorMessage } from '../helpers/field-errors.helpers';
 
 @Component({
@@ -23,8 +27,9 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
     MatButtonModule,
     MatTooltipModule,
   ],
-  // self-contained: doesn't require the host app to configure a global DateAdapter
-  providers: [provideNativeDateAdapter()],
+  // self-contained: doesn't require the host app to configure a global DateAdapter — and the
+  // calendar's own labels come in the user's language
+  providers: [provideNativeDateAdapter(), provideMaterialIntl()],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let f = state();
@@ -87,7 +92,7 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
             class="w-32"
             [class.hide-subscript]="!showSubscript()"
           >
-            <mat-label>Time</mat-label>
+            <mat-label>{{ t().date.time }}</mat-label>
             <input
               matInput
               type="time"
@@ -145,6 +150,8 @@ export class DateFieldComponent {
   readonly field = input.required<DateField>();
   readonly instance = input.required<FormInstance>();
 
+  protected readonly t = injectMessages(FORM_MESSAGES);
+
   protected readonly state = computed(() => this.instance().fieldState(this.field())());
   protected readonly control = computed(() => this.instance().control(this.field()) as FormControl);
   protected readonly status = controlStatus(this.control);
@@ -164,7 +171,7 @@ export class DateFieldComponent {
 
   protected readonly errorMessage = computed(() =>
     this.status().touched
-      ? firstErrorMessage(this.status().errors, this.state().validations)
+      ? firstErrorMessage(this.status().errors, this.state().validations, this.t())
       : null,
   );
 
@@ -174,7 +181,13 @@ export class DateFieldComponent {
   protected readonly timePartControl = new FormControl<string | null>(null);
   private syncingParts = false;
 
+  private readonly adapter = inject<DateAdapter<Date>>(DateAdapter);
+  private readonly i18n = inject(I18nService);
+
   constructor() {
+    // month and weekday names, and how a typed date is read, follow the user's language
+    effect(() => this.adapter.setLocale(this.i18n.locale()));
+
     effect(() => {
       const value = this.status().value as Date | string | null;
       if (this.syncingParts) return;

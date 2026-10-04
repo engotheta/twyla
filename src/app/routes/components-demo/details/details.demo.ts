@@ -16,7 +16,8 @@ export const detailsParameter: DetailsParameter = {
 
   fieldsStrings: ['users  icon(group)', 'createdAt type(date)'],
   fieldsProperties: {
-    id: { label: 'User ID', class: '!text-blue-600' },
+    // a field's colour also tints its label, at 80%: blue-800 keeps that readable
+    id: { label: 'User ID', class: '!text-blue-800' },
     name: {
       label: 'Full Name',
       value: (entity: any) => entity?.name?.toUpperCase(),
@@ -27,7 +28,8 @@ export const detailsParameter: DetailsParameter = {
     },
     users: {
       label: 'Users Listo',
-      class: 'text-purple-600',
+      // purple-700 for the same reason: a step lighter, and the faded label is under 4.5:1
+      class: 'text-purple-700',
       tabular: true,
       pageSize: 10,
       value: (entity: any) =>
@@ -70,4 +72,29 @@ export const detailsParameter: DetailsParameter = {
     { label: 'Details', icon: 'info', fields: ['...'] },
   ],
   entity: userDetails,
+};
+
+/** the same record with its groups as tabs — one group's sub-groups as tabs of their own, which
+ *  that group restyles: an underline in place of the pill */
+export const tabbedDetailsParameter: DetailsParameter = {
+  ...detailsParameter,
+  showGroupsInTabs: true,
+  fieldGroups: [
+    detailsParameter.fieldGroups![0],
+    detailsParameter.fieldGroups![1],
+    {
+      label: 'More',
+      icon: 'info',
+      fields: ['reportFile', 'feedback'],
+      tabsContainerClass: 'rounded-none border-0 border-b bg-transparent p-0',
+      tabClass: 'rounded-none text-gray-700',
+      activeTabClass: 'text-primary',
+      tabIndicatorClass: 'top-auto bottom-0 h-0.5 rounded-none',
+      groups: [
+        { label: 'Address', icon: 'home', fields: ['address'] },
+        { label: 'Settings', icon: 'settings', fields: ['settings'] },
+        { label: 'Users', icon: 'group', fields: ['users'] },
+      ],
+    },
+  ],
 };

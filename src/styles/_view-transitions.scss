@@ -1,0 +1,35 @@
+// The theme change, as a circle opening from the control that was used (GASCO's reveal).
+//
+// `SettingsService` sets --reveal-x / --reveal-y / --reveal-radius on <html>, then makes the
+// change inside `document.startViewTransition()`: the browser holds a picture of the old theme
+// and uncovers the new one through the growing circle. The service skips the transition
+// altogether where the browser has none, or motion is reduced — then the theme simply changes.
+
+// the picture of the old theme stays still underneath
+::view-transition-old(root) {
+  animation: none;
+}
+
+::view-transition-new(root) {
+  animation: theme-reveal 500ms linear both;
+}
+
+// the browser blends the pair with `plus-lighter`, which leaves a bright seam along the edge
+// when one side is light and the other dark
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+
+::view-transition-group(root) {
+  animation-duration: 500ms;
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0 at var(--reveal-x, 50%) var(--reveal-y, 50%));
+  }
+  to {
+    clip-path: circle(var(--reveal-radius, 150vmax) at var(--reveal-x, 50%) var(--reveal-y, 50%));
+  }
+}

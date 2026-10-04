@@ -11,7 +11,10 @@ import {
   resolveOptionsSource,
 } from '@components/generic-form';
 import { map, Subscription } from 'rxjs';
+import { FORM_MESSAGES } from '@components/generic-form/form.messages';
+import { I18nService } from '@services/i18n/i18n.service';
 import { GridInstance } from '../grid-engine.service';
+import { GRID_MESSAGES } from '../grid.messages';
 import {
   cloneFormFields,
   filterTokenFromField,
@@ -67,11 +70,15 @@ export class GridSearchFilters<RowType = any> {
     const built = this.built();
     const errors: Record<string, string> = {};
     if (!built) return errors;
+    const i18n = this.injector.get(I18nService);
+    const formText = i18n.messages(FORM_MESSAGES)();
+    const invalid = i18n.messages(GRID_MESSAGES)().filters.invalid;
     for (const field of built.fields) {
       const control = built.instance.control(field);
       if (!field.key || !control?.invalid) continue;
       const validations = 'validations' in field ? field.validations : undefined;
-      errors[`filter:${field.key}`] = firstErrorMessage(control.errors, validations) ?? 'Invalid';
+      errors[`filter:${field.key}`] =
+        firstErrorMessage(control.errors, validations, formText) ?? invalid;
     }
     return errors;
   });

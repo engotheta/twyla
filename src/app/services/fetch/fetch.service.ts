@@ -21,9 +21,11 @@ import {
   throwError,
   timer,
 } from 'rxjs';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { LoadingService } from '@services/loading';
-import { FETCH_CONFIG } from './fetch-config.token';
+import { FETCH_CONFIG, FetchMessages } from './fetch-config.token';
 import { FetchFailedError } from './fetch-failed.error';
+import { FETCH_MESSAGES } from './fetch.messages';
 import { FETCH_NOTIFIER } from './fetch-notifier.token';
 import {
   appendQueryParams,
@@ -87,6 +89,7 @@ export class FetchService {
   private readonly config = inject(FETCH_CONFIG);
   private readonly notifier = inject(FETCH_NOTIFIER);
   private readonly loading = inject(LoadingService);
+  private readonly t = injectMessages(FETCH_MESSAGES);
 
   private readonly cache = new Map<string, CacheEntry>();
   /** The latest in-flight call per operation, with the subject that cancels it ('switch'). */
@@ -243,7 +246,7 @@ export class FetchService {
       p.failedFn?.(res);
 
       const message =
-        resolveMessage(p.errorMessage, res) ?? responseMessage(res) ?? this.config.messages.failed;
+        resolveMessage(p.errorMessage, res) ?? responseMessage(res) ?? this.messages().failed;
 
       if (shouldNotify(p.notify, 'error', request.write)) this.notifier.error(message);
       throw new FetchFailedError(res, message);
@@ -267,9 +270,7 @@ export class FetchService {
 
     if (fromNetwork && shouldNotify(p.notify, 'success', request.write)) {
       this.notifier.success(
-        resolveMessage(p.successMessage, res) ??
-          responseMessage(res) ??
-          this.config.messages.success,
+        resolveMessage(p.successMessage, res) ?? responseMessage(res) ?? this.messages().success,
       );
     }
     return data;
@@ -289,7 +290,7 @@ export class FetchService {
 
     if (!handled && shouldNotify(p.notify, 'error', request.write)) {
       this.notifier.error(
-        resolveMessage(p.errorMessage, error) ?? httpErrorMessage(error, this.config.messages),
+        resolveMessage(p.errorMessage, error) ?? httpErrorMessage(error, this.messages()),
       );
     }
     return throwError(() => error);
@@ -372,6 +373,11 @@ export class FetchService {
     }
 
     return { data: entry.data as TRes };
+  }
+
+  /** the fallback toasts: the app's own wording where it gave any, else in the user's language */
+  private messages(): FetchMessages {
+    return { ...this.t(), ...this.config.messages };
   }
 
   private writeCache(key: string, res: unknown, ttl?: number): void {

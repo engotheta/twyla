@@ -3,7 +3,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MatIcon } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
 import { map } from 'rxjs';
+import { LAYOUT_CONFIG } from '@layout';
 import { PageHeaderComponent } from '@layout/page-header';
+import { injectMessages } from '@services/i18n';
+import { PAGES_MESSAGES } from '../pages.messages';
+import { RichTextComponent } from './rich-text.component';
 
 /**
  * A stand-in page: the page header (named from the route's `data.name`) and a "nothing here yet"
@@ -11,21 +15,19 @@ import { PageHeaderComponent } from '@layout/page-header';
  */
 @Component({
   selector: 'placeholder-page',
-  imports: [PageHeaderComponent, MatIcon],
+  imports: [PageHeaderComponent, MatIcon, RichTextComponent],
   template: `
-    <page-header [showBackBtn]="params().length > 0" [subtitle]="subtitle" />
+    <page-header [showBackBtn]="params().length > 0" [subtitle]="subtitle()" />
     <section
       class="grid place-items-center rounded-xl border-2 border-dashed border-gray-300 bg-white px-6 py-14 text-center"
       aria-labelledby="placeholder-title"
     >
       <mat-icon class="size-12! text-5xl! text-gray-400" aria-hidden="true">construction</mat-icon>
       <h2 id="placeholder-title" class="mt-3 text-lg font-semibold text-gray-900">
-        Nothing here yet
+        {{ t().placeholder.heading }}
       </h2>
       <p class="mt-1 max-w-md text-sm text-gray-600">
-        This page is a placeholder. Give its route a real
-        <code class="text-gray-800">loadComponent</code>
-        to build it out.
+        <rich-text [text]="t().placeholder.text" />
       </p>
       @if (params().length) {
         <dl class="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-1 text-sm">
@@ -44,8 +46,14 @@ import { PageHeaderComponent } from '@layout/page-header';
 })
 export class PlaceholderPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly translate = inject(LAYOUT_CONFIG).translate;
+  protected readonly t = injectMessages(PAGES_MESSAGES);
 
-  protected readonly subtitle: string | undefined = this.route.snapshot.data['subtitle'];
+  /** the route's `data.subtitle` is the app's own text, like its name: translated the same way */
+  protected readonly subtitle = computed(() => {
+    const subtitle: string | undefined = this.route.snapshot.data['subtitle'];
+    return subtitle === undefined ? undefined : this.translate(subtitle);
+  });
 
   private readonly paramMap = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,

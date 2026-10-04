@@ -1,0 +1,95 @@
+// Menus and popovers — the panels Material floats over the page: a menu, a select's or an
+// autocomplete's list, the date picker's calendar.
+//
+// Each is a pane of frosted glass: the card surface at three quarters' strength over a blur of
+// whatever is behind it, a hairline edge and a soft shadow. The surface is `--color-white`, which
+// dark mode rebinds (`_dark.scss`), so the glass is dark there with nothing more said.
+//
+// Glass is opaque again where it would get in the way: under "more contrast", and when the
+// operating system asks for less transparency.
+//
+// The app's own popovers take the same look from the `surface-glass` utility (`tailwind.css`),
+// which reads the properties below. Dialogs, sheets, tooltips and toasts are not glass.
+
+@use '@angular/material' as mat;
+
+:root {
+  --overlay-radius: var(--radius-xl, 0.75rem);
+  --overlay-surface: color-mix(in srgb, var(--color-white) 75%, transparent);
+  // the saturation gives back the colour a blur washes out of what shows through
+  --overlay-blur: blur(18px) saturate(1.6);
+  --overlay-edge: color-mix(in srgb, var(--color-black) 10%, transparent);
+  // the edge is the first, spread-only shadow: a border would take room inside the panel
+  --overlay-shadow:
+    0 0 0 1px var(--overlay-edge), 0 12px 32px -8px rgb(0 0 0 / 0.2),
+    0 2px 6px -2px rgb(0 0 0 / 0.08);
+}
+
+@mixin opaque {
+  --overlay-surface: var(--color-white);
+  --overlay-blur: none;
+}
+
+html[data-contrast='more'] {
+  @include opaque;
+  --overlay-edge: var(--contrast-line);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    @include opaque;
+  }
+}
+
+html {
+  @include mat.menu-overrides(
+    (
+      container-color: var(--overlay-surface),
+      container-shape: var(--overlay-radius),
+      container-elevation-shadow: var(--overlay-shadow),
+    )
+  );
+
+  @include mat.select-overrides(
+    (
+      panel-background-color: var(--overlay-surface),
+      container-elevation-shadow: var(--overlay-shadow),
+    )
+  );
+
+  @include mat.autocomplete-overrides(
+    (
+      background-color: var(--overlay-surface),
+      container-shape: var(--overlay-radius),
+      container-elevation-shadow: var(--overlay-shadow),
+    )
+  );
+
+  @include mat.datepicker-overrides(
+    (
+      calendar-container-background-color: var(--overlay-surface),
+      calendar-container-shape: var(--overlay-radius),
+      calendar-container-elevation-shadow: var(--overlay-shadow),
+    )
+  );
+}
+
+// ── What tokens can't reach ──
+
+// the blur itself
+.mat-mdc-menu-panel,
+div.mat-mdc-select-panel,
+div.mat-mdc-autocomplete-panel,
+.mat-datepicker-content {
+  -webkit-backdrop-filter: var(--overlay-blur);
+  backdrop-filter: var(--overlay-blur);
+}
+
+// A select's and an autocomplete's list hang off their field, and Material squares the corners
+// on that side — the bottom ones, or the top ones for a list that opens upwards: floating clear
+// of the field as they do here, they are rounded all the way round. (The two ancestors make the
+// rule more specific than Material's own, which load later.)
+.cdk-overlay-container .cdk-overlay-pane div.mat-mdc-select-panel,
+.cdk-overlay-container .cdk-overlay-pane div.mat-mdc-autocomplete-panel {
+  border-radius: var(--overlay-radius);
+}

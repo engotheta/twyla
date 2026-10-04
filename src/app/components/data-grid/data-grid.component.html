@@ -1,17 +1,24 @@
-<div class="flex-1 flex flex-col h-full min-h-0 overflow-hidden gap-[2px]">
+<!-- The rows scroll inside their own region, which keeps a few rows' height (min-h-20): in a
+     box too short for the toolbar, those rows and the paginator — a small pane, large text — the
+     grid itself scrolls, so nothing is cut off out of reach. -->
+<div class="flex-1 flex flex-col h-full min-h-0 overflow-x-hidden overflow-y-auto gap-[2px]">
   @if (showToolbar()) {
     <grid-toolbar [instance]="instance" [showSearch]="showSearch()" class="shrink-0" />
   }
 
   @if (instance.loading()) {
-    <mat-progress-bar mode="indeterminate" class="!h-0.5 shrink-0" />
+    <mat-progress-bar
+      mode="indeterminate"
+      class="!h-0.5 shrink-0"
+      [attr.aria-label]="t().loading"
+    />
   }
 
   @switch (instance.renderMode()) {
     @case ('table') {
       <!-- tabindex: a scroll region stays keyboard-reachable even when its rows hold nothing
            focusable (WCAG 2.1.1 / AXE scrollable-region-focusable) — likewise list/cards below -->
-      <div class="overflow-auto min-h-0 grow bg-white" tabindex="0">
+      <div class="overflow-auto min-h-20 grow bg-white" tabindex="0">
         <table
           class="w-full text-sm border-collapse"
           [class.table-fixed]="isFixedLayout()"
@@ -59,8 +66,8 @@
                     <div class="flex items-center">
                       @switch (cell.column?.key) {
                         @case (DRAG_KEY) {
-                          <span class="sr-only">Reorder rows</span>
-                          <mat-icon class="!text-base opacity-40" aria-hidden="true"
+                          <span class="sr-only">{{ t().rows.reorder }}</span>
+                          <mat-icon class="!size-6 !text-base opacity-40" aria-hidden="true"
                             >drag_indicator</mat-icon
                           >
                         }
@@ -69,27 +76,27 @@
                             <mat-checkbox
                               [checked]="isSelectAllChecked()"
                               (click)="onSelectAllToggle($event)"
-                              aria-label="Select all rows on this page"
+                              [aria-label]="t().rows.selectAll"
                             />
                           } @else {
-                            <span class="sr-only">Select row</span>
-                            <mat-icon class="!text-base opacity-40" aria-hidden="true"
+                            <span class="sr-only">{{ t().rows.select }}</span>
+                            <mat-icon class="!size-6 !text-base opacity-40" aria-hidden="true"
                               >check_box_outline_blank</mat-icon
                             >
                           }
                         }
                         @case (INDEX_KEY) {
-                          <span class="sr-only">Row number</span>
+                          <span class="sr-only">{{ t().rows.number }}</span>
                           <span aria-hidden="true">{{ cell.label }}</span>
                         }
                         @case (EXPAND_KEY) {
-                          <span class="sr-only">Expand row</span>
+                          <span class="sr-only">{{ t().rows.expand }}</span>
                         }
                         @default {
                           <span class="inline-flex items-center gap-1">
                             {{ cell.label }}
                             @if (sortIcon(cell); as icon) {
-                              <mat-icon class="!text-sm">{{ icon }}</mat-icon>
+                              <mat-icon class="!size-6 !text-sm">{{ icon }}</mat-icon>
                             }
                           </span>
                           @if (cell.column?.headerProps?.buttons?.length) {
@@ -179,10 +186,12 @@
                             cdkDragHandle
                             mat-icon-button
                             class="cursor-grab"
-                            aria-label="Drag to reorder row"
+                            [attr.aria-label]="t().rows.drag"
                             (click)="$event.stopPropagation()"
                           >
-                            <mat-icon class="!text-base opacity-60">drag_indicator</mat-icon>
+                            <mat-icon class="!size-6 !text-base opacity-60"
+                              >drag_indicator</mat-icon
+                            >
                           </button>
                         }
                         @case (INDEX_KEY) {
@@ -195,14 +204,14 @@
                                 [checked]="instance.isSelected(row)"
                                 [disabled]="rowCheckboxDisabled(row)"
                                 (click)="onRowSelectToggle(row, $event)"
-                                aria-label="Select row"
+                                [aria-label]="t().rows.select"
                               />
                             } @else {
                               <mat-radio-button
                                 [checked]="instance.isSelected(row)"
                                 [disabled]="rowCheckboxDisabled(row)"
                                 (click)="onRowSelectToggle(row, $event)"
-                                aria-label="Select row"
+                                [aria-label]="t().rows.select"
                               />
                             }
                           }
@@ -213,10 +222,10 @@
                             mat-icon-button
                             class="!w-7 !h-7"
                             [attr.aria-expanded]="instance.isExpanded(row)"
-                            aria-label="Toggle row detail"
+                            [attr.aria-label]="t().rows.toggleDetail"
                             (click)="onExpandToggle(row, $event)"
                           >
-                            <mat-icon class="!text-base">{{
+                            <mat-icon class="!size-6 !text-base">{{
                               instance.isExpanded(row) ? 'expand_less' : 'expand_more'
                             }}</mat-icon>
                           </button>
@@ -259,7 +268,7 @@
 
     @case ('list') {
       <div
-        class="flex flex-col gap-2 py-2 grow min-h-0 overflow-auto"
+        class="flex flex-col gap-2 py-2 grow min-h-20 overflow-auto"
         tabindex="0"
         cdkDropList
         [cdkDropListData]="instance.rows()"
@@ -303,10 +312,10 @@
                   cdkDragHandle
                   mat-icon-button
                   class="!w-7 !h-7 shrink-0 cursor-grab"
-                  aria-label="Drag to reorder row"
+                  [attr.aria-label]="t().rows.drag"
                   (click)="$event.stopPropagation()"
                 >
-                  <mat-icon class="!text-base opacity-60">drag_indicator</mat-icon>
+                  <mat-icon class="!size-6 !text-base opacity-60">drag_indicator</mat-icon>
                 </button>
               }
 
@@ -340,14 +349,14 @@
                         [checked]="instance.isSelected(row)"
                         [disabled]="rowCheckboxDisabled(row)"
                         (click)="onRowSelectToggle(row, $event)"
-                        aria-label="Select row"
+                        [aria-label]="t().rows.select"
                       />
                     } @else {
                       <mat-radio-button
                         [checked]="instance.isSelected(row)"
                         [disabled]="rowCheckboxDisabled(row)"
                         (click)="onRowSelectToggle(row, $event)"
-                        aria-label="Select row"
+                        [aria-label]="t().rows.select"
                       />
                     }
                   </span>
@@ -400,7 +409,7 @@
 
     @case ('cards') {
       <div
-        class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 py-2 grow min-h-0 overflow-auto"
+        class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 py-2 grow min-h-20 overflow-auto"
         tabindex="0"
       >
         @for (row of instance.rows(); track instance.rowId(row); let ri = $index) {
@@ -447,7 +456,9 @@
       <mat-icon class="!text-4xl !w-10 !h-10">inbox</mat-icon>
       <p>{{ noContentLabel() }}</p>
       @if (instance.params().noContentClick) {
-        <button type="button" mat-button (click)="onNoContentClick()">Reload</button>
+        <button type="button" mat-button (click)="onNoContentClick()">
+          {{ t().reload }}
+        </button>
       }
     </div>
   }

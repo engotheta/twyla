@@ -40,16 +40,16 @@
          input keeps the focus while a row is clicked. -->
     <div
       role="region"
-      [attr.aria-label]="label() + ' suggestions'"
+      [attr.aria-label]="t().search.suggestions(label())"
       (mousedown)="$event.preventDefault()"
     >
       <div
         role="listbox"
         [id]="listId"
-        [attr.aria-label]="label() + ' suggestions'"
+        [attr.aria-label]="t().search.suggestions(label())"
         [attr.aria-multiselectable]="multiple() ? true : null"
         [attr.aria-busy]="loading() ? true : null"
-        class="max-h-72 max-w-80 min-w-48 overflow-y-auto rounded-md border border-black/10 bg-white py-1 text-sm text-gray-900 shadow-lg"
+        class="surface-glass max-h-72 max-w-80 min-w-48 overflow-y-auto py-1 text-sm text-gray-900"
       >
         @for (group of groups(); track group.name ?? $index) {
           @if (group.name; as name) {
@@ -71,7 +71,9 @@
         }
 
         @if (loading() && !rows().length) {
-          <div role="presentation" class="px-3 py-1.5 text-gray-600">Loading…</div>
+          <div role="presentation" class="px-3 py-1.5 text-gray-600">
+            {{ t().search.loading }}
+          </div>
         }
       </div>
     </div>
@@ -93,13 +95,13 @@
         @if (multiple()) {
           <mat-icon
             aria-hidden="true"
-            class="shrink-0 !text-base text-primary"
+            class="shrink-0 !size-6 !text-base text-primary"
             [class.invisible]="!isSelected(entry.row)"
             >check</mat-icon
           >
         }
         @if (entry.row.icon; as icon) {
-          <mat-icon aria-hidden="true" class="shrink-0 !text-base text-gray-600">
+          <mat-icon aria-hidden="true" class="shrink-0 !size-6 !text-base text-gray-600">
             {{ icon }}
           </mat-icon>
         }

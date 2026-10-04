@@ -13,7 +13,9 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { labelFromFieldString } from '@components/details/helpers/field-labels.helpers';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { GridInstance, SYNTHETIC_COLUMN_KEYS } from '../grid-engine.service';
+import { GRID_MESSAGES } from '../grid.messages';
 import { GridColumn_ } from '../interfaces/grid-column.interface';
 import { GridExportFormat } from '../interfaces/grid-export.interface';
 
@@ -70,6 +72,7 @@ function discoverExtraKeys(rows: unknown[], knownKeys: Set<string>): string[] {
 })
 export class GridExportPanelComponent<RowType = any> {
   protected readonly data = inject<GridExportPanelData<RowType>>(MAT_DIALOG_DATA);
+  protected readonly t = injectMessages(GRID_MESSAGES);
   private readonly dialogRef = inject(
     MatDialogRef<GridExportPanelComponent<RowType>, GridColumn_[] | undefined>,
   );

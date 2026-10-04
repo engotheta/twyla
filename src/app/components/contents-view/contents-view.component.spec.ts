@@ -114,7 +114,7 @@ describe('ContentsViewComponent', () => {
   beforeEach(() => {
     stubMatchMedia(true);
     stubLocalStorage();
-    // Material components rendered INSIDE contents (a details' `<mat-tab-group>`, …) settle on
+    // Material components rendered INSIDE contents (a grid's paginator, a form's stepper, …) settle on
     // real fallback timers (standing in for a CSS transitionend jsdom never fires) unless
     // animations are known to be off — timers `whenStable()` doesn't wait for. Declaring
     // 'NoopAnimations' (the token `provideNoopAnimations()` sets; `@angular/animations` isn't a
@@ -1050,6 +1050,34 @@ describe('ContentsViewComponent', () => {
     expect(parseFloat(hGutter.style.top)).toBeGreaterThan(topBefore);
   });
 
+  it('arrow presses in quick succession each move a step, before any re-measure', async () => {
+    const { fixture, instance } = await measuredLayout(
+      { contents: threeContents, resizable: true },
+      2,
+      2,
+    );
+    const vGutter = gutters(fixture).find(
+      (el) => el.getAttribute('aria-orientation') === 'vertical',
+    )!;
+    const press = (key: string) => {
+      vGutter.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      fixture.detectChanges();
+      return parseFloat(vGutter.style.left);
+    };
+    const start = parseFloat(vGutter.style.left);
+
+    // a move is re-measured two frames after it ends; none passes between these presses (a held
+    // key repeats faster than that), so each one has to start from where the last one left off
+    expect(press('ArrowRight') - start).toBe(24);
+    expect(press('ArrowRight') - start).toBe(48);
+    expect(press('ArrowRight') - start).toBe(72);
+    expect(press('ArrowLeft') - start).toBe(48);
+
+    // …and the split followed: 348px | 252px of the two 300px columns
+    const [first, second] = instance.sizes().columns!;
+    expect(first / second).toBeCloseTo(348 / 252, 6);
+  });
+
   it('instance sizes()/setSizes()/resetSizes()', async () => {
     let instance: ContentsViewInstance | undefined;
     const fixture = mount({ contents: threeContents, resizable: true });
@@ -1381,6 +1409,106 @@ describe('ContentsViewComponent', () => {
     instance.setCollapsed('a', false);
     fixture.detectChanges();
     expect(gridContainer(fixture).style.justifyContent).toBe('');
+  });
+
+  // ── collapsed panes are remembered, as the sizes are ──
+
+  const COLLAPSED_SLOT = 'studio.tab-state.contents-collapsed:/:a|b|c';
+
+  it('remembers the collapsed panes: a new mount starts with them collapsed', async () => {
+    const first = await mountSettled({ contents: threeContents, collapsible: true });
+    byLabel(first, 'Collapse B')!.click();
+    first.detectChanges();
+    expect(localStorage.getItem(COLLAPSED_SLOT)).toBe('["b"]');
+    first.destroy(); // hands the slot back, as leaving the page does
+
+    const second = await mountSettled({ contents: threeContents, collapsible: true });
+    expect(byLabel(second, 'Restore B')).toBeTruthy();
+    expect(byLabel(second, 'Collapse A')).toBeTruthy();
+    expect(byLabel(second, 'Collapse C')).toBeTruthy();
+
+    // restoring a pane is remembered too
+    byLabel(second, 'Restore B')!.click();
+    second.detectChanges();
+    expect(localStorage.getItem(COLLAPSED_SLOT)).toBe('[]');
+  });
+
+  it('persistCollapsed: false neither restores nor saves', async () => {
+    localStorage.setItem(COLLAPSED_SLOT, '["b"]');
+    const fixture = await mountSettled({
+      contents: threeContents,
+      collapsible: true,
+      persistCollapsed: false,
+    });
+    expect(byLabel(fixture, 'Restore B')).toBeNull();
+
+    byLabel(fixture, 'Collapse A')!.click();
+    fixture.detectChanges();
+    expect(byLabel(fixture, 'Restore A')).toBeTruthy(); // still collapses, for the session
+    expect(localStorage.getItem(COLLAPSED_SLOT)).toBe('["b"]'); // what was saved is left alone
+  });
+
+  it('a restore skips panes that are gone and still keeps one open', async () => {
+    localStorage.setItem(
+      'studio.tab-state.contents-collapsed:/:a|b',
+      JSON.stringify(['a', 'b', 'gone']),
+    );
+    let instance: ContentsViewInstance | undefined;
+    const fixture = mount({ contents: [threeContents[0], threeContents[1]], collapsible: true });
+    fixture.componentInstance.instanceChange.subscribe((i) => (instance = i));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // both were saved collapsed: with `keepOneExpanded` the first reopens
+    expect(instance!.collapsed()).toEqual(['b']);
+    expect(byLabel(fixture, 'Collapse A')).toBeTruthy();
+  });
+
+  it('a corrupt saved entry leaves every pane expanded', async () => {
+    localStorage.setItem(COLLAPSED_SLOT, '{not json');
+    const fixture = await mountSettled({ contents: threeContents, collapsible: true });
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.cv-strip').length).toBe(0);
+    expect(byLabel(fixture, 'Collapse A')).toBeTruthy();
+  });
+
+  it('cascades `persistCollapsed` to a nested level, which keeps its own slot', async () => {
+    const group = (persistCollapsed?: boolean): ContentView => ({
+      type: 'group',
+      slug: 'g',
+      persistCollapsed,
+      contents: [
+        { type: 'html', slug: 'x', label: 'X', html: 'x' },
+        { type: 'html', slug: 'y', label: 'Y', html: 'y' },
+      ],
+    });
+    const nestedParams = (fixture: ReturnType<typeof mount>): ContentsParameter => {
+      const nested = fixture.debugElement
+        .queryAll(By.directive(ContentsViewComponent))
+        .map((de) => de.componentInstance as ContentsViewComponent)
+        .find((c) => c !== fixture.componentInstance)!;
+      return nested.params();
+    };
+
+    const off = await mountSettled({
+      contents: [group(), threeContents[0]],
+      collapsible: true,
+      persistCollapsed: false,
+    });
+    expect(nestedParams(off).persistCollapsed).toBe(false); // inherited from the root
+    off.destroy();
+
+    const on = await mountSettled({
+      contents: [group(true), threeContents[0]],
+      collapsible: true,
+      persistCollapsed: false,
+    });
+    expect(nestedParams(on).persistCollapsed).toBe(true); // the child's own value wins
+
+    byLabel(on, 'Collapse X')!.click();
+    on.detectChanges();
+    expect(localStorage.getItem('studio.tab-state.contents-collapsed:/:x|y')).toBe('["x"]');
+    expect(localStorage.getItem('studio.tab-state.contents-collapsed:/:g|a')).toBeNull();
   });
 
   describe('full screen', () => {

@@ -9,6 +9,7 @@ import { camelToSpaced } from './field-labels.helpers';
 import { propsFromString } from './field-string.helpers';
 import { DataField, FieldData } from '../interfaces/field.interface';
 import { expandDataFields } from './fields.helpers';
+import { TabPanelsItem } from '@components/tab-nav/tab-nav.interface';
 
 export function getGroupsFromMap(fieldsGroupsMap: FieldsGroupsMap): FieldGroupData[] {
   if (!fieldsGroupsMap) return [];
@@ -165,4 +166,20 @@ export function resolveFieldGroups(
   }
 
   return defaultGroups(fields, parameter.arrayConfig);
+}
+
+/**
+ * A list of groups as the tabs of a `tab-panels` (`showGroupsInTabs`): a group's `slug` (else
+ * its place) is its key, its icon goes on its tab, and a group without a label is "Group 2"
+ * (`unnamed`, from the messages) rather than an empty tab.
+ */
+export function groupTabs(
+  groups: readonly FieldGroupData[],
+  unnamed: (position: number) => string,
+): TabPanelsItem[] {
+  return groups.map((group, index) => ({
+    key: group.slug ?? `#${index}`,
+    label: group.label || unnamed(index + 1),
+    icon: group.icon,
+  }));
 }

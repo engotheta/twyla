@@ -1,5 +1,8 @@
-// the unified search bar's fixed texts: how operators read, and which ones it can express
+// the unified search bar's fixed values: which operators it can express. Its text — how the
+// operators read, the list's headings — is in `grid.messages.ts`, per language; the constants
+// kept here for it are the English.
 
+import { GRID_EN } from '../grid.messages';
 import { GridFilterOperator } from '../interfaces/grid-filter.interface';
 import { DEFAULT_ENABLED_SEARCH_TYPES } from '../interfaces/grid-search.interface';
 
@@ -10,21 +13,9 @@ export interface GridSearchOperatorText {
   words: string;
 }
 
-/** symbols where one is universally read (`=`, `>`…), plain words for the rest */
-export const GRID_SEARCH_OPERATORS: Record<GridFilterOperator, GridSearchOperatorText> = {
-  equals: { text: '=', words: 'is' },
-  notEquals: { text: '!=', words: 'is not' },
-  like: { text: 'contains', words: 'contains' },
-  greaterThan: { text: '>', words: 'is greater than' },
-  greaterThanOrEqual: { text: '>=', words: 'is at least' },
-  lessThan: { text: '<', words: 'is less than' },
-  lessThanOrEqual: { text: '<=', words: 'is at most' },
-  in: { text: 'is one of', words: 'is one of' },
-  notIn: { text: 'is not one of', words: 'is not one of' },
-  between: { text: 'between', words: 'is between' },
-  isNull: { text: 'is empty', words: 'is empty' },
-  isNotNull: { text: 'is not empty', words: 'is not empty' },
-};
+/** how the operators read in English — in another language, `GRID_MESSAGES`'s `search.operators` */
+export const GRID_SEARCH_OPERATORS: Record<GridFilterOperator, GridSearchOperatorText> =
+  GRID_EN.search.operators;
 
 /**
  * What a column token can use. A `SearchField.value` is one string, so only operators a single
@@ -44,11 +35,12 @@ export const GRID_SEARCH_VALUELESS_OPERATORS: ReadonlySet<GridFilterOperator> = 
 /** operators whose value is a list of picked options */
 export const GRID_SEARCH_LIST_OPERATORS: ReadonlySet<GridFilterOperator> = new Set(['in', 'notIn']);
 
-/** the list row that turns the typed text into a free-text pill — GitLab's wording */
-export const GRID_SEARCH_TEXT_OPTION = 'Search for this text';
+/** the list row that turns the typed text into a free-text pill, in English */
+export const GRID_SEARCH_TEXT_OPTION = GRID_EN.search.textOption;
 
 /** `GridSearchSuggestion.value` of that row */
 export const GRID_SEARCH_TEXT_VALUE = Symbol('grid-search-text');
 
-export const GRID_SEARCH_COLUMNS_GROUP = 'Columns';
-export const GRID_SEARCH_FILTERS_GROUP = 'Filters';
+/** the field list's two headings, in English */
+export const GRID_SEARCH_COLUMNS_GROUP = GRID_EN.search.columnsGroup;
+export const GRID_SEARCH_FILTERS_GROUP = GRID_EN.search.filtersGroup;

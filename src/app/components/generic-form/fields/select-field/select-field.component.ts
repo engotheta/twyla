@@ -21,6 +21,8 @@ import { FormInstance } from '../../form-engine.service';
 import { Option } from '../../interfaces/form-state.interface';
 import { SelectField } from '../../interfaces/control-fields.interface';
 import { controlStatus } from '../../helpers/control-status.helpers';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { FORM_MESSAGES } from '../../form.messages';
 import { firstErrorMessage } from '../../helpers/field-errors.helpers';
 import { mapRawOptions, resolveOptionsSource } from './options.helpers';
 
@@ -63,13 +65,16 @@ function defaultCompare(a: unknown, b: unknown): boolean {
             (openedChange)="onOpenedChange($event)"
           >
             @if (f.searchable) {
-              <div class="sticky top-0 z-10 bg-white p-2" (keydown)="$event.stopPropagation()">
+              <div
+                class="sticky top-0 z-10 bg-(--overlay-surface) p-2 backdrop-blur-lg"
+                (keydown)="$event.stopPropagation()"
+              >
                 <input
                   #searchInput
                   type="text"
-                  class="w-full rounded border border-black/20 px-2 py-1 text-sm"
-                  placeholder="Search…"
-                  aria-label="Search options"
+                  class="w-full rounded-lg border border-(--field-outline) px-2 py-1 text-sm"
+                  [placeholder]="t().select.search"
+                  [attr.aria-label]="t().select.searchOptions"
                   [value]="search()"
                   (input)="onSearchInput($event)"
                 />
@@ -174,6 +179,8 @@ export class SelectFieldComponent {
   readonly field = input.required<SelectField>();
   readonly instance = input.required<FormInstance>();
 
+  protected readonly t = injectMessages(FORM_MESSAGES);
+
   protected readonly defaultCompare = defaultCompare;
 
   protected readonly state = computed(() => this.instance().fieldState(this.field())());
@@ -195,7 +202,7 @@ export class SelectFieldComponent {
 
   protected readonly errorMessage = computed(() =>
     this.status().touched
-      ? firstErrorMessage(this.status().errors, this.state().validations)
+      ? firstErrorMessage(this.status().errors, this.state().validations, this.t())
       : null,
   );
 
@@ -223,7 +230,7 @@ export class SelectFieldComponent {
       : Array.isArray(f.options)
         ? f.options
         : [];
-    return f.hasNoneOption ? [{ label: 'None', value: null }, ...base] : base;
+    return f.hasNoneOption ? [{ label: this.t().select.none, value: null }, ...base] : base;
   });
 
   protected readonly search = signal('');

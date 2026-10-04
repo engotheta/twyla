@@ -1,6 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { DatePipe, JsonPipe } from '@angular/common';
+import { JsonPipe } from '@angular/common';
 import { MatIcon } from '@angular/material/icon';
+import { I18nService } from '@services/i18n/i18n.service';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { DETAILS_MESSAGES } from '../details.messages';
 import { FieldData } from '../interfaces/field.interface';
 import { getLabelField } from '../helpers/field-labels.helpers';
 import { getBase64Object } from '@utils/base-64.helpers';
@@ -30,7 +33,7 @@ interface MediaInfo {
   selector: 'field-value',
   templateUrl: './field-value.component.html',
   styleUrl: './field-value.component.scss',
-  imports: [DatePipe, JsonPipe, MatIcon],
+  imports: [JsonPipe, MatIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FieldValueComponent {
@@ -38,6 +41,8 @@ export class FieldValueComponent {
   readonly undefinedValue = input('—');
 
   private readonly fileViewer = inject(FileViewerService);
+  private readonly i18n = inject(I18nService);
+  protected readonly t = injectMessages(DETAILS_MESSAGES);
   protected readonly viewButton = VIEW_BUTTON;
   protected readonly thumbButton = THUMB_BUTTON;
 
@@ -49,6 +54,16 @@ export class FieldValueComponent {
 
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date;
+  });
+
+  /** the date and time, the way the user's language writes them */
+  protected readonly dateText = computed(() => {
+    const date = this.date();
+    if (!date) return '';
+    return new Intl.DateTimeFormat(this.i18n.locale(), {
+      dateStyle: 'medium',
+      timeStyle: 'medium',
+    }).format(date);
   });
 
   protected readonly commentText = computed(() => {

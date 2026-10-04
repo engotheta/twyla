@@ -3,6 +3,9 @@
 @if (vm.visible) {
   <ng-template #buttonContent>
     <span class="flex items-center justify-center gap-2 flex-1">
+      @if (vm.avatar) {
+        <action-avatar [avatar]="vm.avatar" />
+      }
       @if (vm.icon && vm.iconPosition === 'before') {
         <ng-container [ngTemplateOutlet]="iconTemplate" />
       }
@@ -40,13 +43,16 @@
     />
   }
 
-  <mat-menu #childMenu="matMenu">
-    <div class="flex flex-col gap-1 p-1" [class]="vm.childrenHolderClass">
-      @for (child of childButtons(); track child.slug ?? $index) {
-        <action-button [button]="child" [parentData]="data()" />
-      }
-    </div>
-  </mat-menu>
+  <!-- child buttons are the items of a real menu: arrow keys, type-ahead, Esc and submenus -->
+  <action-menu
+    #children
+    [buttons]="childButtons()"
+    [data]="data()"
+    [panelClass]="vm.childrenHolderClass"
+    [title]="vm.menuTitle"
+    [subtitle]="vm.menuSubtitle"
+    [xPosition]="vm.menuPosition"
+  />
 
   <!-- the menu trigger goes on the button itself, and only on a button with a menu: it stamps
        aria-haspopup / aria-expanded on its host, which a plain button or a wrapper must not carry -->
@@ -60,7 +66,7 @@
   >
     <ng-container
       [ngTemplateOutlet]="buttonByType"
-      [ngTemplateOutletContext]="{ $implicit: hasChildren() ? childMenu : null }"
+      [ngTemplateOutletContext]="{ $implicit: hasChildren() ? children.menu() : null }"
     />
   </div>
 
@@ -137,8 +143,8 @@
       @default {
         @if (menu) {
           <button
-            matButton="outlined"
             type="button"
+            [matButton]="appearance()"
             [matMenuTriggerFor]="menu"
             [attr.aria-label]="ariaLabel()"
             [class]="vm.class"
@@ -149,8 +155,8 @@
           </button>
         } @else {
           <button
-            matButton="outlined"
             type="button"
+            [matButton]="appearance()"
             [attr.aria-label]="ariaLabel()"
             [class]="vm.class"
             [buttonLoading]="vm.loading"

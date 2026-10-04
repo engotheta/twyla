@@ -1,12 +1,18 @@
-import { inject, Injectable, Injector } from '@angular/core';
+import { effect, inject, Injectable, Injector } from '@angular/core';
 import { Title } from '@angular/platform-browser';
-import { ActivatedRouteSnapshot, RouterStateSnapshot, TitleStrategy } from '@angular/router';
+import {
+  ActivatedRouteSnapshot,
+  Router,
+  RouterStateSnapshot,
+  TitleStrategy,
+} from '@angular/router';
 import { LAYOUT_CONFIG } from './layout-config.token';
 
 /**
  * Document titles like "Data grid · Studio": the deepest route's menu `data.name`, else its
  * `title` — so GASCO-style routes, which name pages in `data`, get titles without repeating them.
- * `{ provide: TitleStrategy, useClass: PageTitleStrategy }`.
+ * The name goes through `LayoutConfig.translate`, and the title is written again when the
+ * language changes. `{ provide: TitleStrategy, useClass: PageTitleStrategy }`.
  */
 @Injectable({ providedIn: 'root' })
 export class PageTitleStrategy extends TitleStrategy {
@@ -15,10 +21,16 @@ export class PageTitleStrategy extends TitleStrategy {
   // inject services that need the Router (a session service) — injecting it here would loop
   private readonly injector = inject(Injector);
 
+  constructor() {
+    super();
+    // `translate` reads the language, which makes it this effect's dependency
+    effect(() => this.updateTitle(this.injector.get(Router).routerState.snapshot));
+  }
+
   override updateTitle(snapshot: RouterStateSnapshot): void {
-    const brand = this.injector.get(LAYOUT_CONFIG).brand.name;
+    const { brand, translate } = this.injector.get(LAYOUT_CONFIG);
     const page = pageName(snapshot.root);
-    this.title.setTitle(page ? `${page} · ${brand}` : brand);
+    this.title.setTitle(page ? `${translate(page)} · ${brand.name}` : brand.name);
   }
 }
 

@@ -61,7 +61,7 @@ const VIEWS: PageHeaderToggle<string>[] = [
         <input
           type="search"
           placeholder="Search reports"
-          class="h-10 w-56 rounded-lg border border-gray-300 px-3 text-sm placeholder:text-gray-500 focus:border-primary focus:outline-2 focus:outline-primary/30"
+          class="h-10 w-56 rounded-lg border border-(--field-outline) px-3 text-sm placeholder:text-gray-500 focus:border-primary focus:outline-2 focus:outline-primary/30"
         />
       </label>
     </page-header>

@@ -118,4 +118,88 @@ describe('AppSidebarComponent', () => {
     await settle();
     expect(fixture.nativeElement.textContent).toContain('Audit');
   });
+
+  // ── the line beside a nested list ──
+
+  /** the row (link or group button) named `name`, and the pieces of line drawn for it */
+  const lineOf = (name: string) => {
+    const row = all('sidebar-menu sidebar-menu li > a, sidebar-menu sidebar-menu li > button').find(
+      (el) => el.querySelector('.truncate')?.textContent?.trim() === name,
+    )!;
+    const lit = (el: Element | null | undefined) =>
+      el ? el.classList.contains('border-primary') : undefined;
+    const node = row.querySelector(':scope > .menu-node')!;
+    return {
+      rail: lit(row.parentElement!.querySelector(':scope > .menu-rail')), // undefined: no rail
+      branch: lit(row.querySelector(':scope > .menu-branch')),
+      node: lit(node),
+      filled: node.classList.contains('bg-primary'),
+    };
+  };
+  const stemOf = (group: string) => groupButton(group).querySelector(':scope > .menu-stem');
+
+  it('draws each nested item a branch and a node, and a rail for all but the last', () => {
+    expect(all('.menu-branch').length).toBe(3); // Daily, Archive, Old reports
+    expect(all('.menu-node').length).toBe(3);
+    expect(all('.menu-rail').length).toBe(1); // Daily's: the line ends at Archive, the last child
+    expect(all('[class*="menu-"][aria-hidden="true"]').length).toBe(7);
+    // the top level has no line: its rows carry an icon instead
+    expect(all('nav > div > sidebar-menu > ul > li > a > .menu-branch').length).toBe(0);
+    expect(all('nav > div > sidebar-menu > ul > li > a > menu-icon').length).toBe(1); // Overview
+    // nothing is lit before the current page is one of them
+    expect(all('.menu-rail.border-primary, .menu-branch.border-primary').length).toBe(0);
+  });
+
+  it('lights the line from the top as far as the current page', async () => {
+    await TestBed.inject(Router).navigateByUrl('/reports/daily');
+    await settle();
+
+    expect(lineOf('Daily')).toEqual({ rail: false, branch: true, node: true, filled: true });
+    // past the current page the line carries on, unlit
+    expect(lineOf('Archive')).toEqual({ rail: undefined, branch: false, node: false, filled: false });
+    // …and it starts at the group, whose own icon takes the colour
+    expect(stemOf('Reports')!.classList).toContain('border-primary');
+    expect(groupButton('Reports').querySelector('menu-icon')!.classList).toContain('text-primary');
+  });
+
+  it('lights it through every group the current page is under', async () => {
+    await TestBed.inject(Router).navigateByUrl('/reports/archive/old');
+    await settle();
+
+    // Daily comes before the group on the way: the line runs past it, lit, and its branch stays out
+    expect(lineOf('Daily')).toEqual({ rail: true, branch: false, node: false, filled: false });
+    // the group on the way: a lit branch to a hollow node
+    expect(lineOf('Archive')).toEqual({ rail: undefined, branch: true, node: true, filled: false });
+    expect(stemOf('Archive')!.classList).toContain('border-primary');
+    // the page itself: a filled one
+    expect(lineOf('Old reports')).toEqual({
+      rail: undefined,
+      branch: true,
+      node: true,
+      filled: true,
+    });
+  });
+
+  it('lights nothing when the current page is not in a nested list', async () => {
+    await TestBed.inject(Router).navigateByUrl('/reports/overview');
+    await settle();
+    expect(all('[class*="menu-"].border-primary').length).toBe(0);
+    expect(groupButton('Reports').querySelector('menu-icon')!.classList).not.toContain(
+      'text-primary',
+    );
+  });
+
+  it('keeps the start-edge bar for the top level, where there is no line to light', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/reports/overview');
+    await settle();
+    const top = fixture.nativeElement.querySelector('[aria-current="page"]') as HTMLElement;
+    expect(top.className).toContain('before:bg-primary');
+
+    await router.navigateByUrl('/reports/daily');
+    await settle();
+    const nested = fixture.nativeElement.querySelector('[aria-current="page"]') as HTMLElement;
+    expect(nested.className).toContain('bg-primary/10!');
+    expect(nested.className).not.toContain('before:bg-primary');
+  });
 });

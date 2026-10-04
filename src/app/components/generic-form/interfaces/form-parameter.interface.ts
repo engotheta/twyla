@@ -18,12 +18,18 @@ interface CrossValidatorBase {
   showOn?: string;
 }
 
+/**
+ * A cross rule's message: text, or a function read each time the rule runs — which lets it
+ * follow the user's language (`message: () => t().errors.mismatch`).
+ */
+export type CrossValidatorMessage = string | (() => string);
+
 export type CrossValidator =
   | (CrossValidatorBase & {
       /** all listed fields must hold equal values (e.g. password/confirm) */
       type: 'match';
       fields: string[];
-      message?: string;
+      message?: CrossValidatorMessage;
     })
   | (CrossValidatorBase & {
       /** `field` becomes required when `when` equals `equals` (or is truthy if omitted) */
@@ -31,7 +37,7 @@ export type CrossValidator =
       field: string;
       when: string;
       equals?: unknown;
-      message?: string;
+      message?: CrossValidatorMessage;
     })
   | (CrossValidatorBase & {
       /** escape hatch: arbitrary rule over the listed fields' values */
@@ -41,7 +47,7 @@ export type CrossValidator =
         values: Record<string, unknown>,
         formState: FormState,
       ) => boolean | Promise<boolean>;
-      message: string;
+      message: CrossValidatorMessage;
     });
 
 export interface FormParameter<T = Record<string, unknown>> {

@@ -1,0 +1,137 @@
+<mat-menu
+  #menu="matMenu"
+  [class]="panelClass() ?? ''"
+  [xPosition]="xPosition()"
+  [aria-labelledby]="title() ? headingId : ''"
+>
+  <!-- the menu's heading: what `menuConfig.title` / `subtitle` say, and the menu's own name -->
+  @if (title() || subtitle()) {
+    <p class="px-4 pt-2 pb-2 leading-snug" role="presentation">
+      @if (title(); as title) {
+        <span [id]="headingId" class="block text-sm font-medium text-gray-900">{{ title }}</span>
+      }
+      @if (subtitle(); as subtitle) {
+        <span class="block text-xs text-gray-600">{{ subtitle }}</span>
+      }
+    </p>
+    <mat-divider />
+  }
+
+  @for (row of rows(); track row.entry.button.slug ?? $index) {
+    @let item = row.entry;
+
+    <!-- A divider sits between two groups; with a label it is the heading of the one below.
+         Anything else is a row — which comes three times, as a directive can't be added
+         conditionally: opening a submenu, as a link, or running an action. -->
+    @if (item.divider) {
+      @if (row.line) {
+        <mat-divider />
+      }
+      @if (item.vm.label; as heading) {
+        <p class="px-4 pt-3 pb-1 text-xs font-medium text-gray-600" role="presentation">
+          {{ heading }}
+        </p>
+      }
+    } @else if (item.button.buttons?.length) {
+      <action-menu
+        #sub
+        [buttons]="item.button.buttons ?? []"
+        [data]="item.data"
+        [panelClass]="item.vm.childrenHolderClass"
+        [title]="item.vm.menuTitle"
+        [subtitle]="item.vm.menuSubtitle"
+        [xPosition]="item.vm.menuPosition"
+      />
+      <button
+        mat-menu-item
+        type="button"
+        [matMenuTriggerFor]="sub.menu()"
+        [class]="item.vm.class"
+        [disabled]="item.vm.disabled || item.vm.loading"
+        [attr.aria-busy]="item.vm.loading || null"
+        [matTooltip]="item.vm.tooltip ?? ''"
+        [matTooltipDisabled]="!item.vm.tooltip || !item.vm.label"
+        [matTooltipPosition]="item.vm.tooltipPosition"
+        [matTooltipClass]="item.vm.tooltipClass ?? ''"
+        (click)="run(item)"
+      >
+        <ng-container
+          [ngTemplateOutlet]="rowContent"
+          [ngTemplateOutletContext]="{ $implicit: item }"
+        />
+      </button>
+    } @else if (item.vm.link; as link) {
+      <a
+        mat-menu-item
+        [routerLink]="link"
+        [class]="item.vm.class"
+        [disabled]="item.vm.disabled || item.vm.loading"
+        [attr.aria-busy]="item.vm.loading || null"
+        [matTooltip]="item.vm.tooltip ?? ''"
+        [matTooltipDisabled]="!item.vm.tooltip || !item.vm.label"
+        [matTooltipPosition]="item.vm.tooltipPosition"
+        [matTooltipClass]="item.vm.tooltipClass ?? ''"
+        (click)="follow(item)"
+      >
+        <ng-container
+          [ngTemplateOutlet]="rowContent"
+          [ngTemplateOutletContext]="{ $implicit: item }"
+        />
+      </a>
+    } @else {
+      <button
+        mat-menu-item
+        type="button"
+        [class]="item.vm.class"
+        [disabled]="item.vm.disabled || item.vm.loading"
+        [attr.aria-busy]="item.vm.loading || null"
+        [matTooltip]="item.vm.tooltip ?? ''"
+        [matTooltipDisabled]="!item.vm.tooltip || !item.vm.label"
+        [matTooltipPosition]="item.vm.tooltipPosition"
+        [matTooltipClass]="item.vm.tooltipClass ?? ''"
+        (click)="run(item)"
+      >
+        <ng-container
+          [ngTemplateOutlet]="rowContent"
+          [ngTemplateOutletContext]="{ $implicit: item }"
+        />
+      </button>
+    }
+  }
+</mat-menu>
+
+<!-- a row's avatar or icon — a spinner while it loads — then its text -->
+<ng-template #rowContent let-item>
+  <span class="flex items-center gap-3">
+    @if (item.vm.loading) {
+      <mat-progress-spinner mode="indeterminate" diameter="20" aria-hidden="true" />
+    } @else if (item.vm.avatar) {
+      <action-avatar [avatar]="item.vm.avatar" />
+    } @else if (item.vm.icon) {
+      @switch (item.vm.iconType) {
+        @case ('material') {
+          <mat-icon class="!me-0" [class]="item.vm.iconClass" aria-hidden="true">{{
+            item.vm.icon
+          }}</mat-icon>
+        }
+        @case ('SVG') {
+          <mat-icon
+            class="!me-0"
+            [svgIcon]="item.vm.icon"
+            [class]="item.vm.iconClass"
+            aria-hidden="true"
+          />
+        }
+        @default {
+          <img
+            [src]="item.vm.icon"
+            alt=""
+            class="size-6 object-contain"
+            [class]="item.vm.iconClass"
+          />
+        }
+      }
+    }
+    <span class="truncate" [class]="item.vm.labelClass">{{ label(item) }}</span>
+  </span>
+</ng-template>

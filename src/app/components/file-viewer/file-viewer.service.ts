@@ -1,5 +1,6 @@
 import { DOCUMENT, inject, Injectable } from '@angular/core';
 import { MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { NotificationService } from '@services/notification';
 import { ViewService } from '@services/view';
 import { FILE_VIEWER_CONFIG } from './file-viewer-config.token';
@@ -9,6 +10,7 @@ import {
   FileViewerParameter,
   ViewerAttachmentInput,
 } from './file-viewer.interface';
+import { FILE_VIEWER_EN, FILE_VIEWER_MESSAGES, fileErrorMessage } from './file-viewer.messages';
 import { saveBlob } from './loader/file-actions.helpers';
 import { FileLoaderService } from './loader/file-loader.service';
 import { isViewerAttachment } from './loader/file-source.helpers';
@@ -30,6 +32,7 @@ export class FileViewerService {
   private readonly loader = inject(FileLoaderService);
   private readonly config = inject(FILE_VIEWER_CONFIG);
   private readonly notify = inject(NotificationService);
+  private readonly t = injectMessages(FILE_VIEWER_MESSAGES);
   private readonly document = inject(DOCUMENT);
 
   open(
@@ -84,12 +87,21 @@ export class FileViewerService {
         external: false,
         direct: false,
       });
-      if (!file.blob) throw new FileViewerError('There is no file to download.');
+      if (!file.blob) {
+        throw new FileViewerError(
+          FILE_VIEWER_EN.errors.nothingToDownload,
+          undefined,
+          undefined,
+          'nothingToDownload',
+        );
+      }
       saveBlob(this.document, file.blob, file.name);
       return true;
     } catch (err) {
       this.notify.error(
-        err instanceof FileViewerError ? err.message : "The file couldn't be downloaded.",
+        err instanceof FileViewerError
+          ? fileErrorMessage(err, this.t().errors)
+          : this.t().downloadFailedUnnamed,
       );
       return false;
     }

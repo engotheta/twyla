@@ -13,9 +13,11 @@ import { MatSidenav, MatSidenavContainer, MatSidenavContent } from '@angular/mat
 import { Title } from '@angular/platform-browser';
 import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { AppFooterComponent } from './app-footer.component';
 import { AppHeaderComponent } from './app-header/app-header.component';
 import { AppSidebarComponent } from './app-sidebar/app-sidebar.component';
+import { LAYOUT_MESSAGES } from './layout.messages';
 import { LayoutService } from './layout.service';
 import { ModuleRailComponent } from './menu/module-rail.component';
 
@@ -43,7 +45,7 @@ import { ModuleRailComponent } from './menu/module-rail.component';
       class="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-[1100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg focus:outline-2 focus:outline-primary"
       (click)="skipToMain($event)"
     >
-      Skip to main content
+      {{ t().skipToMain }}
     </a>
 
     <div class="flex h-full">
@@ -66,10 +68,7 @@ import { ModuleRailComponent } from './menu/module-rail.component';
           />
         </mat-sidenav>
 
-        <mat-sidenav-content
-          class="flex! flex-col bg-gray-100"
-          [class.overflow-hidden!]="fullHeight()"
-        >
+        <mat-sidenav-content class="flex! flex-col bg-page" [class.overflow-hidden!]="fullHeight()">
           <app-header class="sticky top-0 z-20" />
           <main
             #main
@@ -90,6 +89,7 @@ import { ModuleRailComponent } from './menu/module-rail.component';
 })
 export class AppLayoutComponent {
   protected readonly layout = inject(LayoutService);
+  protected readonly t = injectMessages(LAYOUT_MESSAGES);
   private readonly router = inject(Router);
   private readonly title = inject(Title);
   private readonly announcer = inject(LiveAnnouncer);

@@ -1,42 +1,21 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { LAYOUT_CONFIG } from '@layout';
+import { injectMessages } from '@services/i18n';
 import { SessionService } from '@services/session';
+import { PAGES_MESSAGES } from './pages.messages';
 
+/** the "What's inside" cards: an icon for each entry of the page's `features` text */
 const FEATURES = [
-  {
-    icon: 'grid_on',
-    title: 'Data grid',
-    text: 'Local or server rows with sorting, filters, grouping, inline editing and export.',
-  },
-  {
-    icon: 'dynamic_form',
-    title: 'Config-driven forms',
-    text: 'Fields, lists, steps and cross-field rules from one config — sign-in forms included.',
-  },
-  {
-    icon: 'article',
-    title: 'Details',
-    text: 'Read-only records, grouped and formatted by type, with actions.',
-  },
-  {
-    icon: 'preview',
-    title: 'File viewer',
-    text: 'PDF, Office, images, text and media from URLs, base64, blobs or streams.',
-  },
-  {
-    icon: 'dashboard',
-    title: 'Contents view',
-    text: 'Tables, details and forms composed into tabbed, resizable views.',
-  },
-  {
-    icon: 'space_dashboard',
-    title: 'Layout & sessions',
-    text: 'Modules, menus nested to any depth, page headers, sign-in, sign-up and password resets.',
-  },
-];
+  { key: 'grid', icon: 'grid_on' },
+  { key: 'forms', icon: 'dynamic_form' },
+  { key: 'details', icon: 'article' },
+  { key: 'viewer', icon: 'preview' },
+  { key: 'contents', icon: 'dashboard' },
+  { key: 'layout', icon: 'space_dashboard' },
+] as const;
 
 /** The public landing page (inside the auth layout). */
 @Component({
@@ -49,21 +28,18 @@ const FEATURES = [
           class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold tracking-wide text-blue-800 uppercase"
         >
           <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-          Angular starter
+          {{ t().home.eyebrow }}
         </p>
         <h1 class="mt-4 text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
-          Build admin apps from parts that already work
+          {{ t().home.heading }}
         </h1>
-        <p class="mt-4 max-w-xl text-lg text-gray-600">
-          {{ brand.tagline }} Data grids, config-driven forms, a file viewer and a full app layout —
-          accessible, signal-based, and ready to point at your API.
-        </p>
+        <p class="mt-4 max-w-xl text-lg text-gray-600">{{ tagline() }} {{ t().home.lead }}</p>
         <div class="mt-8 flex flex-wrap gap-3">
           @if (session.isAuthenticated()) {
-            <a mat-flat-button [routerLink]="homeUrl">Open modules</a>
+            <a mat-flat-button [routerLink]="homeUrl">{{ t().home.openModules }}</a>
           } @else {
-            <a mat-flat-button routerLink="/auth/register">Get started</a>
-            <a mat-stroked-button routerLink="/auth/login">Sign in</a>
+            <a mat-flat-button routerLink="/auth/register">{{ t().home.getStarted }}</a>
+            <a mat-stroked-button routerLink="/auth/login">{{ t().home.signIn }}</a>
           }
         </div>
       </div>
@@ -102,15 +78,18 @@ const FEATURES = [
     </section>
 
     <section class="mx-auto w-full max-w-7xl py-8" aria-labelledby="features-title">
-      <h2 id="features-title" class="text-2xl font-semibold text-gray-900">What's inside</h2>
+      <h2 id="features-title" class="text-2xl font-semibold text-gray-900">
+        {{ t().home.featuresHeading }}
+      </h2>
       <ul class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        @for (feature of features; track feature.title) {
+        @for (feature of features; track feature.key) {
+          @let text = t().home.features[feature.key];
           <li class="rounded-xl bg-white p-5 ring-1 ring-gray-200">
             <span class="grid size-10 place-items-center rounded-lg bg-primary/10 text-primary">
               <mat-icon aria-hidden="true">{{ feature.icon }}</mat-icon>
             </span>
-            <h3 class="mt-3 font-semibold text-gray-900">{{ feature.title }}</h3>
-            <p class="mt-1 text-sm text-gray-600">{{ feature.text }}</p>
+            <h3 class="mt-3 font-semibold text-gray-900">{{ text.title }}</h3>
+            <p class="mt-1 text-sm text-gray-600">{{ text.text }}</p>
           </li>
         }
       </ul>
@@ -121,14 +100,14 @@ const FEATURES = [
       aria-labelledby="cta-title"
     >
       <div>
-        <h2 id="cta-title" class="text-2xl font-semibold">Ready when you are</h2>
-        <p class="mt-1">Sign in with the demo account and open the modules.</p>
+        <h2 id="cta-title" class="text-2xl font-semibold">{{ t().home.ctaHeading }}</h2>
+        <p class="mt-1">{{ t().home.ctaText }}</p>
       </div>
       <a
         class="inline-flex h-11 items-center rounded-full bg-white px-6 text-sm font-semibold text-blue-800 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         [routerLink]="session.isAuthenticated() ? homeUrl : '/auth/login'"
       >
-        {{ session.isAuthenticated() ? 'Open modules' : 'Sign in' }}
+        {{ session.isAuthenticated() ? t().home.openModules : t().home.signIn }}
       </a>
     </section>
   `,
@@ -137,7 +116,14 @@ const FEATURES = [
 })
 export class HomePage {
   protected readonly session = inject(SessionService);
-  protected readonly brand = inject(LAYOUT_CONFIG).brand;
-  protected readonly homeUrl = inject(LAYOUT_CONFIG).homeUrl;
+  private readonly layout = inject(LAYOUT_CONFIG);
+  protected readonly t = injectMessages(PAGES_MESSAGES);
+  protected readonly homeUrl = this.layout.homeUrl;
   protected readonly features = FEATURES;
+
+  /** the brand's tagline is the app's own text: the layout config says how to translate it */
+  protected readonly tagline = computed(() => {
+    const tagline = this.layout.brand.tagline;
+    return tagline ? this.layout.translate(tagline) : '';
+  });
 }

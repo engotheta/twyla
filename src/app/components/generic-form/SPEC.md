@@ -169,6 +169,10 @@ assembled value without triggering `onSubmit`/modal-close side effects.
   that control so it renders inline under the field; otherwise it is
   form-level only (banner area above the footer). Error key = rule `type`,
   error value = rule `message`.
+- `message` is text or a function. A function is called each time the rule
+  runs, so `message: () => t().errors.mismatch` follows the user's language;
+  the rules themselves are attached once, at build (§16 leaves them as they
+  are).
 
 ## 10. Subscription lifecycle
 
@@ -304,3 +308,37 @@ without subscribing to internals it isn't supposed to touch.
 - Neither addition changes any existing behavior when unused: `onChange`
   only subscribes when set, and `instanceChange` is a new emitter with no
   effect unless a parent listens to it.
+
+## 16. A later `params()`: reconciliation
+
+A form is built once. When `params()` later emits a config whose `fields` array is a different
+reference, the engine brings the live form in line with it instead of building again. This is
+what lets `params` be a `computed` — over a grid's columns, or over a page's text in the user's
+language.
+
+- **Fields are matched by path** (the key under its parent; steps add no segment, §5).
+  - _Added_: a path only the new config has gets a control. _Removed_: a path it no longer has
+    loses its control. A path kept with another `type` is removed and added: its value is lost.
+  - _Kept_ (same path, same type): the field is **re-keyed** to the new config object. Its
+    control stays, with its value and its dirty and touched state; so do its subscriptions.
+    `control(field)` and `fieldState(field)` answer for the new object from then on.
+  - What genuinely changed in a kept field's declared config is applied: `validations` are set
+    on the control, an observer is resubscribed only for a prop whose definition changed, and
+    `valueFn` / `onChange` are rewired only when they or `debounce` changed. `updateOn` cannot
+    change on a live control.
+- **What the engine wrote on the old object goes to the new one**: `path`, an attachment's
+  state (the picked file, its upload status), and a label derived from the key (`autoLabels`).
+  Without this the next reconciliation would find no field with a path, take every field for
+  new, and build its control again.
+- **A list** (`isList`) is re-keyed like any field. Its items follow a changed `value` array by
+  `itemKey` (default: position), and each item's fields follow a changed item template.
+- **Not reconciled.** Static fields (label, content, button, submit) have no path and are not
+  matched: a fresh object for one is shown as it is declared, a `Dynamic` prop on it
+  unresolved — pass the same object again to keep it live. `crossValidators`, the form's
+  `onChange` and `changeDebounce` are attached once, at build (§9, §15), and `model` seeds
+  values only then. The rest of `params` is read live: `submitButtonLabel`, `showSubscript`,
+  the stepper options.
+- **Rendering.** The templates track their fields by `fieldIdentity(field)` — the object a
+  field was first declared with — so a kept field keeps its component, and with it the focus,
+  the caret and whatever it has open.
+- The same array reference twice is nothing to do. The first emission is the build itself.

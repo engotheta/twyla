@@ -1,10 +1,13 @@
-// Grid mechanics only — colours come from the cells themselves or stay neutral.
+// Grid mechanics only — colours come from the cells themselves or stay neutral. The sheet is
+// paper: white under dark text in either theme, like a PDF or Word page, because the colours a
+// file gives its own cells assume it (hence fixed values here, not theme properties).
 .sheet-table {
   border-collapse: separate;
   border-spacing: 0;
   font-size: 13px;
   line-height: 1.4;
   color: #111;
+  background: #fff;
 }
 
 .sheet-table th,

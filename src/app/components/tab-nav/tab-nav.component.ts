@@ -20,6 +20,7 @@ import {
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { mergeClasses } from '@utils/class-name.helpers';
+import { prefersReducedMotion } from '@utils/motion.helpers';
 import { TabNavItemDirective } from './tab-nav-item.directive';
 import { TabNavClasses, TabNavItem } from './tab-nav.interface';
 
@@ -345,7 +346,6 @@ export class TabNavComponent {
   }
 
   private scrollBehavior(): ScrollBehavior {
-    const reduce = this.document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)');
-    return reduce?.matches ? 'auto' : 'smooth';
+    return prefersReducedMotion(this.document) ? 'auto' : 'smooth';
   }
 }

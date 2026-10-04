@@ -10,8 +10,9 @@ export interface LoadingConfig {
   waitForTarget: number;
   /** Spinner diameter in px. */
   diameter: number;
-  /** Accessible name of the spinner (it is exposed as a `progressbar`). */
-  label: string;
+  /** Accessible name of the spinner (it is exposed as a `progressbar`). Left out, it is
+   *  "Loading" in the user's language (`LOADING_MESSAGES`). */
+  label?: string;
 }
 
 export const DEFAULT_LOADING_CONFIG: LoadingConfig = {
@@ -19,7 +20,6 @@ export const DEFAULT_LOADING_CONFIG: LoadingConfig = {
   minDuration: 400,
   waitForTarget: 3000,
   diameter: 32,
-  label: 'Loading',
 };
 
 export const LOADING_CONFIG = new InjectionToken<LoadingConfig>('LOADING_CONFIG', {

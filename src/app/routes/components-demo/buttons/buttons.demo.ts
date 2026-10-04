@@ -94,3 +94,48 @@ export const actionButtons: ActionButton[] = [
     ],
   },
 ];
+
+/** what the second row of buttons acts on */
+export interface DemoPerson {
+  name: string;
+  email: string;
+}
+
+export const person: DemoPerson = { name: 'Ada Lovelace', email: 'ada@example.com' };
+
+/** a row in groups: the appearances, a button that is a link, and a person's button — an avatar
+ *  opening a menu with a heading, links, groups of its own and a confirmation */
+export const personButtons: ActionButton<DemoPerson>[] = [
+  { label: 'Text', appearance: 'text', click: () => applog.set('Text clicked') },
+  { label: 'Tonal', appearance: 'tonal', click: () => applog.set('Tonal clicked') },
+  { label: 'Filled', appearance: 'filled', click: () => applog.set('Filled clicked') },
+  { divider: true },
+  {
+    label: 'Data grid',
+    icon: 'table_view',
+    link: '/components/data-grid',
+    click: () => applog.set('Going to the data grid'),
+  },
+  { divider: true },
+  {
+    appearance: 'text',
+    avatar: (person) => ({ name: person.name }),
+    label: (person) => person.name,
+    icon: 'expand_more',
+    iconConfig: { position: 'after' },
+    menuConfig: { title: (person) => person.name, subtitle: (person) => person.email },
+    buttons: [
+      { label: 'Profile', icon: 'person', link: '/account/profile' },
+      { divider: true, label: 'Records' },
+      { label: 'Export', icon: 'download', click: () => applog.set('Export clicked') },
+      { label: 'Archive', icon: 'archive', click: () => applog.set('Archive clicked') },
+      { divider: true },
+      {
+        label: 'Remove',
+        icon: 'delete',
+        confirmMessage: (person) => `Remove ${person.name}?`,
+        click: (person) => applog.set(`Removed ${person?.name}`),
+      },
+    ],
+  },
+];

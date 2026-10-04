@@ -28,7 +28,7 @@ export class MenuService {
 
   /** every module — the router's own top-level `isMenu` routes (no import of the route config) */
   private readonly allModules = computed(() =>
-    resolveMenu(menuFromRoutes(this.router.config, false)),
+    this.translated(resolveMenu(menuFromRoutes(this.router.config, false))),
   );
 
   /** the modules this user may open: the module rail and the Modules page */
@@ -43,7 +43,7 @@ export class MenuService {
   /** the current module's side menu: absolute links, filtered for the user */
   readonly menu = computed(() => {
     const { menu, prefix } = this.source();
-    return filterMenu(resolveMenu(menu, prefix), this.config.canAccess);
+    return filterMenu(this.translated(resolveMenu(menu, prefix)), this.config.canAccess);
   });
 
   /** the side-menu path to the current page, root first — breadcrumbs, the sidebar's open branch */
@@ -65,5 +65,20 @@ export class MenuService {
 
   reset(): void {
     this.source.set({ menu: [], prefix: '' });
+  }
+
+  /**
+   * Names, descriptions and tags in the user's language (`LayoutConfig.translate`). Called
+   * inside the computeds above, so a change of language re-renders every menu.
+   */
+  private translated(nodes: MenuNode[]): MenuNode[] {
+    const translate = this.config.translate;
+    return nodes.map((node) => ({
+      ...node,
+      name: translate(node.name),
+      description: node.description && translate(node.description),
+      label: node.label && { ...node.label, value: translate(node.label.value) },
+      children: this.translated(node.children),
+    }));
   }
 }

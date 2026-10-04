@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, isObservable, Observable, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
@@ -8,6 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { mergeClasses } from '@utils/class-name.helpers';
 import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
+import { I18nService } from '@services/i18n/i18n.service';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { resolveDynamicValue$ } from '@utils/dynamic-value.helpers';
 import {
   FormField,
@@ -16,6 +18,7 @@ import {
   GenericFormComponent,
 } from '@components/generic-form';
 import { GridInstance } from '../grid-engine.service';
+import { GRID_MESSAGES } from '../grid.messages';
 import { GridColumn_ } from '../interfaces/grid-column.interface';
 import { GridCell, GridRow } from '../interfaces/grid-cell.interface';
 import { formatCellValue, resolveClassMap } from '../helpers/grid-format.helpers';
@@ -67,6 +70,9 @@ export class GridCellComponent<RowType = any> {
   readonly instance = input.required<GridInstance<RowType>>();
   readonly column = input.required<GridColumn_<RowType>>();
   readonly row = input.required<RowType>();
+
+  private readonly i18n = inject(I18nService);
+  protected readonly t = injectMessages(GRID_MESSAGES);
 
   protected readonly override = computed<GridCell<RowType> | undefined>(
     () => (this.row() as GridRow<RowType>)?._cellsProps?.[this.column().key],
@@ -138,7 +144,7 @@ export class GridCellComponent<RowType = any> {
   protected readonly displayValue = computed(() => {
     const value = this.resolved().value;
     const truncate = this.column().truncate;
-    const formatted = formatCellValue(value, this.type());
+    const formatted = formatCellValue(value, this.type(), this.i18n.locale(), this.t().format);
     return truncate && formatted.length > truncate ? `${formatted.slice(0, truncate)}…` : formatted;
   });
 

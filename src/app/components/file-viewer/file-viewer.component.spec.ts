@@ -2,6 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ANIMATION_MODULE_TYPE } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideI18n } from '@services/i18n/i18n-config.token';
+import { I18nService } from '@services/i18n/i18n.service';
 import { FileViewerComponent } from './file-viewer.component';
 import { ResolvedFile, ViewerAttachmentInput } from './file-viewer.interface';
 
@@ -51,6 +53,12 @@ describe('FileViewerComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideI18n({
+          languages: [
+            { code: 'en', name: 'English', locale: 'en-GB' },
+            { code: 'sw', name: 'Kiswahili', locale: 'sw-TZ' },
+          ],
+        }),
         { provide: ANIMATION_MODULE_TYPE, useValue: 'NoopAnimations' },
       ],
     });
@@ -62,6 +70,7 @@ describe('FileViewerComponent', () => {
   afterEach(() => {
     http.verify();
     vi.restoreAllMocks();
+    document.documentElement.lang = 'en';
   });
 
   it('shows a text file with its name, type and size, and emits `loaded`', async () => {
@@ -101,6 +110,23 @@ describe('FileViewerComponent', () => {
     http.expectOne('https://x.test/notes.txt').flush(new Blob(['second time lucky']));
     await settle();
     expect(el.querySelector('file-viewer-text')?.textContent).toContain('second time lucky');
+  });
+
+  it("says a failure in the user's language, and follows it while it is on screen", async () => {
+    await mount({ attachment: { url: 'https://x.test/notes.txt' } });
+    http
+      .expectOne('https://x.test/notes.txt')
+      .flush(new Blob(), { status: 404, statusText: 'Not Found' });
+    await settle();
+    expect(el.querySelector('[role=alert]')?.textContent).toContain('The file was not found.');
+
+    TestBed.inject(I18nService).use('sw');
+    await settle();
+    expect(el.querySelector('[role=alert]')?.textContent).toContain('Faili halikupatikana.');
+    expect(buttonByText('Jaribu tena')).toBeTruthy();
+    expect(el.textContent).not.toContain('Try again');
+    // a change of language is not a second failure
+    expect(failed).toEqual(['The file was not found.']);
   });
 
   it('steps through several files with the toolbar and the arrow keys, two-way bound to `index`', async () => {

@@ -2,6 +2,7 @@
 
 export * from './fetch.interface';
 export * from './fetch-config.token';
+export * from './fetch.messages';
 export * from './fetch-notifier.token';
 export * from './fetch-failed.error';
 export * from './fetch.service';

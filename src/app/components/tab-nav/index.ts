@@ -3,3 +3,4 @@
 export * from './tab-nav.interface';
 export * from './tab-nav-item.directive';
 export * from './tab-nav.component';
+export * from './tab-panels.component';

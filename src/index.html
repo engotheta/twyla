@@ -13,6 +13,19 @@
       rel="stylesheet"
     />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <!-- Dark before the first paint, so a dark-theme visit doesn't open on a white page. The
+         settings service takes over once the app starts. Keep the key and the default theme
+         ('system') in step with provideSettings() in app.config.ts. Under a strict content
+         security policy, allow this script by hash or move it to a file. -->
+    <script>
+      try {
+        var theme = (JSON.parse(localStorage.getItem('studio.settings')) || {}).theme;
+        var systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
+        if (theme === 'dark' || (theme !== 'light' && systemDark)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <app-root></app-root>

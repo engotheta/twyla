@@ -13,6 +13,9 @@ export * from './helpers/field-keys.helpers';
 export * from './helpers/field-labels.helpers';
 export * from './helpers/field-string.helpers';
 
+// ── text ──
+export * from './details.messages';
+
 // ── pipes + components ──
 export * from './label.pipe';
 export * from './bg-icon-mark.component';

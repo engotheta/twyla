@@ -15,49 +15,23 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NgTemplateOutlet } from '@angular/common';
-import { combineLatest, EMPTY, map, Observable, Subscription, switchMap } from 'rxjs';
-import {
-  ActionButton,
-  ButtonType,
-  FileChangeEvent,
-  FileConfig,
-  IconPosition,
-  IconType,
-} from '../action-button.interface';
-import { resolveDynamicValue$ } from '@utils/dynamic-value.helpers';
-import { ButtonLoadingDirective } from '../button-loading.directive';
-import { ConfirmDialog } from '@services/view/confirm-dialog/confirm-dialog.interface';
+import { Router } from '@angular/router';
+import { combineLatest, EMPTY, Subscription, switchMap } from 'rxjs';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { ViewService } from '@services/view';
-
-interface ActionButtonViewModel {
-  label?: string;
-  labelClass?: string;
-  labelMaxLength?: number;
-  icon?: string;
-  iconType: IconType;
-  iconClass?: string;
-  iconPosition: IconPosition;
-  tooltip?: string;
-  tooltipPosition: 'above' | 'below' | 'left' | 'right';
-  tooltipClass?: string;
-  disabled: boolean;
-  visible: boolean;
-  loading: boolean;
-  class?: string;
-  childrenHolderClass?: string;
-  fileConfig?: FileConfig;
-  confirmMessage?: string;
-  confirmConfig?: ConfirmDialog;
-}
-
-const DEFAULT_VIEW_MODEL: ActionButtonViewModel = {
-  iconType: 'material',
-  iconPosition: 'before',
-  tooltipPosition: 'below',
-  disabled: false,
-  visible: true,
-  loading: false,
-};
+import { ActionAvatarComponent } from '../action-avatar.component';
+import {
+  acceptAttribute,
+  actionButtonViewModel$,
+  DEFAULT_VIEW_MODEL,
+  displayLabel,
+  isFileButton,
+  reportFiles,
+} from '../action-button.helpers';
+import { ActionButton, ButtonAppearance, ButtonType } from '../action-button.interface';
+import { ACTION_BUTTONS_MESSAGES } from '../action-buttons.messages';
+import { ActionMenuComponent } from '../action-menu/action-menu.component';
+import { ButtonLoadingDirective } from '../button-loading.directive';
 
 const ICON_ONLY_TYPES: ReadonlySet<ButtonType> = new Set(['icon', 'mini-icon', 'mini-fab']);
 
@@ -69,7 +43,8 @@ const ICON_ONLY_TYPES: ReadonlySet<ButtonType> = new Set(['icon', 'mini-icon', '
     MatMenuModule,
     MatTooltipModule,
     NgTemplateOutlet,
-    ActionButtonComponent,
+    ActionAvatarComponent,
+    ActionMenuComponent,
     ButtonLoadingDirective,
   ],
   templateUrl: './action-button.component.html',
@@ -80,15 +55,18 @@ export class ActionButtonComponent<D = unknown> implements OnDestroy {
   readonly button = input.required<ActionButton<D>>();
   readonly parentData = input<D>();
   private readonly view = inject(ViewService);
+  private readonly router = inject(Router);
+  private readonly t = injectMessages(ACTION_BUTTONS_MESSAGES);
 
   protected readonly data = computed(() => (this.button().data ?? this.parentData()) as D);
   protected readonly type = computed<ButtonType>(() => this.button().type ?? 'button');
+  protected readonly appearance = computed<ButtonAppearance>(
+    () => this.button().appearance ?? 'outlined',
+  );
   protected readonly childButtons = computed(() => this.button().buttons ?? []);
   protected readonly hasChildren = computed(() => this.childButtons().length > 0);
 
-  protected readonly isFileButton = computed(
-    () => this.button().fileConfig !== undefined || this.button().fileChange !== undefined,
-  );
+  protected readonly isFileButton = computed(() => isFileButton(this.button()));
 
   protected readonly selectedFileNames = signal<string[]>([]);
   protected readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
@@ -99,20 +77,15 @@ export class ActionButtonComponent<D = unknown> implements OnDestroy {
 
   protected readonly viewModel = toSignal(
     combineLatest([this.button$, this.data$]).pipe(
-      switchMap(([button, data]) => this.buildViewModel$(button, data)),
+      switchMap(([button, data]) => actionButtonViewModel$(button, data)),
     ),
 
     { initialValue: DEFAULT_VIEW_MODEL },
   );
 
-  protected readonly displayLabel = computed(() => {
-    const vm = this.viewModel();
-    const updateLabel = vm.fileConfig?.updateLabel ?? true;
-    const canUpdate = this.isFileButton() && updateLabel && this.selectedFileNames().length;
-
-    if (canUpdate) return this.selectedFileNames().join(', ');
-    return this.truncateLabel(vm.label, vm.labelMaxLength);
-  });
+  protected readonly displayLabel = computed(() =>
+    displayLabel(this.button(), this.viewModel(), this.selectedFileNames()),
+  );
 
   protected readonly showLabel = computed(
     () => !ICON_ONLY_TYPES.has(this.type()) && !!this.displayLabel(),
@@ -122,16 +95,18 @@ export class ActionButtonComponent<D = unknown> implements OnDestroy {
     () => ICON_ONLY_TYPES.has(this.type()) || (this.type() === 'fab' && !this.displayLabel()),
   );
 
+  /** `ariaLabel` when the button gives one; otherwise a button that is only an icon is named by
+   *  its tooltip, else its label, and any other button by what it shows */
   protected readonly ariaLabel = computed(() => {
+    const vm = this.viewModel();
+    if (vm.ariaLabel) return vm.ariaLabel;
     if (!this.isIconOnly()) return null;
-    return this.viewModel().tooltip ?? this.displayLabel() ?? 'Action';
+    return vm.tooltip || this.displayLabel() || this.t().action;
   });
 
-  protected readonly acceptAttribute = computed(() => {
-    const extensions = this.viewModel().fileConfig?.extensions;
-    const extensions_ = () => extensions?.map((e) => (e.startsWith('.') ? e : `.${e}`)).join(',');
-    return extensions?.length ? extensions_() : null;
-  });
+  protected readonly acceptAttribute = computed(() =>
+    acceptAttribute(this.viewModel().fileConfig?.extensions),
+  );
 
   constructor() {
     this.subs.add(
@@ -146,9 +121,8 @@ export class ActionButtonComponent<D = unknown> implements OnDestroy {
   }
 
   protected handleClick(event: Event): void {
-    // Menu items are plain buttons (not `mat-menu-item`), so stop the click from
-    // bubbling to the ancestor `mat-menu` overlay's outside-click detection, which
-    // would otherwise close the menu whenever a nested action button is clicked.
+    // the button's own business: a click on it must not also count as a click on what it sits
+    // in — a grid row that opens on click, say
     event.stopPropagation();
 
     const vm = this.viewModel();
@@ -164,11 +138,21 @@ export class ActionButtonComponent<D = unknown> implements OnDestroy {
         ...vm.confirmConfig,
         message: vm.confirmConfig?.message ?? vm.confirmMessage,
       };
-      void this.view.confirm(config).then((ok) => ok && this.button().click?.(this.data()));
+      void this.view.confirm(config).then((ok) => ok && this.act());
       return;
     }
 
+    this.act();
+  }
+
+  /** the button's `click`, then its `link` — a button with a menu only opens it */
+  private act(): void {
     this.button().click?.(this.data());
+    const link = this.viewModel().link;
+    if (link === undefined || this.hasChildren()) return;
+    void (typeof link === 'string'
+      ? this.router.navigateByUrl(link)
+      : this.router.navigate([...link]));
   }
 
   protected onFileSelected(event: Event): void {
@@ -176,120 +160,10 @@ export class ActionButtonComponent<D = unknown> implements OnDestroy {
     const files = fileInput.files;
     if (!files?.length) return;
 
-    const button = this.button();
     const fileConfig = this.viewModel().fileConfig;
-    const fileNames: string[] = [];
-
-    Array.from(files).forEach((file) => {
-      fileNames.push(file.name);
-
-      const fileChangeEvent: FileChangeEvent = {
-        event: event as InputEvent,
-        file,
-        fileName: file.name,
-        extension: file.name.includes('.') ? (file.name.split('.').pop() ?? '') : '',
-      };
-
-      (fileConfig?.change ?? button.fileChange)?.(fileChangeEvent);
-    });
-
+    const fileNames = reportFiles(this.button(), fileConfig, files, event);
     if (fileConfig?.updateLabel ?? true) this.selectedFileNames.set(fileNames);
 
     fileInput.value = '';
-  }
-
-  private truncateLabel(label: string | undefined, maxLength: number | undefined): string {
-    if (!label || !maxLength || label.length <= maxLength) return label ?? '';
-    return `${label.slice(0, maxLength)}…`;
-  }
-
-  private buildViewModel$(button: ActionButton<D>, data: D): Observable<ActionButtonViewModel> {
-    return combineLatest({
-      label: this.resolveLabel$(button, data),
-      icon: this.resolveIcon$(button, data),
-      tooltip: this.resolveTooltip$(button, data),
-      misc: this.resolveMisc$(button, data),
-    }).pipe(map(({ label, icon, tooltip, misc }) => ({ ...label, ...icon, ...tooltip, ...misc })));
-  }
-
-  private resolveLabel$(button: ActionButton<D>, data: D) {
-    return resolveDynamicValue$(button.labelConfig, data).pipe(
-      switchMap((config) =>
-        combineLatest({
-          fromConfig: resolveDynamicValue$(config?.label, data),
-          fallback: resolveDynamicValue$(button.label, data),
-          labelClass: resolveDynamicValue$(config?.class, data),
-        }).pipe(
-          map(({ fromConfig, fallback, labelClass }) => ({
-            label: fromConfig ?? fallback,
-            labelClass,
-            labelMaxLength: config?.maxLength,
-          })),
-        ),
-      ),
-    );
-  }
-
-  private resolveIcon$(button: ActionButton<D>, data: D) {
-    return resolveDynamicValue$(button.iconConfig, data).pipe(
-      switchMap((config) =>
-        combineLatest({
-          fallback: resolveDynamicValue$(button.icon, data),
-          iconClass: resolveDynamicValue$(config?.class, data),
-        }).pipe(
-          map(({ fallback, iconClass }) => ({
-            icon: config?.icon ?? fallback,
-            iconType: config?.type ?? 'material',
-            iconClass,
-            iconPosition: config?.position ?? 'before',
-          })),
-        ),
-      ),
-    );
-  }
-
-  private resolveTooltip$(button: ActionButton<D>, data: D) {
-    return resolveDynamicValue$(button.tooltipConfig, data).pipe(
-      switchMap((config) =>
-        combineLatest({
-          fromConfig: resolveDynamicValue$(config?.tooltip, data),
-          fallback: resolveDynamicValue$(button.tooltip, data),
-          position: resolveDynamicValue$(config?.position, data),
-          tooltipClass: resolveDynamicValue$(config?.class, data),
-        }).pipe(
-          map((x) => ({
-            tooltip: x.fromConfig ?? x.fallback,
-            tooltipPosition: x.position ?? 'below',
-            tooltipClass: x.tooltipClass,
-          })),
-        ),
-      ),
-    );
-  }
-
-  private resolveMisc$(button: ActionButton<D>, data: D) {
-    let fileConfigDef: FileConfig = { multiple: false, updateLabel: true };
-
-    return combineLatest({
-      disabled: resolveDynamicValue$(button.disabled, data),
-      visible: resolveDynamicValue$(button.visible, data),
-      loading: resolveDynamicValue$(button.loading, data),
-      hostClass: resolveDynamicValue$(button.class, data),
-      childrenHolderClass: resolveDynamicValue$(button.childrenHolderClass, data),
-      fileConfig: resolveDynamicValue$(button.fileConfig, data),
-      confirmMessage: resolveDynamicValue$(button.confirmMessage, data),
-      confirmConfig: resolveDynamicValue$(button.confirmConfig, data),
-    }).pipe(
-      map((x) => ({
-        disabled: x.disabled ?? false,
-        visible: x.visible ?? true,
-        loading: x.loading ?? false,
-        class: x.hostClass,
-        childrenHolderClass: x.childrenHolderClass,
-        fileConfig: x.fileConfig ? { ...fileConfigDef, ...x.fileConfig } : undefined,
-        confirmMessage: x.confirmMessage,
-        confirmConfig: x.confirmConfig,
-      })),
-    );
   }
 }

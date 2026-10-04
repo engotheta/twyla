@@ -1,5 +1,6 @@
 import { computed, DOCUMENT, inject, Injectable, signal } from '@angular/core';
-import { LG_UP_QUERY, mediaQuerySignal } from '@utils/viewport.helpers';
+import { SettingsService } from '@services/settings/settings.service';
+import { LG_UP_REM, mediaQuerySignal } from '@utils/viewport.helpers';
 import { LAYOUT_CONFIG } from './layout-config.token';
 
 /**
@@ -11,8 +12,17 @@ export class LayoutService {
   private readonly storageKey = `${inject(LAYOUT_CONFIG).storageKey}.sidebarOpened`;
   private readonly storage = localStorageOf(inject(DOCUMENT).defaultView);
 
-  /** wide enough for the module rail and a docked sidebar */
-  readonly large = mediaQuerySignal(LG_UP_QUERY);
+  private readonly settings = inject(SettingsService);
+
+  /**
+   * Wide enough for the module rail and a docked sidebar. The breakpoint moves with the text
+   * size: at 150% the rail and the sidebar are half as wide again, so they give way to the
+   * drawer on windows half as wide again (a media query's rem is the browser's own, which the
+   * setting doesn't change — hence the multiplication).
+   */
+  readonly large = mediaQuerySignal(
+    () => `(min-width: ${LG_UP_REM * this.settings.textScale()}rem)`,
+  );
 
   private readonly docked = signal(readFlag(this.storage, this.storageKey) ?? true);
   /** the drawer (below `lg`) is open */

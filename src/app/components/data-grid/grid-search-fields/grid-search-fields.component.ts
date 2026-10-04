@@ -28,27 +28,14 @@ import {
   observe,
   SelectField,
 } from '@components/generic-form';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { GridInstance } from '../grid-engine.service';
+import { GRID_MESSAGES } from '../grid.messages';
 import {
   DEFAULT_ENABLED_SEARCH_TYPES,
   SearchField,
   SearchType,
 } from '../interfaces/grid-search.interface';
-
-const SEARCH_TYPE_LABELS: Record<SearchType, string> = {
-  equals: 'Equals',
-  notEquals: 'Not equals',
-  like: 'Contains',
-  in: 'In',
-  notIn: 'Not in',
-  greaterThan: 'Greater than',
-  greaterThanOrEqual: 'Greater than or equal',
-  lessThan: 'Less than',
-  lessThanOrEqual: 'Less than or equal',
-  between: 'Between',
-  isNull: 'Is empty',
-  isNotNull: 'Is not empty',
-};
 
 /**
  * The compound multi-field search UI (grid-search.interface.ts): a dropdown of `searchable`
@@ -58,6 +45,9 @@ const SEARCH_TYPE_LABELS: Record<SearchType, string> = {
  * first) needs bespoke per-item chrome the stock isList rendering doesn't offer) backs BOTH the
  * toolbar's inline mount and, in `searchFieldsMode: 'modal'`, grid-search-dialog's mount — see
  * `existingInstance`, which is how the two stay in sync instead of diverging into two forms.
+ *
+ * The form's own placeholders and operator names are read once, when it is built: they are in
+ * the language in use then, and a change of language shows the next time the grid is opened.
  */
 @Component({
   selector: 'grid-search-fields',
@@ -80,6 +70,7 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
   private readonly engine = inject(FormEngineService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  protected readonly t = injectMessages(GRID_MESSAGES);
 
   protected formInstance!: FormInstance;
   protected objectField!: ObjectField;
@@ -87,7 +78,7 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
   protected readonly searchConfig = computed(() => this.instance().params().searchConfig);
 
   protected readonly typeOverrideOn = signal(false);
-  protected readonly searchTypeLabel = (t: SearchType): string => SEARCH_TYPE_LABELS[t];
+  protected readonly searchTypeLabel = (type: SearchType): string => this.t().classic.types[type];
 
   // `AbstractControl`/`FormArray` are plain RxJS-backed objects, not signals — reading
   // `.length`/`.value` off one directly inside a `computed()` creates NO reactive dependency, so
@@ -142,7 +133,7 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
         type: FieldType.select,
         key: 'key',
         showLabel: false,
-        placeholder: 'Column',
+        placeholder: this.t().classic.column,
         options: observe(
           ['searchFields', './key'],
           (allItems: SearchField[], ownKey: string | undefined) =>
@@ -154,16 +145,16 @@ export class GridSearchFieldsComponent<RowType = any> implements OnInit {
       type: FieldType.input,
       key: 'value',
       showLabel: false,
-      placeholder: hasSearchable ? 'Value…' : 'Search…',
+      placeholder: hasSearchable ? this.t().classic.value : this.t().classic.search,
     });
     if (showTypeToggle) {
       itemFields.push({
         type: FieldType.select,
         key: 'searchType',
         showLabel: false,
-        placeholder: 'Operator',
+        placeholder: this.t().classic.operator,
         value: observe('./key', (key: string | undefined) => this.resolveDefaultSearchType(key)),
-        options: enabledTypes.map((t) => ({ label: SEARCH_TYPE_LABELS[t], value: t })),
+        options: enabledTypes.map((type) => ({ label: this.searchTypeLabel(type), value: type })),
       } as SelectField);
     }
 

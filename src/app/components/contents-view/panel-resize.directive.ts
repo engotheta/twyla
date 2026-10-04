@@ -1,6 +1,8 @@
 import { DOCUMENT } from '@angular/common';
 import { Directive, inject, input, output } from '@angular/core';
 import { Directionality } from '@angular/cdk/bidi';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { CONTENTS_MESSAGES } from './contents.messages';
 
 /**
  * A window-splitter drag handle for the gutters between resizable `contents-view` panes —
@@ -27,7 +29,7 @@ import { Directionality } from '@angular/cdk/bidi';
     role: 'separator',
     tabindex: '0',
     '[attr.aria-orientation]': "axis() === 'x' ? 'vertical' : 'horizontal'",
-    '[attr.aria-label]': 'ariaLabel()',
+    '[attr.aria-label]': 'ariaLabel() ?? t().resizePanels',
     '[attr.aria-valuenow]': 'valueNow() ?? null',
     '[attr.aria-valuemin]': 'valueNow() == null ? null : 0',
     '[attr.aria-valuemax]': 'valueNow() == null ? null : 100',
@@ -38,8 +40,9 @@ import { Directionality } from '@angular/cdk/bidi';
 export class PanelResizeDirective {
   /** `'x'` → resizes the column split; `'y'` → resizes a row boundary */
   readonly axis = input.required<'x' | 'y'>();
-  /** accessible name for the handle */
-  readonly ariaLabel = input('Resize panels');
+  /** accessible name for the handle; "Resize panels" in the user's language when left out */
+  readonly ariaLabel = input<string>();
+  protected readonly t = injectMessages(CONTENTS_MESSAGES);
   /** integer 0–100: the first pane of the pair's share, for `aria-valuenow` */
   readonly valueNow = input<number | undefined>(undefined);
   /** pixels moved per arrow-key press */

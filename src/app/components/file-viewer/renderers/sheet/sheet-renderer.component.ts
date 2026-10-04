@@ -17,8 +17,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TabNavComponent } from '@components/tab-nav/tab-nav.component';
 import { TabNavItem } from '@components/tab-nav/tab-nav.interface';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { FILE_VIEWER_CONFIG } from '../../file-viewer-config.token';
 import { ResolvedFile } from '../../file-viewer.interface';
+import { FILE_VIEWER_MESSAGES, FileFailure } from '../../file-viewer.messages';
 import { escapeHtml, printHtml } from '../../loader/file-actions.helpers';
 import { decodeText, readBlob } from '../../loader/text-decode.helpers';
 import { ViewerController } from '../../viewer-controller';
@@ -63,8 +65,9 @@ interface RenderRow {
 export class SheetRendererComponent {
   readonly file = input.required<ResolvedFile>();
   readonly label = input('');
-  readonly failed = output<string>();
+  readonly failed = output<FileFailure>();
 
+  protected readonly t = injectMessages(FILE_VIEWER_MESSAGES);
   private readonly controller = inject(ViewerController);
   private readonly config = inject(FILE_VIEWER_CONFIG);
   private readonly document = inject(DOCUMENT);
@@ -174,16 +177,13 @@ export class SheetRendererComponent {
           this.active.set(0);
           this.visibleRows.set(this.config.sheetPageSize);
           this.busy.set(false);
-          if (!sheets.length) this.failed.emit('This workbook has no visible sheets.');
+          if (!sheets.length) this.failed.emit((text) => text.sheet.noSheets);
         })
         .catch(() => {
           if (stale) return;
           this.busy.set(false);
-          this.failed.emit(
-            this.isCsv()
-              ? 'This file could not be read as CSV.'
-              : 'This workbook could not be opened — it may be damaged, protected or in the older .xls format.',
-          );
+          const csv = this.isCsv();
+          this.failed.emit((text) => (csv ? text.sheet.csvFailed : text.sheet.failed));
         });
     });
 
@@ -202,7 +202,7 @@ export class SheetRendererComponent {
   protected selectSheet(key: string): void {
     this.active.set(Number(key));
     this.visibleRows.set(this.config.sheetPageSize);
-    this.controller.announce(`Sheet ${this.sheet()?.name ?? ''}`);
+    this.controller.announce(this.t().sheet.sheet(this.sheet()?.name ?? ''));
   }
 
   protected showMore(): void {

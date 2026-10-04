@@ -41,22 +41,22 @@
   <button
     type="button"
     class="inline-flex w-8 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent text-gray-600 hover:text-gray-900 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
-    aria-label="Clear search"
-    matTooltip="Clear"
+    [attr.aria-label]="t().search.clearSearch"
+    [matTooltip]="t().search.clear"
     (click)="clear()"
   >
-    <mat-icon aria-hidden="true" class="!text-xl">cancel</mat-icon>
+    <mat-icon aria-hidden="true" class="!size-6 !text-xl">cancel</mat-icon>
   </button>
 }
 
 <button
   type="button"
-  class="inline-flex w-10 shrink-0 cursor-pointer items-center justify-center border-0 border-l border-(--mat-sys-outline) bg-transparent text-gray-700 hover:bg-black/5 hover:text-gray-900 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
-  aria-label="Search"
-  matTooltip="Search"
+  class="inline-flex w-10 shrink-0 cursor-pointer items-center justify-center border-0 border-l border-(--field-outline) bg-transparent text-gray-700 hover:bg-black/5 hover:text-gray-900 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+  [attr.aria-label]="t().search.search"
+  [matTooltip]="t().search.search"
   (click)="submit()"
 >
-  <mat-icon aria-hidden="true" class="!text-xl">search</mat-icon>
+  <mat-icon aria-hidden="true" class="!size-6 !text-xl">search</mat-icon>
 </button>
 
 <span class="sr-only" role="status">{{ announcement() }}</span>

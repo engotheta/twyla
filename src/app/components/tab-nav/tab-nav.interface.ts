@@ -15,6 +15,17 @@ export interface TabNavItem {
   panelId: string;
 }
 
+/** one tab of a `tab-panels`, which works out the ids itself */
+export interface TabPanelsItem {
+  /** identity within the tabs — what `activeKey` holds, and what a panel's template is given */
+  key: string;
+  label: string;
+  icon?: string;
+  badge?: string | number;
+  /** default false: still focusable, never selectable */
+  disabled?: boolean;
+}
+
 /** consumer classes, each merged over the nav's defaults (consumer wins conflicts) */
 export interface TabNavClasses {
   /** the strip (or, vertical, the sidebar) holding the toggles */

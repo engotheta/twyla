@@ -1,9 +1,11 @@
 import { inject, Injectable, Type } from '@angular/core';
 import { MatDialog, MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom, Observable, take, takeUntil } from 'rxjs';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';
 import { ConfirmDialog } from './confirm-dialog/confirm-dialog.interface';
 import { ViewDialogComponent } from './view-dialog.component';
+import { VIEW_MESSAGES } from './view.messages';
 import {
   ClickAction,
   ClickActionTuple,
@@ -41,6 +43,7 @@ interface EventRun {
 @Injectable({ providedIn: 'root' })
 export class ViewService {
   private readonly dialog = inject(MatDialog);
+  private readonly t = injectMessages(VIEW_MESSAGES);
 
   private readonly multiClickRun: EventRun & { input?: unknown } = { count: 0 };
   private readonly multiEventRun: EventRun = { count: 0 };
@@ -64,7 +67,7 @@ export class ViewService {
       ...SHELL_DEFAULTS,
       ...dialogConfig,
       // a titled dialog is labelled by its `mat-dialog-title`; an untitled one still needs a name
-      ariaLabel: dialogConfig.ariaLabel ?? (data.title ? undefined : 'Dialog'),
+      ariaLabel: dialogConfig.ariaLabel ?? (data.title ? undefined : this.t().dialog),
       data,
     });
 

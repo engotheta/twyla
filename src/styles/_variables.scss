@@ -1,16 +1,14 @@
-// Design tokens consumed by the Material override partials (details'
-// `material-tabs-group` and generic-form's `material-stepper`) — those files reference these
-// custom properties but never defined them. Declared on `:root` (not scoped to a component) for
-// the same reason those partials are loaded globally from `styles.scss`: Angular's view
-// encapsulation can't reach into Angular Material's own internal DOM, so anything meant to apply
-// there has to live outside any single component's style scope.
+// Design tokens consumed by the global partials — the Material overrides in `material/`
+// (`_stepper.scss`, `_overlays.scss`, `_form-field.scss`) and the features' own. Declared on
+// `:root` (not scoped to a component) for the same reason those partials are loaded globally from
+// `styles.scss`: Angular's view encapsulation can't reach into Angular Material's own internal
+// DOM, so anything meant to apply there has to live outside any single component's style scope.
 //
-// `--mat-stepper-header-height` is NOT declared here — it's a real Angular Material system token,
-// already supplied by the `mat.theme(...)` include in `styles.scss`. `--progress-x`/
-// `--progress-width` (stepper) aren't declared here either — `StepperProgressIndicatorDirective`
-// sets them at runtime on the element it animates, and every consuming `var(...)` carries its own
-// fallback for before the first measurement lands. (contents-view's own tabs don't use Material:
-// `tab-nav` styles itself.)
+// `--mat-stepper-header-height` is NOT declared here — it's a real Angular Material token, set
+// in `material/_stepper.scss`. `--progress-x`/`--progress-width` (stepper) aren't declared here
+// either — `StepperProgressIndicatorDirective` sets them at runtime on the element it animates,
+// and every consuming `var(...)` carries its own fallback for before the first measurement lands.
+// (Tabs don't use Material at all: `tab-nav` styles itself.)
 :root {
   // surfaces
   --color-white: #ffffff;

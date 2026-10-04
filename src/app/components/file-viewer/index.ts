@@ -1,6 +1,7 @@
 // file-viewer barrel — import everything from '.../file-viewer'
 
 export * from './file-viewer.interface';
+export * from './file-viewer.messages';
 export * from './file-viewer-config.token';
 export * from './file-viewer.component';
 export * from './file-viewer-dialog.component';

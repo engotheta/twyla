@@ -6,10 +6,10 @@
           type="button"
           mat-icon-button
           class="!absolute !-top-1 !-right-1 !z-10 !w-5 !h-5 !min-h-0"
-          aria-label="Remove search field"
+          [attr.aria-label]="t().classic.removeField"
           (click)="removeItem(item.index)"
         >
-          <mat-icon class="!text-sm !w-4 !h-4">close</mat-icon>
+          <mat-icon class="!text-sm !w-4 !h-4 !leading-4">close</mat-icon>
         </button>
       }
       @for (field of item.fields; track field.key) {
@@ -26,12 +26,12 @@
       mat-icon-button
       class="shrink-0"
       [attr.aria-pressed]="typeOverrideOn()"
-      aria-label="Fine-tune search operator"
-      matTooltip="Fine-tune search operator"
+      [attr.aria-label]="t().classic.fineTune"
+      [matTooltip]="t().classic.fineTune"
       (click)="toggleTypeOverride()"
     >
       <mat-icon
-        class="!text-base"
+        class="!size-6 !text-base"
         [class.opacity-100]="typeOverrideOn()"
         [class.opacity-50]="!typeOverrideOn()"
         >tune</mat-icon
@@ -46,21 +46,21 @@
       class="!w-8 !h-8 shrink-0"
       [matBadge]="itemCount()"
       matBadgeSize="small"
-      aria-label="View all search fields"
-      matTooltip="View all search fields"
+      [attr.aria-label]="t().classic.viewAll"
+      [matTooltip]="t().classic.viewAll"
       (click)="openDialogRequested.emit()"
     >
-      <mat-icon class="!text-base">more_horiz</mat-icon>
+      <mat-icon class="!size-6 !text-base">more_horiz</mat-icon>
     </button>
   } @else if (canAdd()) {
     <button
       type="button"
       mat-icon-button
       class="!w-8 !h-8 shrink-0"
-      aria-label="Add search field"
+      [attr.aria-label]="t().classic.addField"
       (click)="addItem()"
     >
-      <mat-icon class="!text-base">add</mat-icon>
+      <mat-icon class="!size-6 !text-base">add</mat-icon>
     </button>
   }
 
@@ -69,11 +69,11 @@
       type="button"
       mat-icon-button
       class="!w-8 !h-8 shrink-0"
-      aria-label="Clear search"
-      matTooltip="Clear search"
+      [attr.aria-label]="t().classic.clearSearch"
+      [matTooltip]="t().classic.clearSearch"
       (click)="clearAll()"
     >
-      <mat-icon class="!text-base opacity-60">backspace</mat-icon>
+      <mat-icon class="!size-6 !text-base opacity-60">backspace</mat-icon>
     </button>
   }
 </div>

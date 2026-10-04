@@ -1,4 +1,5 @@
 // contents-view barrel — import everything from '.../contents-view'
 
 export * from './contents.interface';
+export * from './contents.messages';
 export * from './contents-view.component';

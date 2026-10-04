@@ -11,6 +11,12 @@ export interface LayoutPreset {
   arrayConfig: ArrayConfig;
 }
 
+// A label is its field's own colour, faded — but only to 80%: below that, a label on a tinted
+// card or in a coloured field drops under 4.5:1. The colour is what fades, not the label's
+// `opacity`: the buttons that sit beside an array's label ("Add") would fade with it, and theirs
+// is a colour that has nothing to spare.
+const FADED = '[color:color-mix(in_oklab,currentColor_80%,transparent)]';
+
 // Each layout is self-contained: its own default FieldConfig + ArrayConfig, expressed in the
 // same shape a caller would pass in. A caller's own fieldConfig/arrayConfig is merged on top
 // (class-like props combine via mergeClasses, everything else is a plain override) rather than
@@ -20,7 +26,7 @@ export const LAYOUT_PRESETS: Record<FieldLayout, LayoutPreset> = {
     fieldConfig: {
       containerClass: 'grid grid-cols-1 lg:grid-cols-2 gap-4',
       class: 'flex flex-col gap-0.5 py-1.5',
-      labelsClass: 'text-xs uppercase tracking-wide opacity-60',
+      labelsClass: `text-xs uppercase tracking-wide ${FADED}`,
       valuesClass: 'text-sm',
       showUnderlines: true,
     },
@@ -33,7 +39,7 @@ export const LAYOUT_PRESETS: Record<FieldLayout, LayoutPreset> = {
   table: {
     fieldConfig: {
       class: 'grid grid-cols-12 gap-x-3 items-baseline border-b border-black/10 py-1.5',
-      labelsClass: 'col-span-5 sm:col-span-4 font-medium opacity-70 text-sm',
+      labelsClass: `col-span-5 sm:col-span-4 font-medium text-sm ${FADED}`,
       valuesClass: 'col-span-7 sm:col-span-8 text-sm',
     },
     arrayConfig: {
@@ -44,7 +50,7 @@ export const LAYOUT_PRESETS: Record<FieldLayout, LayoutPreset> = {
   palletes: {
     fieldConfig: {
       class: 'grid grid-cols-12 gap-x-3 items-baseline rounded-md odd:bg-black/[0.03] py-1.5 px-2',
-      labelsClass: 'col-span-5 sm:col-span-4 opacity-70 text-sm',
+      labelsClass: `col-span-5 sm:col-span-4 text-sm ${FADED}`,
       valuesClass: 'col-span-7 sm:col-span-8 text-sm',
     },
     arrayConfig: {

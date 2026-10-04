@@ -1,5 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, inject } from '@angular/core';
+import { I18nService } from '@services/i18n/i18n.service';
+import { injectMessages } from '@services/i18n/message-bundle';
 import {
   buildCellSpanPlan,
   CellSpan,
@@ -11,6 +13,7 @@ import {
   flattenLeafColumns,
   orderColumnsForHeader,
 } from './helpers/grid-column.helpers';
+import { GRID_MESSAGES } from './grid.messages';
 import { GridColumn_ } from './interfaces/grid-column.interface';
 import { GridExportConfig, GridExportFormat } from './interfaces/grid-export.interface';
 import { formatCellValue } from './helpers/grid-format.helpers';
@@ -29,6 +32,8 @@ const EXCEL_CELL_BORDER = { style: 'thin', color: { argb: 'FF999999' } } as cons
 @Injectable({ providedIn: 'root' })
 export class GridExportService {
   private readonly document = inject(DOCUMENT);
+  private readonly i18n = inject(I18nService);
+  private readonly t = injectMessages(GRID_MESSAGES);
 
   /**
    * `overrideColumns`, when given (from `grid-export-panel`'s column picker), replaces both
@@ -128,7 +133,12 @@ export class GridExportService {
   private rowToRecord<RowType>(row: RowType, columns: GridColumn_<RowType>[]): Record<string, any> {
     const record: Record<string, any> = {};
     for (const col of columns)
-      record[col.label ?? col.key] = formatCellValue(getCellValue(row, col), col.type);
+      record[col.label ?? col.key] = formatCellValue(
+        getCellValue(row, col),
+        col.type,
+        this.i18n.locale(),
+        this.t().format,
+      );
     return record;
   }
 
@@ -175,7 +185,7 @@ export class GridExportService {
   ): Promise<void> {
     const ExcelJS = await import('exceljs');
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Sheet1');
+    const sheet = workbook.addWorksheet(this.t().export.sheet);
     sheet.columns = columns.map((c) => ({ key: c.label ?? c.key, width: 18 }));
 
     const headerDepth = this.writeExcelHeaderRows(sheet, headerRows);

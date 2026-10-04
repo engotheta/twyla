@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { FormInstance } from '@components/generic-form';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { GridInstance } from './grid-engine.service';
+import { GRID_MESSAGES } from './grid.messages';
 import { GridSearchFieldsComponent } from './grid-search-fields/grid-search-fields.component';
 
 export interface GridSearchDialogData<RowType = any> {
@@ -24,7 +26,7 @@ export interface GridSearchDialogData<RowType = any> {
   imports: [GridSearchFieldsComponent, MatDialogModule, CdkDrag, CdkDragHandle],
   template: `
     <div cdkDrag cdkDragRootElement=".cdk-overlay-pane" class="contents">
-      <h2 mat-dialog-title cdkDragHandle class="!cursor-move">Search</h2>
+      <h2 mat-dialog-title cdkDragHandle class="!cursor-move">{{ t().classic.dialogTitle }}</h2>
       <div mat-dialog-content class="pt-2">
         <grid-search-fields [instance]="data.instance" [existingInstance]="data.formInstance" />
       </div>
@@ -34,4 +36,5 @@ export interface GridSearchDialogData<RowType = any> {
 })
 export class GridSearchDialogComponent<RowType = any> {
   protected readonly data = inject<GridSearchDialogData<RowType>>(MAT_DIALOG_DATA);
+  protected readonly t = injectMessages(GRID_MESSAGES);
 }

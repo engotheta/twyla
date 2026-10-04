@@ -6,7 +6,7 @@
       [attr.aria-pressed]="headerRow()"
       (click)="headerRow.set(!headerRow())"
     >
-      First row is the header
+      {{ t().sheet.headerRow }}
     </button>
   </div>
 }
@@ -18,7 +18,7 @@
   [attr.role]="tabs().length > 1 ? 'tabpanel' : 'region'"
   [attr.id]="tabs().length > 1 ? 'sheet-panel-' + uid : null"
   [attr.aria-labelledby]="tabs().length > 1 ? 'sheet-tab-' + uid + '-' + active() : null"
-  [attr.aria-label]="tabs().length > 1 ? null : label() + ' — spreadsheet'"
+  [attr.aria-label]="tabs().length > 1 ? null : t().sheet.spreadsheet(label())"
 >
   @if (sheet(); as s) {
     <table class="sheet-table" [style.zoom]="scale()">
@@ -32,7 +32,9 @@
       }
       <thead>
         <tr>
-          <th scope="col" class="sheet-corner"><span class="sr-only">Row</span></th>
+          <th scope="col" class="sheet-corner">
+            <span class="sr-only">{{ t().sheet.row }}</span>
+          </th>
           @for (h of headers(); track $index) {
             <th scope="col">{{ h }}</th>
           }
@@ -60,29 +62,33 @@
     @if (hasMore()) {
       <div class="sticky left-0 flex justify-center p-3">
         <button #more type="button" matButton="outlined" (click)="showMore()">
-          Show more rows ({{ rows().length }} of {{ totalRows() }})
+          {{ t().sheet.showMore(rows().length, totalRows()) }}
         </button>
       </div>
     } @else if (s.truncated) {
       <p class="sticky left-0 m-0 p-3 text-xs text-black/70">
-        This sheet is too large to show in full — download the file to see the rest.
+        {{ t().sheet.truncated }}
       </p>
     }
   }
 
   @if (busy()) {
     <div class="absolute inset-0 grid place-items-center" role="status">
-      <mat-progress-spinner mode="indeterminate" diameter="40" aria-label="Opening spreadsheet" />
+      <mat-progress-spinner
+        mode="indeterminate"
+        diameter="40"
+        [attr.aria-label]="t().sheet.opening"
+      />
     </div>
   }
 </div>
 
 @if (tabs().length > 1) {
-  <div class="border-t border-black/10 bg-[#f3f4f6] px-2 py-1.5">
+  <div class="border-t border-black/10 bg-gray-100 px-2 py-1.5">
     <tab-nav
       [tabs]="tabs()"
       [activeKey]="'' + active()"
-      ariaLabel="Sheets"
+      [ariaLabel]="t().sheet.sheets"
       (tabSelect)="selectSheet($event)"
     />
   </div>

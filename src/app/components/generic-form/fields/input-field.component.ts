@@ -9,6 +9,8 @@ import { FormInstance } from '../form-engine.service';
 import { InputType } from '../interfaces/field-type.interface';
 import { InputField } from '../interfaces/control-fields.interface';
 import { controlStatus } from '../helpers/control-status.helpers';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { FORM_MESSAGES } from '../form.messages';
 import { firstErrorMessage } from '../helpers/field-errors.helpers';
 
 const HTML_TYPE: Record<InputType, string> = {
@@ -73,7 +75,7 @@ const HTML_TYPE: Record<InputType, string> = {
           matSuffix
           mat-icon-button
           type="button"
-          aria-label="Show password"
+          [attr.aria-label]="t().input.showPassword"
           [attr.aria-pressed]="revealed()"
           (click)="toggleReveal()"
         >
@@ -85,7 +87,7 @@ const HTML_TYPE: Record<InputType, string> = {
           matSuffix
           mat-icon-button
           type="button"
-          [attr.aria-label]="'Clear ' + (f.label ?? 'value')"
+          [attr.aria-label]="t().input.clear(f.label ?? t().input.value)"
           (click)="clear()"
         >
           <mat-icon aria-hidden="true">close</mat-icon>
@@ -104,6 +106,8 @@ const HTML_TYPE: Record<InputType, string> = {
 export class InputFieldComponent {
   readonly field = input.required<InputField>();
   readonly instance = input.required<FormInstance>();
+
+  protected readonly t = injectMessages(FORM_MESSAGES);
 
   protected readonly state = computed(() => this.instance().fieldState(this.field())());
   protected readonly control = computed(() => this.instance().control(this.field()) as FormControl);
@@ -142,7 +146,7 @@ export class InputFieldComponent {
 
   protected readonly errorMessage = computed(() =>
     this.status().touched
-      ? firstErrorMessage(this.status().errors, this.state().validations)
+      ? firstErrorMessage(this.status().errors, this.state().validations, this.t())
       : null,
   );
 

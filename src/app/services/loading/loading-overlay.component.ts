@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { LOADING_CONFIG } from './loading-config.token';
+import { LOADING_MESSAGES } from './loading.messages';
 
 /**
  * The scrim + spinner `LoadingService` mounts inside a loading target. Not meant for templates —
@@ -13,7 +15,7 @@ import { LOADING_CONFIG } from './loading-config.token';
     <mat-progress-spinner
       mode="indeterminate"
       [diameter]="config.diameter"
-      [attr.aria-label]="config.label"
+      [attr.aria-label]="config.label ?? t().label"
     />
   `,
   styles: `
@@ -46,4 +48,5 @@ import { LOADING_CONFIG } from './loading-config.token';
 })
 export class LoadingOverlayComponent {
   protected readonly config = inject(LOADING_CONFIG);
+  protected readonly t = injectMessages(LOADING_MESSAGES);
 }

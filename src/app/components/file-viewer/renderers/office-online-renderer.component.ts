@@ -8,7 +8,9 @@ import {
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { ResolvedFile } from '../file-viewer.interface';
+import { FILE_VIEWER_MESSAGES } from '../file-viewer.messages';
 import { FileLoaderService } from '../loader/file-loader.service';
 import { ViewerController } from '../viewer-controller';
 
@@ -23,14 +25,14 @@ import { ViewerController } from '../viewer-controller';
     <p
       class="m-0 flex items-center gap-2 border-b border-black/10 bg-amber-50 px-3 py-1.5 text-xs text-amber-950"
     >
-      <mat-icon class="!size-4 !text-base" aria-hidden="true">public</mat-icon>
-      Shown with Microsoft Office Online — Microsoft fetches the file from its public link.
+      <mat-icon class="!size-4 !text-base !leading-4" aria-hidden="true">public</mat-icon>
+      {{ t().office.notice }}
     </p>
     @if (src(); as url) {
       <iframe
-        class="min-h-0 w-full flex-1 border-0 bg-white"
+        class="min-h-0 w-full flex-1 border-0 bg-always-white"
         [src]="url"
-        [title]="label() + ' — Microsoft Office Online preview'"
+        [title]="t().office.frame(label())"
         referrerpolicy="no-referrer"
         sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-downloads"
       ></iframe>
@@ -43,6 +45,7 @@ export class OfficeOnlineRendererComponent {
   readonly file = input.required<ResolvedFile>();
   readonly label = input('');
 
+  protected readonly t = injectMessages(FILE_VIEWER_MESSAGES);
   private readonly loader = inject(FileLoaderService);
   private readonly sanitizer = inject(DomSanitizer);
 

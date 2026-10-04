@@ -15,7 +15,8 @@ export interface FetchMessages {
 export interface FetchConfig {
   /** Base URL that REST slugs resolve against; '' keeps them relative to the app. */
   apiBaseUrl: string;
-  /** GraphQL endpoint — a slug (resolved like REST urls) or an absolute URL. */
+  /** GraphQL endpoint — a slug (resolved like REST urls) or an absolute URL. Default: the
+   *  `graphql` slug, so queries only ever go to the app's own `apiBaseUrl` unless it says otherwise. */
   graphqlUrl: string;
   /** Whether a 2xx payload succeeded. Default: anything except `{ success: false }`. */
   isSuccess: (res: unknown) => boolean;
@@ -27,20 +28,17 @@ export interface FetchConfig {
   onException?: (err: HttpErrorResponse) => boolean | void;
   /** Ms to wait before retry number `attempt` (1-based). Default: 500 ms doubling, capped at 8 s. */
   retryDelay: (attempt: number) => number;
-  messages: FetchMessages;
+  /** An app's own wording for the fallback toasts. What is left out is `FETCH_MESSAGES`, in the
+   *  user's language. */
+  messages: Partial<FetchMessages>;
 }
 
 export const DEFAULT_FETCH_CONFIG: FetchConfig = {
   apiBaseUrl: '',
-  graphqlUrl: 'https://countries.trevorblades.com',
+  graphqlUrl: 'graphql',
   isSuccess: (res) => (res as { success?: unknown } | null | undefined)?.success !== false,
   retryDelay: (attempt) => Math.min(500 * 2 ** (attempt - 1), 8000),
-  messages: {
-    success: 'Completed successfully',
-    failed: 'Request failed',
-    error: 'Something went wrong',
-    network: 'Network error — check your connection',
-  },
+  messages: {},
 };
 
 export const FETCH_CONFIG = new InjectionToken<FetchConfig>('FETCH_CONFIG', {

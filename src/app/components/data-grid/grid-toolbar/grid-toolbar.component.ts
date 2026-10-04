@@ -8,6 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -15,9 +16,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormInstance } from '@components/generic-form';
 import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { ViewService } from '@services/view';
 import { GridExportService } from '../grid-export.service';
 import { GridInstance } from '../grid-engine.service';
+import { GRID_MESSAGES } from '../grid.messages';
 import { GridColumnPanelComponent } from '../grid-column-panel/grid-column-panel.component';
 import {
   GridExportPanelComponent,
@@ -41,6 +44,7 @@ const RENDER_MODE_ICONS: Record<GridRenderMode, string> = {
 @Component({
   selector: 'grid-toolbar',
   imports: [
+    CdkTrapFocus,
     OverlayModule,
     MatButtonModule,
     MatButtonToggleModule,
@@ -61,6 +65,7 @@ export class GridToolbarComponent<RowType = any> {
 
   private readonly exportService = inject(GridExportService);
   private readonly view = inject(ViewService);
+  protected readonly t = injectMessages(GRID_MESSAGES);
 
   protected readonly renderModeIcons = RENDER_MODE_ICONS;
 

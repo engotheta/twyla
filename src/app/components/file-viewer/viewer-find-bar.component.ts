@@ -13,6 +13,8 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { FILE_VIEWER_MESSAGES } from './file-viewer.messages';
 import { ViewerController } from './viewer-controller';
 
 const SEARCH_DELAY_MS = 250;
@@ -29,7 +31,7 @@ const TOGGLE =
   template: `
     <form
       role="search"
-      aria-label="Find in document"
+      [attr.aria-label]="t().find.label"
       class="flex flex-wrap items-center gap-2 px-3 py-1.5"
       (submit)="$event.preventDefault(); step(false)"
     >
@@ -37,9 +39,9 @@ const TOGGLE =
         #query
         type="search"
         autocomplete="off"
-        placeholder="Find in document"
-        aria-label="Find in document"
-        class="h-8 w-56 max-w-full rounded border border-black/25 px-2 text-sm outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40"
+        [placeholder]="t().find.label"
+        [attr.aria-label]="t().find.label"
+        class="h-8 w-56 max-w-full rounded-lg border border-(--field-outline) px-2 text-sm outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40"
         (input)="onInput(query.value)"
         (keydown)="onKeydown($event)"
       />
@@ -47,8 +49,8 @@ const TOGGLE =
       <button
         type="button"
         mat-icon-button
-        aria-label="Previous match"
-        matTooltip="Previous (Shift+Enter)"
+        [attr.aria-label]="t().find.previous"
+        [matTooltip]="t().find.previousTip"
         [disabled]="!total()"
         (click)="step(true)"
       >
@@ -57,8 +59,8 @@ const TOGGLE =
       <button
         type="button"
         mat-icon-button
-        aria-label="Next match"
-        matTooltip="Next (Enter)"
+        [attr.aria-label]="t().find.next"
+        [matTooltip]="t().find.nextTip"
         [disabled]="!total()"
         (click)="step(false)"
       >
@@ -70,7 +72,7 @@ const TOGGLE =
         [attr.aria-pressed]="caseSensitive()"
         (click)="caseSensitive.set(!caseSensitive()); search()"
       >
-        Match case
+        {{ t().find.matchCase }}
       </button>
       <button
         type="button"
@@ -78,21 +80,21 @@ const TOGGLE =
         [attr.aria-pressed]="entireWord()"
         (click)="entireWord.set(!entireWord()); search()"
       >
-        Whole words
+        {{ t().find.wholeWords }}
       </button>
       <button
         type="button"
         mat-icon-button
         class="ms-auto"
-        aria-label="Close find"
-        matTooltip="Close (Esc)"
+        [attr.aria-label]="t().find.close"
+        [matTooltip]="t().find.closeTip"
         (click)="close()"
       >
         <mat-icon aria-hidden="true">close</mat-icon>
       </button>
     </form>
   `,
-  host: { class: 'block border-b border-black/10 bg-[#f9fafb]' },
+  host: { class: 'block border-b border-black/10 bg-gray-50' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ViewerFindBarComponent {
@@ -100,6 +102,7 @@ export class ViewerFindBarComponent {
   readonly closed = output<void>();
 
   private readonly controller = inject(ViewerController);
+  protected readonly t = injectMessages(FILE_VIEWER_MESSAGES);
   private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('query');
 
   protected readonly toggle = TOGGLE;
@@ -112,9 +115,10 @@ export class ViewerFindBarComponent {
   protected readonly status = computed(() => {
     const { state, current, total } = this.controller.findResult();
     if (!this.query()) return '';
-    if (state === 'pending') return 'Searching…';
-    if (state === 'not-found' || !total) return 'No matches';
-    return `${current} of ${total}${state === 'wrapped' ? ' (wrapped)' : ''}`;
+    const text = this.t().find;
+    if (state === 'pending') return text.searching;
+    if (state === 'not-found' || !total) return text.noMatches;
+    return text.matches(current, total, state === 'wrapped');
   });
 
   constructor() {

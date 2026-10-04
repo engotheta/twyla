@@ -16,6 +16,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormInstance } from '../form-engine.service';
 import { TextareaField } from '../interfaces/control-fields.interface';
 import { controlStatus } from '../helpers/control-status.helpers';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { FORM_MESSAGES } from '../form.messages';
 import { firstErrorMessage } from '../helpers/field-errors.helpers';
 
 @Component({
@@ -72,11 +74,11 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
         @if (f.showLabel !== false && f.label) {
           <label class="text-sm font-medium">{{ f.label }}</label>
         }
-        <div class="flex items-center gap-1 rounded-t border border-b-0 border-black/20 p-1">
+        <div class="flex items-center gap-1 rounded-t-lg border border-b-0 border-(--field-outline) p-1">
           <button
             type="button"
             mat-icon-button
-            aria-label="Bold"
+            [attr.aria-label]="t().richText.bold"
             (mousedown)="$event.preventDefault()"
             (click)="exec('bold')"
           >
@@ -85,7 +87,7 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
           <button
             type="button"
             mat-icon-button
-            aria-label="Italic"
+            [attr.aria-label]="t().richText.italic"
             (mousedown)="$event.preventDefault()"
             (click)="exec('italic')"
           >
@@ -94,7 +96,7 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
           <button
             type="button"
             mat-icon-button
-            aria-label="Underline"
+            [attr.aria-label]="t().richText.underline"
             (mousedown)="$event.preventDefault()"
             (click)="exec('underline')"
           >
@@ -103,7 +105,7 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
           <button
             type="button"
             mat-icon-button
-            aria-label="Bullet list"
+            [attr.aria-label]="t().richText.bulletList"
             (mousedown)="$event.preventDefault()"
             (click)="exec('insertUnorderedList')"
           >
@@ -112,13 +114,13 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
         </div>
         <div
           #editor
-          class="focus:outline-primary min-h-32 rounded-b border border-black/20 p-2 focus:outline focus:outline-2 {{
+          class="focus:outline-primary min-h-32 rounded-b-lg border border-(--field-outline) p-2 focus:outline focus:outline-2 {{
             f.inputClass ?? ''
           }}"
           contenteditable
           role="textbox"
           aria-multiline="true"
-          [attr.aria-label]="f.label ?? 'Rich text'"
+          [attr.aria-label]="f.label ?? t().richText.label"
           [attr.aria-readonly]="f.readonly === true"
           (input)="onInput($event)"
           (blur)="control().markAsTouched()"
@@ -135,6 +137,8 @@ import { firstErrorMessage } from '../helpers/field-errors.helpers';
 export class TextareaFieldComponent {
   readonly field = input.required<TextareaField>();
   readonly instance = input.required<FormInstance>();
+
+  protected readonly t = injectMessages(FORM_MESSAGES);
 
   private readonly editor = viewChild<ElementRef<HTMLDivElement>>('editor');
 
@@ -157,7 +161,7 @@ export class TextareaFieldComponent {
 
   protected readonly errorMessage = computed(() =>
     this.status().touched
-      ? firstErrorMessage(this.status().errors, this.state().validations)
+      ? firstErrorMessage(this.status().errors, this.state().validations, this.t())
       : null,
   );
 

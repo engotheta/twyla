@@ -3,7 +3,7 @@
 @switch (f.type) {
   <!-- undefined: muted placeholder text -->
   @case ('undefined') {
-    <span class="text-gray-400 italic">{{ f.value ?? undefinedValue() }}</span>
+    <span class="text-gray-600 italic">{{ f.value ?? undefinedValue() }}</span>
   }
 
   <!-- boolean: yes/no badge -->
@@ -13,14 +13,14 @@
         f.value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
       }}"
     >
-      {{ f.value ? 'Yes' : 'No' }}
+      {{ f.value ? t().yes : t().no }}
     </span>
   }
 
   <!-- date: formatted, falling back to the raw value if it doesn't parse -->
   @case ('date') {
     @if (date(); as d) {
-      <time [attr.datetime]="d.toISOString()">{{ d | date: 'medium' }}</time>
+      <time [attr.datetime]="d.toISOString()">{{ dateText() }}</time>
     } @else {
       <span>{{ f.value }}</span>
     }
@@ -70,7 +70,7 @@
     @if (media()) {
       <button type="button" [class]="viewButton" (click)="view()">
         <mat-icon class="shrink-0" aria-hidden="true">picture_as_pdf</mat-icon>
-        <span>View PDF</span>
+        <span>{{ t().viewPdf }}</span>
       </button>
     }
   }
@@ -82,7 +82,7 @@
       <button type="button" [class]="thumbButton" (click)="view()">
         <img
           [src]="m.uri"
-          [alt]="'View ' + (f.label ?? 'image')"
+          [alt]="t().view(f.label ?? t().image)"
           class="max-h-32 rounded border border-black/10 object-contain"
         />
       </button>
@@ -96,7 +96,7 @@
         <button type="button" [class]="thumbButton" (click)="view()">
           <img
             [src]="m.uri"
-            [alt]="'View ' + (f.label ?? 'image')"
+            [alt]="t().view(f.label ?? t().image)"
             class="max-h-32 rounded border border-black/10 object-contain"
           />
         </button>
@@ -105,7 +105,7 @@
           <mat-icon class="shrink-0" aria-hidden="true">{{
             m.isPdf ? 'picture_as_pdf' : 'description'
           }}</mat-icon>
-          <span>View file</span>
+          <span>{{ t().viewFile }}</span>
         </button>
       }
     }

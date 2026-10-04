@@ -23,8 +23,11 @@ import {
   RouterLink,
 } from '@angular/router';
 import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { SettingsButtonComponent } from '@services/settings/settings-button.component';
 import { BrandLogoComponent } from '../brand-logo.component';
 import { LAYOUT_CONFIG, LayoutNotification } from '../layout-config.token';
+import { LAYOUT_MESSAGES } from '../layout.messages';
 import { LayoutService } from '../layout.service';
 import { UserMenuComponent } from '../menu/user-menu.component';
 
@@ -51,6 +54,7 @@ const PROGRESS_DELAY = 150;
     MatTooltip,
     ActionButtonsComponent,
     BrandLogoComponent,
+    SettingsButtonComponent,
     UserMenuComponent,
   ],
   templateUrl: './app-header.component.html',
@@ -63,6 +67,7 @@ const PROGRESS_DELAY = 150;
 export class AppHeaderComponent {
   protected readonly layout = inject(LayoutService);
   protected readonly config = inject(LAYOUT_CONFIG);
+  protected readonly t = injectMessages(LAYOUT_MESSAGES);
   private readonly document = inject(DOCUMENT);
 
   protected readonly notifications = this.config.notifications;

@@ -2,7 +2,7 @@
   @if (data.icon) {
     <mat-icon aria-hidden="true">{{ data.icon }}</mat-icon>
   }
-  {{ data.title ?? 'Please confirm' }}
+  {{ data.title ?? t().confirm.title }}
 </h2>
 
 <mat-dialog-content>
@@ -16,7 +16,7 @@
 
 <mat-dialog-actions align="end">
   <button mat-button type="button" [class]="data.cancelButtonClass" (click)="cancel()">
-    {{ data.cancelText ?? 'Cancel' }}
+    {{ data.cancelText ?? t().confirm.cancel }}
   </button>
 
   <button
@@ -26,6 +26,6 @@
     [class]="data.confirmButtonClass"
     (click)="confirm()"
   >
-    {{ data.confirmText ?? 'Confirm' }}
+    {{ data.confirmText ?? t().confirm.confirm }}
   </button>
 </mat-dialog-actions>

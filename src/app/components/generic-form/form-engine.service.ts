@@ -1,4 +1,5 @@
 import { effect, Injectable, Injector, Signal, signal, WritableSignal } from '@angular/core';
+import { injectMessages } from '@services/i18n/message-bundle';
 import {
   AbstractControl,
   AsyncValidatorFn,
@@ -10,6 +11,7 @@ import {
 } from '@angular/forms';
 import { Subscription, from, isObservable, lastValueFrom, Observable } from 'rxjs';
 import { debounceTime, startWith, switchMap } from 'rxjs/operators';
+import { FORM_MESSAGES } from './form.messages';
 import { Dynamic, ObserverParameter, Resolved, isObserver } from './interfaces/dynamic.interface';
 import { FieldType } from './interfaces/field-type.interface';
 import { FieldChange, FormState, Validator } from './interfaces/form-state.interface';
@@ -23,7 +25,11 @@ import {
 } from './interfaces/form-field.interface';
 import { AttachmentField, AttachmentMeta } from './interfaces/control-fields.interface';
 import { ObjectField } from './interfaces/container-fields.interface';
-import { CrossValidator, FormParameter } from './interfaces/form-parameter.interface';
+import {
+  CrossValidator,
+  CrossValidatorMessage,
+  FormParameter,
+} from './interfaces/form-parameter.interface';
 
 /** internal alias: engine internals don't care about the payload generic */
 type AnyParams = FormParameter<any>;
@@ -125,6 +131,8 @@ export interface FormInstance<T = Record<string, unknown>> {
 
 @Injectable({ providedIn: 'root' })
 export class FormEngineService {
+  private readonly t = injectMessages(FORM_MESSAGES);
+
   // ── public API ────────────────────────────
 
   /**
@@ -717,7 +725,7 @@ export class FormEngineService {
       const file = meta.file as File;
       const value = field.uploadFn
         ? await this.resolveUpload(field.uploadFn(file, formState))
-        : await readFileAsBase64(file);
+        : await readFileAsBase64(file, this.t().attachment.readFailed);
       meta.status = 'done';
       meta.error = undefined;
       this.writeAttachmentMeta(field, meta, index, rt);
@@ -1020,12 +1028,18 @@ export class FormEngineService {
     flat: FormField[],
     runtimes: Map<FormField, FieldRuntime>,
     cascade: Set<string>,
+    params: AnyParams,
   ): void {
     runtimes.delete(oldField);
     runtimes.set(newField, rt);
     const i = flat.indexOf(oldField);
     if (i !== -1) flat[i] = newField;
     rt.localFields = newSiblings;
+    // what walk() writes onto a config object as the form is built, a fresh one lacks
+    carryEngineState(oldField, newField);
+    if (params.autoLabels !== false && newField.label === undefined) {
+      newField.label = this.labelFromKey(newField.key);
+    }
 
     const changed = diffDeclaredConfig(rt.declaredConfig, newField);
 
@@ -1227,6 +1241,7 @@ export class FormEngineService {
         flat,
         runtimes,
         cascade,
+        params,
       );
     }
   }
@@ -1270,6 +1285,7 @@ export class FormEngineService {
         flat,
         runtimes,
         cascade,
+        params,
       );
 
       const arr = rt.control;
@@ -1453,7 +1469,7 @@ export class FormEngineService {
         sync.push((c) => {
           const values = rule.fields.map((p) => c.get(p)?.value);
           const ok = values.every((v) => v === values[0]);
-          return this.place(form, rule, ok, rule.message ?? 'Fields must match');
+          return this.place(form, rule, ok, said(rule.message) ?? this.t().errors.mismatch);
         });
       } else if (rule.type === 'requiredIf') {
         sync.push((c) => {
@@ -1461,13 +1477,18 @@ export class FormEngineService {
           const active = rule.equals !== undefined ? trigger === rule.equals : !!trigger;
           const value = c.get(rule.field)?.value;
           const ok = !active || (value !== null && value !== undefined && value !== '');
-          return this.place(form, rule, ok, rule.message ?? `${rule.field} is required`);
+          return this.place(
+            form,
+            rule,
+            ok,
+            said(rule.message) ?? this.t().errors.requiredField(rule.field),
+          );
         });
       } else {
         const asyncFn: AsyncValidatorFn = async (c) => {
           const values = Object.fromEntries(rule.fields.map((p) => [p, c.get(p)?.value]));
           const ok = await rule.validate(values, this.makeFormState(form, flat));
-          return this.place(form, rule, ok, rule.message);
+          return this.place(form, rule, ok, said(rule.message));
         };
         form.addAsyncValidators(asyncFn);
       }
@@ -1712,6 +1733,34 @@ function diffFieldTree(
 }
 
 /**
+ * `path` and `attachment` are the engine's own notes on a config object, written as the form is
+ * built and used — so a fresh object for a kept field arrives without them. Carried over, or the
+ * next reconciliation finds no field with a path, takes every field for new and builds its
+ * control again, dropping what was typed (and a picked file never reaches its upload).
+ */
+function carryEngineState(from: ValueFormField, to: ValueFormField): void {
+  to.path = from.path;
+  if (from.type === FieldType.attachment && to.type === FieldType.attachment) {
+    to.attachment = from.attachment;
+  }
+  FIELD_ORIGINS.set(to, fieldIdentity(from));
+}
+
+/** each config object a reconciliation re-keyed a field to → the one it was first declared with */
+const FIELD_ORIGINS = new WeakMap<FormField, FormField>();
+
+/**
+ * What stays the same about a field through reconciliations (SPEC §16), whichever config object
+ * stands for it now: the object it was first declared with. The templates track their fields by
+ * it, so a form given a fresh config keeps its field components — and with them the focus, the
+ * caret and what a field has open — where tracking the objects themselves would build every
+ * field again.
+ */
+export function fieldIdentity(field: FormField): FormField {
+  return FIELD_ORIGINS.get(field) ?? field;
+}
+
+/**
  * SPEC §16 (tier 2): which of `next`'s props genuinely differ from `old` — `old` MUST be a
  * field's `FieldRuntime.declaredConfig` (the pre-resolution baseline), never its live `field`
  * (which `applyProp` mutates in place — comparing against that would see every already-resolved
@@ -1760,11 +1809,18 @@ function combineLatestValues(sources: Observable<unknown>[]): Observable<unknown
   });
 }
 
-function readFileAsBase64(file: File): Promise<string> {
+/** a cross rule's message as it reads now (SPEC §9) */
+function said(message: CrossValidatorMessage): string;
+function said(message: CrossValidatorMessage | undefined): string | undefined;
+function said(message: CrossValidatorMessage | undefined): string | undefined {
+  return typeof message === 'function' ? message() : message;
+}
+
+function readFileAsBase64(file: File, failed: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'));
+    reader.onerror = () => reject(reader.error ?? new Error(failed));
     reader.readAsDataURL(file);
   });
 }

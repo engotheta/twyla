@@ -6,6 +6,7 @@ export * from './class-name.helpers';
 export * from './color.helpers';
 export * from './dynamic-value.helpers';
 export * from './fullscreen-overlay.helpers';
+export * from './motion.helpers';
 export * from './object.helpers';
 export * from './persisted-selection.helpers';
 export * from './string.helpers';

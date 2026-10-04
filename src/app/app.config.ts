@@ -8,9 +8,14 @@ import { provideFileViewerConfig } from './components/file-viewer/file-viewer-co
 import { provideLayoutConfig } from './layout/layout-config.token';
 import { PageTitleStrategy } from './layout/page-title.strategy';
 import { provideFetchConfig } from './services/fetch';
+import { provideI18n } from './services/i18n/i18n-config.token';
+import { languageInterceptor } from './services/i18n/language.interceptor';
+import { injectPhrases } from './services/i18n/message-bundle';
 import { provideSessionConfig } from './services/session/session-config.token';
 import { sessionInterceptor } from './services/session/session.interceptor';
 import { SessionService } from './services/session/session.service';
+import { provideSettings } from './services/settings/provide-settings';
+import { provideOverlayLandmark } from './services/view/landmark-overlay-container';
 import { APP_ROUTES } from './app.routes';
 import {
   demoNotifications,
@@ -19,6 +24,7 @@ import {
 } from './configs/demo-notifications';
 import { DUMMYJSON_DEMO_CREDENTIALS, dummyJsonSessionApi } from './configs/dummyjson-session.api';
 import { SAMPLE_PATHS } from './configs/demo-file-paths';
+import { ROUTE_NAMES } from './configs/route-names';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -27,9 +33,26 @@ export const appConfig: ApplicationConfig = {
     provideRouter(APP_ROUTES, withComponentInputBinding()),
     // document titles: "Data grid · Studio"
     { provide: TitleStrategy, useClass: PageTitleStrategy },
-    provideHttpClient(withFetch(), withInterceptors([sessionInterceptor])),
-    // the demo pages talk to dummyjson.com, so their slugs resolve against it
-    provideFetchConfig({ apiBaseUrl: 'https://dummyjson.com' }),
+    // requests carry the session's token, and the language the user reads (`Accept-Language`)
+    provideHttpClient(withFetch(), withInterceptors([sessionInterceptor, languageInterceptor])),
+    // the languages on offer; each feature ships its own text for them (`*.messages.ts`)
+    provideI18n({
+      languages: [
+        { code: 'en', name: 'English', locale: 'en-GB' },
+        { code: 'sw', name: 'Kiswahili', locale: 'sw-TZ' },
+      ],
+    }),
+    // the user's own theme, language, text size, … — applied as the app starts. The key and the
+    // default theme are also known to the script in index.html that prevents a light flash.
+    provideSettings({ storageKey: 'studio.settings' }),
+    // menus, selects and tooltips open under <body>: a named landmark there keeps them inside one
+    provideOverlayLandmark(),
+    // the demo pages talk to dummyjson.com, so their slugs resolve against it; the fetch demo's
+    // GraphQL query goes to a public countries API
+    provideFetchConfig({
+      apiBaseUrl: 'https://dummyjson.com',
+      graphqlUrl: 'https://countries.trevorblades.com',
+    }),
     // the file-viewer demo: its "storage paths" resolve to public URLs, and Office Online is opted
     // into so the .pptx sample has a preview (apps leave it off unless their files may go to Microsoft)
     provideFileViewerConfig({
@@ -53,6 +76,7 @@ export const appConfig: ApplicationConfig = {
         userMenu: [
           { route: '/account/profile', name: 'Profile', icon: 'person' },
           { route: '/account/security', name: 'Password & security', icon: 'lock' },
+          { route: '/account/preferences', name: 'Preferences', icon: 'tune' },
         ],
         notifications: demoNotifications,
         onNotification: markNotificationRead,
@@ -66,6 +90,8 @@ export const appConfig: ApplicationConfig = {
           version: '0.0.0',
         },
         storageKey: 'studio.layout',
+        // menu and page names are written in English in the routes: their other languages
+        translate: injectPhrases(ROUTE_NAMES),
       };
     }),
   ],

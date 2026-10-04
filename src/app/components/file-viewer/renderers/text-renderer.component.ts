@@ -12,8 +12,10 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { FILE_VIEWER_CONFIG } from '../file-viewer-config.token';
 import { ResolvedFile } from '../file-viewer.interface';
+import { FILE_VIEWER_MESSAGES, FileFailure } from '../file-viewer.messages';
 import { escapeHtml, printHtml } from '../loader/file-actions.helpers';
 import { formatBytes } from '../loader/file-source.helpers';
 import { readText } from '../loader/text-decode.helpers';
@@ -41,7 +43,8 @@ const TOGGLE =
           [attr.aria-pressed]="wrap()"
           (click)="wrap.set(!wrap())"
         >
-          <mat-icon class="!size-4 !text-base" aria-hidden="true">wrap_text</mat-icon> Wrap lines
+          <mat-icon class="!size-4 !text-base !leading-4" aria-hidden="true">wrap_text</mat-icon>
+          {{ t().text.wrap }}
         </button>
         @if (isJson()) {
           <button
@@ -50,13 +53,15 @@ const TOGGLE =
             [attr.aria-pressed]="pretty()"
             (click)="pretty.set(!pretty())"
           >
-            <mat-icon class="!size-4 !text-base" aria-hidden="true">data_object</mat-icon> Format
-            JSON
+            <mat-icon class="!size-4 !text-base !leading-4" aria-hidden="true"
+              >data_object</mat-icon
+            >
+            {{ t().text.formatJson }}
           </button>
         }
         @if (truncated()) {
           <span class="text-xs text-black/70">
-            Showing the first {{ limit }} of {{ size() }} — download the file to see all of it.
+            {{ t().text.truncated(limit, size()) }}
           </span>
         }
       </div>
@@ -66,10 +71,10 @@ const TOGGLE =
         tabindex="0"
         role="region"
         data-viewer-scroll
-        [attr.aria-label]="label() + ' contents'"
+        [attr.aria-label]="t().text.contents(label())"
       >
         @if (loading()) {
-          <p class="p-4 text-sm text-black/70">Reading file…</p>
+          <p class="p-4 text-sm text-black/70">{{ t().text.reading }}</p>
         } @else {
           <div class="flex min-w-fit font-mono leading-relaxed" [style.font-size.px]="fontSize()">
             @if (lineNumbers(); as numbers) {
@@ -95,8 +100,9 @@ const TOGGLE =
 export class TextRendererComponent {
   readonly file = input.required<ResolvedFile>();
   readonly label = input('');
-  readonly failed = output<string>();
+  readonly failed = output<FileFailure>();
 
+  protected readonly t = injectMessages(FILE_VIEWER_MESSAGES);
   private readonly controller = inject(ViewerController);
   private readonly config = inject(FILE_VIEWER_CONFIG);
   private readonly document = inject(DOCUMENT);
@@ -155,7 +161,7 @@ export class TextRendererComponent {
       onCleanup(() => (stale = true));
       this.loading.set(true);
       if (!blob) {
-        this.failed.emit('There is no text to show.');
+        this.failed.emit((text) => text.text.empty);
         return;
       }
       readText(blob, this.config.maxTextBytes)
@@ -165,7 +171,7 @@ export class TextRendererComponent {
           this.truncated.set(truncated);
           this.loading.set(false);
         })
-        .catch(() => !stale && this.failed.emit('This file could not be read as text.'));
+        .catch(() => !stale && this.failed.emit((text) => text.text.failed));
     });
   }
 

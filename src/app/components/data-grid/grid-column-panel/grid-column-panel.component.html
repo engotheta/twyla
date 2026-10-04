@@ -1,7 +1,7 @@
 <div
-  class="w-72 max-h-96 overflow-y-auto p-2 bg-white"
+  class="w-72 max-h-96 overflow-y-auto p-2"
   role="group"
-  aria-label="Column visibility, order, and pinning"
+  [attr.aria-label]="t().columns.panel"
 >
   <div
     cdkDropList
@@ -23,7 +23,7 @@
           *cdkDragPreview
           class="flex items-center gap-2 rounded border border-black/10 bg-white px-2 py-1 text-sm shadow-lg"
         >
-          <mat-icon class="!text-base opacity-60">drag_indicator</mat-icon>
+          <mat-icon class="!size-6 !text-base opacity-60">drag_indicator</mat-icon>
           <span>{{ columnLabel(entry) }}</span>
         </div>
         <button
@@ -31,9 +31,9 @@
           cdkDragHandle
           mat-icon-button
           class="!w-7 !h-7 cursor-grab"
-          aria-label="Drag to reorder {{ columnLabel(entry) }}"
+          [attr.aria-label]="t().columns.dragToReorder(columnLabel(entry))"
         >
-          <mat-icon class="!text-base opacity-60">drag_indicator</mat-icon>
+          <mat-icon class="!size-6 !text-base opacity-60">drag_indicator</mat-icon>
         </button>
 
         <mat-checkbox
@@ -53,7 +53,7 @@
           [attr.aria-label]="pinLabel(entry)"
           (click)="togglePin(entry)"
         >
-          <mat-icon class="!text-base">push_pin</mat-icon>
+          <mat-icon class="!size-6 !text-base">push_pin</mat-icon>
         </button>
 
         <button
@@ -61,10 +61,10 @@
           mat-icon-button
           class="!w-7 !h-7"
           [disabled]="i === 0"
-          aria-label="Move {{ columnLabel(entry) }} up"
+          [attr.aria-label]="t().columns.moveUp(columnLabel(entry))"
           (click)="moveUp(i)"
         >
-          <mat-icon class="!text-base">arrow_upward</mat-icon>
+          <mat-icon class="!size-6 !text-base">arrow_upward</mat-icon>
         </button>
 
         <button
@@ -72,10 +72,10 @@
           mat-icon-button
           class="!w-7 !h-7"
           [disabled]="i === entries().length - 1"
-          aria-label="Move {{ columnLabel(entry) }} down"
+          [attr.aria-label]="t().columns.moveDown(columnLabel(entry))"
           (click)="moveDown(i)"
         >
-          <mat-icon class="!text-base">arrow_downward</mat-icon>
+          <mat-icon class="!size-6 !text-base">arrow_downward</mat-icon>
         </button>
       </div>
     }
@@ -83,7 +83,7 @@
 
   <button type="button" mat-button class="mt-2 w-full" (click)="reset()">
     <mat-icon>restart_alt</mat-icon>
-    Reset columns
+    {{ t().columns.reset }}
   </button>
 
   @if (canAddColumns()) {
@@ -95,7 +95,7 @@
       (click)="discoverColumns()"
     >
       <mat-icon>auto_awesome</mat-icon>
-      {{ discovering() ? 'Scanning…' : 'Add columns from data' }}
+      {{ discovering() ? t().columns.scanning : t().columns.addFromData }}
     </button>
   }
 </div>

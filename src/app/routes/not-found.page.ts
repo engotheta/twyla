@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { LAYOUT_CONFIG } from '@layout';
+import { injectMessages } from '@services/i18n';
+import { PAGES_MESSAGES } from './pages.messages';
 
 @Component({
   selector: 'not-found-page',
@@ -9,11 +11,13 @@ import { LAYOUT_CONFIG } from '@layout';
   template: `
     <main class="max-w-md text-center">
       <p class="text-sm font-semibold text-blue-700">404</p>
-      <h1 class="mt-2 text-3xl font-bold tracking-tight text-gray-900">Page not found</h1>
-      <p class="mt-3 text-gray-600">The page you're looking for doesn't exist, or it has moved.</p>
+      <h1 class="mt-2 text-3xl font-bold tracking-tight text-gray-900">
+        {{ t().notFound.heading }}
+      </h1>
+      <p class="mt-3 text-gray-600">{{ t().notFound.text }}</p>
       <div class="mt-6 flex flex-wrap justify-center gap-3">
-        <a mat-flat-button routerLink="/home">Go home</a>
-        <a mat-stroked-button [routerLink]="homeUrl">All modules</a>
+        <a mat-flat-button routerLink="/home">{{ t().notFound.home }}</a>
+        <a mat-stroked-button [routerLink]="homeUrl">{{ t().notFound.modules }}</a>
       </div>
     </main>
   `,
@@ -22,4 +26,5 @@ import { LAYOUT_CONFIG } from '@layout';
 })
 export class NotFoundPage {
   protected readonly homeUrl = inject(LAYOUT_CONFIG).homeUrl;
+  protected readonly t = injectMessages(PAGES_MESSAGES);
 }

@@ -11,6 +11,7 @@ export * from './interfaces/control-fields.interface';
 export * from './interfaces/static-fields.interface';
 export * from './interfaces/form-field.interface';
 export * from './interfaces/form-parameter.interface';
+export * from './form.messages';
 export * from './validators';
 export * from './form-engine.service';
 export * from './generic-form.component';

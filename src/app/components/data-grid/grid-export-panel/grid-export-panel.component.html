@@ -1,15 +1,19 @@
-<h2 mat-dialog-title>Choose columns to export ({{ data.format.toUpperCase() }})</h2>
+<h2 mat-dialog-title>{{ t().export.title(data.format.toUpperCase()) }}</h2>
 
 <div mat-dialog-content>
   <div class="flex items-center justify-end gap-2 mb-2">
-    <button type="button" mat-button (click)="selectAll()">Select all</button>
-    <button type="button" mat-button (click)="selectNone()">Select none</button>
+    <button type="button" mat-button (click)="selectAll()">
+      {{ t().export.selectAll }}
+    </button>
+    <button type="button" mat-button (click)="selectNone()">
+      {{ t().export.selectNone }}
+    </button>
   </div>
 
   <div
     class="w-96 max-h-96 overflow-y-auto"
     role="group"
-    aria-label="Columns to export, order, and inclusion"
+    [attr.aria-label]="t().export.panel"
     cdkDropList
     [cdkDropListData]="entries()"
     (cdkDropListDropped)="drop($event)"
@@ -28,7 +32,7 @@
           *cdkDragPreview
           class="flex items-center gap-2 rounded border border-black/10 bg-white px-2 py-1 text-sm shadow-lg"
         >
-          <mat-icon class="!text-base opacity-60">drag_indicator</mat-icon>
+          <mat-icon class="!size-6 !text-base opacity-60">drag_indicator</mat-icon>
           <span>{{ entry.label }}</span>
         </div>
 
@@ -37,9 +41,9 @@
           cdkDragHandle
           mat-icon-button
           class="!w-7 !h-7 cursor-grab"
-          aria-label="Drag to reorder {{ entry.label }}"
+          [attr.aria-label]="t().columns.dragToReorder(entry.label)"
         >
-          <mat-icon class="!text-base opacity-60">drag_indicator</mat-icon>
+          <mat-icon class="!size-6 !text-base opacity-60">drag_indicator</mat-icon>
         </button>
 
         <mat-checkbox [checked]="entry.selected" (change)="toggle(entry)" class="flex-1 min-w-0">
@@ -50,12 +54,12 @@
   </div>
 
   <p class="text-xs opacity-60 mt-2">
-    {{ selectedCount() }} of {{ entries().length }} columns selected.
+    {{ t().export.selected(selectedCount(), entries().length) }}
   </p>
 </div>
 
 <div mat-dialog-actions align="end">
-  <button type="button" mat-button (click)="cancel()">Cancel</button>
+  <button type="button" mat-button (click)="cancel()">{{ t().export.cancel }}</button>
   <button
     type="button"
     mat-flat-button
@@ -63,6 +67,6 @@
     [disabled]="selectedCount() === 0"
     (click)="confirm()"
   >
-    Export
+    {{ t().export.confirm }}
   </button>
 </div>

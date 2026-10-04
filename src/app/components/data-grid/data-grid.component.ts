@@ -32,10 +32,14 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
+import { I18nService } from '@services/i18n/i18n.service';
+import { provideMaterialIntl } from '@services/i18n/material-intl';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { mergeClasses } from '@utils/class-name.helpers';
 import { ViewService } from '@services/view';
 import { ColumnResizeDirective } from './column-resize.directive';
 import { GridCellComponent } from './grid-cell/grid-cell.component';
+import { GRID_MESSAGES } from './grid.messages';
 import { GridRow } from './interfaces/grid-cell.interface';
 import { GridColumn_ } from './interfaces/grid-column.interface';
 import { resolveSyncDynamic } from './helpers/grid-dynamic.helpers';
@@ -122,6 +126,8 @@ const COLUMN_WIDTH_ESTIMATE_BY_TYPE: Partial<Record<GridValueType, number>> = {
   ],
   templateUrl: './data-grid.component.html',
   styleUrl: './data-grid.component.scss',
+  // the paginator's own labels, in the user's language
+  providers: [provideMaterialIntl()],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
@@ -135,6 +141,8 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   private readonly injector = inject(Injector);
   private readonly view = inject(ViewService);
   private readonly rowDetailsComponent = inject(ROW_DETAILS_COMPONENT, { optional: true });
+  private readonly i18n = inject(I18nService);
+  protected readonly t = injectMessages(GRID_MESSAGES);
 
   protected instance!: GridInstance<RowType>;
 
@@ -231,7 +239,7 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   );
   protected readonly noContentLabel = computed(() => {
     const p = this.instance.params();
-    return p.noContentLabel ?? `No ${p.label ?? 'results'} found`;
+    return p.noContentLabel ?? this.t().noResults(p.label);
   });
 
   protected onNoContentClick(): void {
@@ -412,7 +420,7 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
     this.clickCounts.set(id, 0);
 
     this.view.open(this.rowDetailsComponent, {
-      title: 'Details',
+      title: () => this.t().details,
       width: '640px',
       inputs: { params: { entity: row } satisfies RowDetailsParams<RowType> },
     });
@@ -497,6 +505,11 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   protected listRowTitle(row: RowType): string {
     const column = this.previewColumns()[0];
     if (!column) return String(this.instance.rowId(row) ?? '');
-    return formatCellValue(getCellValue(row, column), column.type);
+    return formatCellValue(
+      getCellValue(row, column),
+      column.type,
+      this.i18n.locale(),
+      this.t().format,
+    );
   }
 }

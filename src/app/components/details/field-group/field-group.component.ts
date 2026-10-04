@@ -13,13 +13,17 @@ import { combineLatest, map, Observable, of, switchMap } from 'rxjs';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { MatIcon } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ArrayConfig, FieldConfig, FieldGroupConfig } from '../interfaces/details.interface';
 import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
+import { TabNavClasses } from '@components/tab-nav/tab-nav.interface';
+import { TabPanelsComponent } from '@components/tab-nav/tab-panels.component';
+import { provideMaterialIntl } from '@services/i18n/material-intl';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { resolveDynamicValue$ } from '@utils/dynamic-value.helpers';
 import { DataGridComponent, GridColumn_, GridParameter } from '@components/data-grid';
 import { BgIconMarkComponent } from '../bg-icon-mark.component';
+import { DETAILS_MESSAGES } from '../details.messages';
 import { mergeClasses } from '@utils/class-name.helpers';
 import { MergeClassesPipe } from '@utils/pipes/merge-classes.pipe';
 import { ViewService } from '@services/view';
@@ -32,6 +36,7 @@ import {
   FieldRowViewModel,
 } from '../interfaces/field-group.interface';
 import { FieldData, FieldLayout, FieldType } from '../interfaces/field.interface';
+import { groupTabs } from '../helpers/field-group.helpers';
 import { getFieldType } from '../helpers/fields.helpers';
 import {
   DEFAULT_PAGE_SIZE,
@@ -56,9 +61,9 @@ import {
     NgTemplateOutlet,
     MatIcon,
     MatPaginatorModule,
-    MatTabsModule,
     MatTooltipModule,
     ActionButtonsComponent,
+    TabPanelsComponent,
     DataGridComponent,
     BgIconMarkComponent,
     MergeClassesPipe,
@@ -66,6 +71,8 @@ import {
     FieldGroupComponent,
     CommonModule,
   ],
+  // the paginator of a long list, labelled in the user's language
+  providers: [provideMaterialIntl()],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FieldGroupComponent<D = unknown> {
@@ -88,8 +95,13 @@ export class FieldGroupComponent<D = unknown> {
 
   readonly showBgIconMark = input(false);
   readonly showGroupsInTabs = input(false);
+  /** the details' `tabsContainerClass` and its companions, as `tab-nav` takes them */
+  readonly tabsClasses = input<TabNavClasses>();
+  /** this group is the panel of a tab, which already shows its label and icon */
+  readonly asTab = input(false);
 
   private readonly view = inject(ViewService);
+  protected readonly t = injectMessages(DETAILS_MESSAGES);
   protected readonly resolvedGroup = computed(() => this.parameter()?.group ?? this.group() ?? {});
   protected readonly resolvedLayout = computed(() => this.parameter()?.layout ?? this.layout());
   protected readonly resolvedData = computed(() => this.parameter()?.data ?? this.data());
@@ -153,6 +165,12 @@ export class FieldGroupComponent<D = unknown> {
     () => this.parameter()?.showGroupsInTabs ?? this.showGroupsInTabs(),
   );
 
+  // As handed down — what children get in turn (`childParameter`); this group's own
+  // `tabsContainerClass` & co. are for its own sub-tabs only (`subTabsClasses`).
+  private readonly resolvedTabsClasses = computed(
+    () => this.parameter()?.tabsClasses ?? this.tabsClasses(),
+  );
+
   // Bundles this instance's resolved cross-cutting settings (everything but `group`, which is
   // always call-site-specific) so recursive `<field-group>` calls in the template can pass
   // `[parameter]="{ ...childParameter(), group: x }"` instead of repeating every binding.
@@ -165,6 +183,7 @@ export class FieldGroupComponent<D = unknown> {
     arrayConfig: this.resolvedArrayConfig(),
     showBgIconMark: this.resolvedShowBgIconMark(),
     showGroupsInTabs: this.resolvedShowGroupsInTabs(),
+    tabsClasses: this.resolvedTabsClasses(),
   }));
 
   protected readonly fields = computed(() => {
@@ -174,14 +193,46 @@ export class FieldGroupComponent<D = unknown> {
 
   protected readonly subGroups = computed(() => this.resolvedGroup().groups ?? []);
 
-  protected readonly showHeader = computed(() => {
+  private readonly resolvedAsTab = computed(() => this.parameter()?.asTab ?? this.asTab());
+
+  /** the heading — the group's icon and label. A group shown as a tab leaves it to the tab,
+   *  unless it asks for it (`showHeader: true`) */
+  protected readonly showTitle = computed(() => {
     const g = this.resolvedGroup();
-    return g.showHeader !== false && !!(g.label || g.icon);
+    return !!(g.label || g.icon) && (g.showHeader ?? !this.resolvedAsTab());
+  });
+
+  /** the header row: there for the heading — and, in a tab's panel whose heading is the tab's,
+   *  still there for the group's buttons */
+  protected readonly showHeader = computed(() => {
+    if (this.showTitle()) return true;
+    const g = this.resolvedGroup();
+    return (
+      this.resolvedAsTab() &&
+      g.showHeader !== false &&
+      !!(g.label || g.icon) &&
+      !!g.actionButtons?.length
+    );
   });
 
   protected readonly inTabs = computed(
     () => this.resolvedGroup().showGroupsInTabs ?? this.resolvedShowGroupsInTabs(),
   );
+
+  /** the sub-groups as tabs (`inTabs`) */
+  protected readonly subGroupTabs = computed(() => groupTabs(this.subGroups(), this.t().group));
+
+  /** the look of those tabs: what was handed down, then this group's own on top */
+  protected readonly subTabsClasses = computed<TabNavClasses>(() => {
+    const inherited = this.resolvedTabsClasses() ?? {};
+    const own = this.resolvedGroup();
+    return {
+      container: mergeClasses(inherited.container ?? '', own.tabsContainerClass ?? ''),
+      tab: mergeClasses(inherited.tab ?? '', own.tabClass ?? ''),
+      activeTab: mergeClasses(inherited.activeTab ?? '', own.activeTabClass ?? ''),
+      indicator: mergeClasses(inherited.indicator ?? '', own.tabIndicatorClass ?? ''),
+    };
+  });
 
   private readonly fields$ = toObservable(this.fields);
 
@@ -268,7 +319,11 @@ export class FieldGroupComponent<D = unknown> {
     ).map((c) => ({ key: c.key, label: c.label ?? c.key, template: cellTemplate }));
 
     if (f.itemButtons?.length) {
-      columns.push({ key: '__item_actions__', label: 'Actions', template: actionsTemplate });
+      columns.push({
+        key: '__item_actions__',
+        label: this.t().actions,
+        template: actionsTemplate,
+      });
     }
 
     const size = this.pageSizeFor(f);

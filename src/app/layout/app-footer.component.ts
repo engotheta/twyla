@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { LAYOUT_CONFIG } from './layout-config.token';
+import { LAYOUT_MESSAGES } from './layout.messages';
 
 /** © year and owner, the footer links, the version. */
 @Component({
@@ -18,17 +20,17 @@ import { LAYOUT_CONFIG } from './layout-config.token';
             target="_blank"
             rel="noopener noreferrer"
             [href]="footer.ownerUrl"
-            >{{ footer.owner }}<span class="sr-only"> (opens in a new tab)</span></a
-          ><span>. All rights reserved.</span>
+            >{{ footer.owner }}<span class="sr-only"> {{ t().newTab }}</span></a
+          ><span>. {{ t().footer.rights }}</span>
         } @else {
-          <span>{{ footer.owner }}. All rights reserved.</span>
+          <span>{{ footer.owner }}. {{ t().footer.rights }}</span>
         }
       </p>
 
       @if (footer.links.length || footer.version) {
         <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
           @if (footer.links.length) {
-            <nav aria-label="Footer">
+            <nav [attr.aria-label]="t().footer.links">
               <ul class="flex flex-wrap gap-x-4 gap-y-1">
                 @for (link of footer.links; track link.label) {
                   <li>
@@ -37,7 +39,7 @@ import { LAYOUT_CONFIG } from './layout-config.token';
                         class="underline-offset-2 hover:text-gray-900 hover:underline"
                         [routerLink]="link.route"
                       >
-                        {{ link.label }}
+                        {{ translate(link.label) }}
                       </a>
                     } @else {
                       <a
@@ -46,7 +48,7 @@ import { LAYOUT_CONFIG } from './layout-config.token';
                         rel="noopener noreferrer"
                         [href]="link.href"
                       >
-                        {{ link.label }}<span class="sr-only"> (opens in a new tab)</span>
+                        {{ translate(link.label) }}<span class="sr-only"> {{ t().newTab }}</span>
                       </a>
                     }
                   </li>
@@ -66,5 +68,7 @@ import { LAYOUT_CONFIG } from './layout-config.token';
 })
 export class AppFooterComponent {
   protected readonly footer = inject(LAYOUT_CONFIG).footer;
+  protected readonly translate = inject(LAYOUT_CONFIG).translate;
+  protected readonly t = injectMessages(LAYOUT_MESSAGES);
   protected readonly year = new Date().getFullYear();
 }

@@ -5,8 +5,10 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
 import { ActionButton } from '@components/action-buttons/action-button.interface';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { FileViewerToolbarItem, ResolvedFile, ZoomValue } from '../file-viewer.interface';
-import { ViewerController, ZOOM_LABELS } from '../viewer-controller';
+import { FILE_VIEWER_MESSAGES } from '../file-viewer.messages';
+import { ViewerController } from '../viewer-controller';
 
 const ZOOM_PRESETS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
 
@@ -57,7 +59,7 @@ export class ViewerToolbarComponent {
 
   protected readonly controller = inject(ViewerController);
   protected readonly zoomPresets = ZOOM_PRESETS;
-  protected readonly zoomLabels = ZOOM_LABELS;
+  protected readonly t = injectMessages(FILE_VIEWER_MESSAGES);
 
   private readonly caps = this.controller.capabilities;
   private allowed(item: FileViewerToolbarItem): boolean {

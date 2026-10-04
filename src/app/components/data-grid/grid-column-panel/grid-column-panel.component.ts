@@ -10,7 +10,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { GridInstance } from '../grid-engine.service';
+import { GRID_MESSAGES } from '../grid.messages';
 import { GridColumnState } from '../interfaces/grid-column.interface';
 
 /** Show/hide, reorder (drag or keyboard move-up/down), and pin/unpin columns. */
@@ -31,6 +33,8 @@ import { GridColumnState } from '../interfaces/grid-column.interface';
 })
 export class GridColumnPanelComponent<RowType = any> {
   readonly instance = input.required<GridInstance<RowType>>();
+
+  protected readonly t = injectMessages(GRID_MESSAGES);
 
   private readonly labelByKey = computed(
     () =>
@@ -57,9 +61,10 @@ export class GridColumnPanelComponent<RowType = any> {
   }
 
   protected pinLabel(entry: GridColumnState): string {
-    if (entry.pinned === 'left') return 'Pinned left — click to pin right';
-    if (entry.pinned === 'right') return 'Pinned right — click to unpin';
-    return 'Not pinned — click to pin left';
+    const text = this.t().columns;
+    if (entry.pinned === 'left') return text.pinnedLeft;
+    if (entry.pinned === 'right') return text.pinnedRight;
+    return text.notPinned;
   }
 
   protected togglePin(entry: GridColumnState): void {

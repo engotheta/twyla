@@ -3,8 +3,10 @@ import { MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { BrandLogoComponent } from '../brand-logo.component';
 import { LAYOUT_CONFIG } from '../layout-config.token';
+import { LAYOUT_MESSAGES } from '../layout.messages';
 import { flattenMenu } from '../menu/menu.helpers';
 import { MenuIconComponent } from '../menu/menu-icon.component';
 import { MenuService } from '../menu/menu.service';
@@ -34,7 +36,7 @@ const FILTER_FROM = 8;
   providers: [SidebarMenuState],
   template: `
     <!-- the whole sidebar is one landmark: brand, module card and menu are all navigation -->
-    <nav class="flex h-full flex-col" [attr.aria-label]="(menu.module()?.name ?? 'Main') + ' menu'">
+    <nav class="flex h-full flex-col" [attr.aria-label]="menuLabel()">
       <div class="flex h-16 shrink-0 items-center gap-2 border-b border-gray-200 px-4">
         <a
           class="min-w-0 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -47,7 +49,7 @@ const FILTER_FROM = 8;
             mat-icon-button
             type="button"
             class="ms-auto"
-            aria-label="Close navigation"
+            [attr.aria-label]="t().sidebar.closeNavigation"
             (click)="closed.emit()"
           >
             <mat-icon aria-hidden="true">close</mat-icon>
@@ -66,14 +68,14 @@ const FILTER_FROM = 8;
               <menu-icon class="size-9 shrink-0 rounded-lg bg-white text-primary" [item]="module" />
               <span class="min-w-0 flex-1">
                 <span class="block truncate font-semibold text-gray-900">{{ module.name }}</span>
-                <span class="block text-xs text-gray-600">Switch module</span>
+                <span class="block text-xs text-gray-600">{{ t().sidebar.switchModule }}</span>
               </span>
               <mat-icon class="shrink-0 text-gray-500" aria-hidden="true">unfold_more</mat-icon>
             </button>
             <mat-menu #modules="matMenu">
               <a mat-menu-item [routerLink]="homeUrl">
                 <mat-icon aria-hidden="true">apps</mat-icon>
-                <span>All modules</span>
+                <span>{{ t().allModules }}</span>
               </a>
               @for (item of menu.modules(); track item.id) {
                 <a mat-menu-item [routerLink]="item.link">
@@ -97,18 +99,18 @@ const FILTER_FROM = 8;
 
         @if (showFilter()) {
           <label class="relative block">
-            <span class="sr-only">Filter menu</span>
+            <span class="sr-only">{{ t().sidebar.filterMenu }}</span>
             <mat-icon
-              class="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-xl! text-gray-500"
+              class="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 size-6! text-xl! text-gray-500"
               aria-hidden="true"
             >
               search
             </mat-icon>
             <input
               type="search"
-              placeholder="Filter menu"
+              [placeholder]="t().sidebar.filterMenu"
               autocomplete="off"
-              class="h-10 w-full rounded-lg border border-gray-300 bg-white ps-9 pe-3 text-sm placeholder:text-gray-500 focus:border-primary focus:outline-2 focus:outline-primary/30"
+              class="h-10 w-full rounded-lg border border-(--field-outline) bg-white ps-9 pe-3 text-sm placeholder:text-gray-500 focus:border-primary focus:outline-2 focus:outline-primary/30"
               [value]="state.query()"
               (input)="onFilter($event)"
             />
@@ -118,7 +120,7 @@ const FILTER_FROM = 8;
         <sidebar-menu [items]="state.items()" />
         <p class="px-2 py-3 text-sm text-gray-600" role="status">
           @if (state.filtering() && !state.items().length) {
-            No pages match "{{ state.query() }}".
+            {{ t().sidebar.noMatch(state.query()) }}
           }
         </p>
       </div>
@@ -131,6 +133,13 @@ export class AppSidebarComponent {
   protected readonly menu = inject(MenuService);
   protected readonly state = inject(SidebarMenuState);
   protected readonly homeUrl = inject(LAYOUT_CONFIG).homeUrl;
+  protected readonly t = injectMessages(LAYOUT_MESSAGES);
+
+  /** the landmark's name: the module's menu, or the main one where there is no module */
+  protected readonly menuLabel = computed(() => {
+    const module = this.menu.module()?.name;
+    return module ? this.t().sidebar.menu(module) : this.t().sidebar.mainMenu;
+  });
 
   /** the drawer variant: a module switcher instead of the module card (the rail is hidden) */
   readonly switcher = input(false);

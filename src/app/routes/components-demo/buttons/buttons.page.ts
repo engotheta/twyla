@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ActionButtonsComponent } from '@components/action-buttons';
 import { PageHeaderComponent } from '@layout/page-header';
-import { actionButtons } from './buttons.demo';
+import { actionButtons, person, personButtons } from './buttons.demo';
 import { DemoLogComponent } from '../../shared/demo-log.component';
 
 @Component({
@@ -15,10 +15,16 @@ import { DemoLogComponent } from '../../shared/demo-log.component';
     <div class="rounded-xl bg-white p-4 ring-1 ring-gray-200 sm:p-6">
       <action-buttons [buttons]="buttons" />
     </div>
+    <!-- appearances, a link, dividers, and an avatar opening a menu with a heading and groups -->
+    <div class="rounded-xl bg-white p-4 ring-1 ring-gray-200 sm:p-6">
+      <action-buttons [buttons]="personButtons" [data]="person" />
+    </div>
   `,
   host: { class: 'flex flex-col gap-3' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ButtonsPage {
   protected readonly buttons = actionButtons;
+  protected readonly personButtons = personButtons;
+  protected readonly person = person;
 }

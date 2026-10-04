@@ -4,7 +4,7 @@
   <button
     mat-icon-button
     type="button"
-    aria-label="Toggle navigation"
+    [attr.aria-label]="t().header.toggleNavigation"
     aria-controls="app-sidebar"
     [attr.aria-expanded]="layout.sidebarVisible()"
     (click)="layout.toggleSidebar()"
@@ -32,8 +32,8 @@
       mat-icon-button
       type="button"
       class="hidden! md:inline-flex!"
-      aria-label="Full screen"
-      matTooltip="Full screen"
+      [attr.aria-label]="t().header.fullScreen"
+      [matTooltip]="t().header.fullScreen"
       [attr.aria-pressed]="fullscreen()"
       (click)="toggleFullscreen()"
     >
@@ -41,16 +41,20 @@
     </button>
   }
 
+  @if (config.showSettings) {
+    <settings-button />
+  }
+
   @if (notifications) {
     <button
       mat-icon-button
       type="button"
-      aria-label="Notifications"
-      matTooltip="Notifications"
+      [attr.aria-label]="t().header.notifications"
+      [matTooltip]="t().header.notifications"
       [matMenuTriggerFor]="notificationsMenu"
       [matBadge]="unread()"
       [matBadgeHidden]="!unread()"
-      [matBadgeDescription]="unread() + ' unread'"
+      [matBadgeDescription]="t().header.unread(unread())"
       matBadgeSize="small"
       matBadgeColor="warn"
     >
@@ -58,7 +62,9 @@
     </button>
 
     <mat-menu #notificationsMenu="matMenu" xPosition="before" class="w-80 max-w-[calc(100vw-2rem)]">
-      <p class="px-4 pt-2 pb-1 text-sm font-semibold text-gray-900">Notifications</p>
+      <p class="px-4 pt-2 pb-1 text-sm font-semibold text-gray-900">
+        {{ t().header.notifications }}
+      </p>
       @for (notification of notifications(); track notification.id) {
         <button
           mat-menu-item
@@ -72,7 +78,7 @@
               {{ notification.title }}
               @if (notification.unread) {
                 <span class="size-2 shrink-0 rounded-full bg-primary" aria-hidden="true"></span>
-                <span class="sr-only">(unread)</span>
+                <span class="sr-only">{{ t().header.unreadMark }}</span>
               }
             </span>
             @if (notification.text) {
@@ -84,13 +90,13 @@
           </span>
         </button>
       } @empty {
-        <p class="px-4 py-6 text-center text-sm text-gray-600">You're all caught up.</p>
+        <p class="px-4 py-6 text-center text-sm text-gray-600">{{ t().header.allCaughtUp }}</p>
       }
       @if (config.markAllRead && unread()) {
         <mat-divider />
         <button mat-menu-item type="button" (click)="markAllRead()">
           <mat-icon aria-hidden="true">done_all</mat-icon>
-          <span>Mark all as read</span>
+          <span>{{ t().header.markAllRead }}</span>
         </button>
       }
     </mat-menu>
@@ -102,7 +108,7 @@
     <mat-progress-bar
       class="absolute! inset-x-0 bottom-0"
       mode="indeterminate"
-      aria-label="Loading page"
+      [attr.aria-label]="t().header.loadingPage"
     />
   }
 </header>

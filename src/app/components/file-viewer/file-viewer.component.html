@@ -28,17 +28,17 @@
   <file-viewer-find-bar (closed)="focusFindToggle()" />
 }
 
-<div class="relative min-h-0 flex-1 bg-[#f3f4f6]">
+<div class="relative min-h-0 flex-1 bg-gray-100">
   @switch (v.status) {
     @case ('loading') {
       <div class="absolute inset-0 grid place-items-center p-6">
         <div class="flex w-full max-w-xs flex-col items-center gap-2 text-center" role="status">
-          <span class="text-sm text-black/80">Loading {{ heading() }}…</span>
+          <span class="text-sm text-black/80">{{ t().loading(heading()) }}</span>
           <mat-progress-bar
             class="w-full"
             [mode]="percent() === undefined ? 'indeterminate' : 'determinate'"
             [value]="percent() ?? 0"
-            [attr.aria-label]="'Loading ' + heading()"
+            [attr.aria-label]="t().loadingLabel(heading())"
           />
           <span class="h-4 text-xs tabular-nums text-black/60">{{ progressText() }}</span>
         </div>
@@ -49,7 +49,7 @@
       <file-viewer-message
         class="absolute inset-0"
         icon="insert_drive_file"
-        heading="No file to show"
+        [heading]="t().empty"
       />
     }
 
@@ -58,7 +58,7 @@
         class="absolute inset-0"
         tone="error"
         icon="error_outline"
-        heading="This file can't be shown"
+        [heading]="t().cannotShow"
         [message]="v.message"
         [details]="file() ? file()!.name : ''"
         [canRetry]="true"
@@ -188,7 +188,7 @@
               @default {
                 <file-viewer-message
                   [icon]="icon()"
-                  heading="Preview not available"
+                  [heading]="t().previewUnavailable"
                   [message]="unavailableMessage()"
                   [details]="details()"
                   [canDownload]="true"
@@ -209,7 +209,7 @@
 
 <ng-template #pending>
   <div class="grid size-full place-items-center">
-    <mat-progress-bar class="!w-40" mode="indeterminate" aria-label="Opening viewer" />
+    <mat-progress-bar class="!w-40" mode="indeterminate" [attr.aria-label]="t().openingViewer" />
   </div>
 </ng-template>
 
@@ -217,8 +217,8 @@
   <file-viewer-message
     tone="error"
     icon="cloud_off"
-    heading="The viewer couldn't load"
-    message="Check your connection and try again."
+    [heading]="t().viewerFailed"
+    [message]="t().checkConnection"
     [canRetry]="true"
     [canDownload]="true"
     (retry)="retry()"

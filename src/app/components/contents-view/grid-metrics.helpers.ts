@@ -40,17 +40,18 @@ export function clusterEdges(
   if (!spans.length) return { tracks: [], boundaries: [] };
 
   const tracks: GridTrack[] = [];
+
   for (const span of [...spans].sort((a, b) => a.start - b.start)) {
     const last = tracks[tracks.length - 1];
+
     if (last && span.start <= last.start + tolerance) {
       last.end = Math.max(last.end, span.end);
       last.size = last.end - last.start;
-    } else {
-      tracks.push({ start: span.start, end: span.end, size: span.end - span.start });
-    }
+    } else tracks.push({ start: span.start, end: span.end, size: span.end - span.start });
   }
 
   const boundaries = tracks.slice(1).map((track, i) => (tracks[i].end + track.start) / 2);
+
   return { tracks, boundaries };
 }
 
@@ -58,10 +59,12 @@ export function clusterEdges(
  *  to — the track with the nearest leading edge. `-1` for an axis with no tracks. */
 export function trackIndex(axis: GridAxis, start: number): number {
   let best = -1;
+
   axis.tracks.forEach((track, i) => {
-    if (best < 0 || Math.abs(track.start - start) < Math.abs(axis.tracks[best].start - start)) {
-      best = i;
-    }
+    const adequate =
+      best < 0 || Math.abs(track.start - start) < Math.abs(axis.tracks[best].start - start);
+    if (adequate) best = i;
   });
+
   return best;
 }

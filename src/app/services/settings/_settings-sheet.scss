@@ -1,0 +1,23 @@
+// The settings sheet (`SettingsButtonComponent`): a dialog docked to the edge of the window.
+// Global on purpose — these reach into Material's dialog DOM, which no component's own styles can.
+.settings-sheet {
+  --mat-dialog-container-shape: 0;
+
+  // its backdrop is clear, so the page shows the changes: an edge and a shadow set it apart
+  .mat-mdc-dialog-surface {
+    border-inline-start: 1px solid var(--color-neutral);
+    box-shadow: -8px 0 24px rgb(0 0 0 / 0.12);
+  }
+
+  // a centred dialog caps its content at 65vh; here it takes what's left of the sheet and scrolls
+  view-dialog {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .mat-mdc-dialog-content {
+    flex: 1 1 auto;
+    max-height: none;
+  }
+}

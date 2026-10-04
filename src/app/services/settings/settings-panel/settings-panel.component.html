@@ -1,0 +1,156 @@
+@let text = t();
+
+<div class="flex flex-col gap-6">
+  <section class="flex flex-col gap-5" [attr.aria-labelledby]="id + '-appearance'">
+    <ng-container
+      [ngTemplateOutlet]="heading"
+      [ngTemplateOutletContext]="{ $implicit: text.appearance, id: id + '-appearance' }"
+    />
+    <ng-container
+      [ngTemplateOutlet]="choice"
+      [ngTemplateOutletContext]="{ key: 'theme', label: text.theme.label, hint: text.theme.hint }"
+    />
+    <ng-container
+      [ngTemplateOutlet]="choice"
+      [ngTemplateOutletContext]="{
+        key: 'textSize',
+        label: text.textSize.label,
+        hint: text.textSize.hint,
+      }"
+    />
+    <ng-container
+      [ngTemplateOutlet]="choice"
+      [ngTemplateOutletContext]="{
+        key: 'density',
+        label: text.density.label,
+        hint: text.density.hint,
+      }"
+    />
+  </section>
+
+  @if (languageChoice) {
+    <section
+      class="flex flex-col gap-5 border-t border-gray-200 pt-6"
+      [attr.aria-labelledby]="id + '-language'"
+    >
+      <ng-container
+        [ngTemplateOutlet]="heading"
+        [ngTemplateOutletContext]="{ $implicit: text.language.label, id: id + '-language' }"
+      />
+      <ng-container
+        [ngTemplateOutlet]="choice"
+        [ngTemplateOutletContext]="{
+          key: 'language',
+          label: text.language.label,
+          hint: text.language.hint,
+          hideLabel: true,
+        }"
+      />
+    </section>
+  }
+
+  <section
+    class="flex flex-col gap-5 border-t border-gray-200 pt-6"
+    [attr.aria-labelledby]="id + '-accessibility'"
+  >
+    <ng-container
+      [ngTemplateOutlet]="heading"
+      [ngTemplateOutletContext]="{ $implicit: text.accessibility, id: id + '-accessibility' }"
+    />
+    <ng-container
+      [ngTemplateOutlet]="choice"
+      [ngTemplateOutletContext]="{
+        key: 'contrast',
+        label: text.contrast.label,
+        hint: text.contrast.hint,
+      }"
+    />
+    <ng-container
+      [ngTemplateOutlet]="onOff"
+      [ngTemplateOutletContext]="{
+        key: 'motion',
+        label: text.motion.label,
+        hint: text.motion.hint,
+      }"
+    />
+    <ng-container
+      [ngTemplateOutlet]="onOff"
+      [ngTemplateOutletContext]="{ key: 'font', label: text.font.label, hint: text.font.hint }"
+    />
+    <ng-container
+      [ngTemplateOutlet]="onOff"
+      [ngTemplateOutletContext]="{
+        key: 'textSpacing',
+        label: text.textSpacing.label,
+        hint: text.textSpacing.hint,
+      }"
+    />
+  </section>
+
+  <div class="border-t border-gray-200 pt-4">
+    <button mat-stroked-button type="button" [disabled]="pristine()" (click)="reset()">
+      <mat-icon aria-hidden="true">restart_alt</mat-icon>
+      {{ text.reset }}
+    </button>
+  </div>
+</div>
+
+<ng-template #heading let-title let-headingId="id">
+  @if (headingLevel() === 2) {
+    <h2 class="text-base font-semibold text-gray-900" [id]="headingId">{{ title }}</h2>
+  } @else {
+    <h3 class="text-base font-semibold text-gray-900" [id]="headingId">{{ title }}</h3>
+  }
+</ng-template>
+
+<!-- a setting picked from a few choices: a radio group, named by its legend and described by
+     its hint. The inputs are real radios (hidden, their chips shown), so arrow keys work. -->
+<ng-template #choice let-key="key" let-label="label" let-hint="hint" let-hideLabel="hideLabel">
+  <fieldset class="min-w-0" [attr.aria-describedby]="id + '-' + key + '-hint'">
+    <legend class="text-sm font-medium text-gray-900" [class.sr-only]="hideLabel">
+      {{ label }}
+    </legend>
+    <p class="text-sm text-gray-600" [id]="id + '-' + key + '-hint'">{{ hint }}</p>
+    <div class="mt-2 flex flex-wrap gap-2">
+      @for (option of $any(choices())[key]; track option.value) {
+        <label class="relative cursor-pointer">
+          <input
+            type="radio"
+            class="peer sr-only"
+            [name]="id + '-' + key"
+            [value]="option.value"
+            [checked]="$any(settings())[key] === option.value"
+            (change)="choose(key, option.value, $event)"
+          />
+          <span
+            class="inline-flex min-h-10 items-center gap-2 rounded-lg border border-(--button-outline) px-3.5 text-sm text-gray-700 peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:font-medium peer-checked:text-blue-800 peer-hover:bg-gray-100 peer-checked:peer-hover:bg-primary/10 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"
+          >
+            @if (option.icon) {
+              <mat-icon class="size-5! text-xl! leading-5!" aria-hidden="true">{{
+                option.icon
+              }}</mat-icon>
+            }
+            <span [attr.lang]="option.lang ?? null">{{ option.label }}</span>
+          </span>
+        </label>
+      }
+    </div>
+  </fieldset>
+</ng-template>
+
+<!-- a setting that is on or off: a switch, named by its label and described by its hint -->
+<ng-template #onOff let-key="key" let-label="label" let-hint="hint">
+  <div class="flex items-start justify-between gap-4">
+    <div class="min-w-0">
+      <p class="text-sm font-medium text-gray-900" [id]="id + '-' + key + '-label'">{{ label }}</p>
+      <p class="text-sm text-gray-600" [id]="id + '-' + key + '-hint'">{{ hint }}</p>
+    </div>
+    <mat-slide-toggle
+      class="shrink-0"
+      [checked]="isOn(key)"
+      [aria-labelledby]="id + '-' + key + '-label'"
+      [aria-describedby]="id + '-' + key + '-hint'"
+      (change)="toggle(key, $event.checked)"
+    />
+  </div>
+</ng-template>

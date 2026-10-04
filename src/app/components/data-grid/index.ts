@@ -8,6 +8,7 @@ export * from './interfaces/grid-header.interface';
 export * from './interfaces/grid-filter.interface';
 export * from './interfaces/grid-search.interface';
 export * from './interfaces/grid-search-bar.interface';
+export * from './grid.messages';
 export * from './interfaces/grid-row-detail.interface';
 export * from './interfaces/grid-render-mode.interface';
 export * from './interfaces/grid-editing.interface';

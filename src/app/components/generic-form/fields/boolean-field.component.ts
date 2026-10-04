@@ -7,6 +7,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormInstance } from '../form-engine.service';
 import { BooleanField } from '../interfaces/control-fields.interface';
 import { controlStatus } from '../helpers/control-status.helpers';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { FORM_MESSAGES } from '../form.messages';
 import { firstErrorMessage } from '../helpers/field-errors.helpers';
 
 @Component({
@@ -61,13 +63,15 @@ export class BooleanFieldComponent {
   readonly field = input.required<BooleanField>();
   readonly instance = input.required<FormInstance>();
 
+  protected readonly t = injectMessages(FORM_MESSAGES);
+
   protected readonly state = computed(() => this.instance().fieldState(this.field())());
   protected readonly control = computed(() => this.instance().control(this.field()) as FormControl);
   protected readonly status = controlStatus(this.control);
 
   protected readonly errorMessage = computed(() =>
     this.status().touched
-      ? firstErrorMessage(this.status().errors, this.state().validations)
+      ? firstErrorMessage(this.status().errors, this.state().validations, this.t())
       : null,
   );
 

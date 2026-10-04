@@ -7,8 +7,10 @@ import { Observable } from 'rxjs';
 export interface ViewDialogConfig extends Omit<MatDialogConfig, 'data'> {
   /** set on the hosted component as inputs — signal `input()`s included, e.g. `{ params }` */
   inputs?: Record<string, unknown>;
-  /** title-bar text; defaults to `inputs.params.title` when that's a string (e.g. `FormParameter.title`) */
-  title?: string;
+  /** title-bar text; defaults to `inputs.params.title` when that's a string (e.g. `FormParameter.title`).
+   *  A function is read as the dialog renders, so a title built from a signal — translated text —
+   *  follows it while the dialog is open. */
+  title?: string | (() => string);
   /** title-bar icon; defaults to `inputs.params.icon` when that's a string */
   icon?: string;
   /** default true — an X button in the title bar */
@@ -30,7 +32,7 @@ export interface DialogProps<D = unknown> extends MatDialogConfig<D> {
 export interface ViewDialogData {
   component: Type<unknown>;
   inputs: Record<string, unknown>;
-  title?: string;
+  title?: string | (() => string);
   icon?: string;
   showClose: boolean;
 }

@@ -61,7 +61,10 @@ describe('dummyJsonSessionApi', () => {
       .expectOne('https://dummyjson.com/auth/login')
       .flush({ message: 'Invalid credentials' }, { status: 400, statusText: 'Bad Request' });
 
-    await expect(result).rejects.toEqual(new SessionError('Incorrect username or password.', 400));
+    // named by key, so the sign-in page shows it in the user's language
+    await expect(result).rejects.toEqual(
+      new SessionError('Incorrect username or password.', 400, 'incorrectCredentials'),
+    );
   });
 
   it('keeps registration and password resets local', async () => {

@@ -1,8 +1,10 @@
 import { inject } from '@angular/core';
 import { CanActivateChildFn, CanActivateFn, Router } from '@angular/router';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { NotificationService } from '@services/notification/notification.service';
 import { SESSION_CONFIG } from './session-config.token';
 import { AccessRule } from './session.interface';
+import { SESSION_MESSAGES } from './session.messages';
 import { SessionService } from './session.service';
 
 /**
@@ -34,7 +36,7 @@ export const permissionGuard: CanActivateFn & CanActivateChildFn = (route) => {
     visibleFor: route.data['visibleFor'] as string[] | undefined,
   };
   if (!session.isAuthenticated() || session.canAccess(rule)) return true;
-  inject(NotificationService).warn("You don't have access to that page.");
+  inject(NotificationService).warn(injectMessages(SESSION_MESSAGES)().noAccess);
   return inject(Router).parseUrl(inject(SESSION_CONFIG).homeUrl);
 };
 

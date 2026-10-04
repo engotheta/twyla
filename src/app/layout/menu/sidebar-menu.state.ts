@@ -22,6 +22,9 @@ export class SidebarMenuState {
 
   readonly filtering = computed(() => this.query().trim().length > 0);
 
+  /** the ids along the way to the current page, the page's own last */
+  private readonly trailIds = computed(() => this.menuService.trail().map((node) => node.id));
+
   constructor() {
     effect(() => {
       const pinned = flattenMenu(this.menuService.menu()).filter((node) => node.expanded);
@@ -33,6 +36,16 @@ export class SidebarMenuState {
   /** while filtering every matching branch shows */
   isOpen(node: MenuNode): boolean {
     return this.filtering() || this.opened().has(node.id);
+  }
+
+  /** the current page is this item, or somewhere under it — the lit part of the menu's lines */
+  onTrail(node: MenuNode): boolean {
+    return this.trailIds().includes(node.id);
+  }
+
+  /** this item is the current page itself */
+  isCurrent(node: MenuNode): boolean {
+    return this.trailIds().at(-1) === node.id;
   }
 
   toggle(node: MenuNode, siblings: readonly MenuNode[]): void {

@@ -23,6 +23,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { catchError, map, Observable, of, startWith, switchMap } from 'rxjs';
 import { ActionButton } from '@components/action-buttons/action-button.interface';
 import { syncOverlayContainer } from '@utils/fullscreen-overlay.helpers';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { NotificationService } from '@services/notification';
 import {
   FileKind,
@@ -33,6 +34,12 @@ import {
   ViewerAttachmentInput,
   ZoomValue,
 } from './file-viewer.interface';
+import {
+  failureMessage,
+  FILE_VIEWER_MESSAGES,
+  FileFailure,
+  fileErrorMessage,
+} from './file-viewer.messages';
 import { openInNewTab, saveBlob } from './loader/file-actions.helpers';
 import { FileLoaderService } from './loader/file-loader.service';
 import {
@@ -54,10 +61,15 @@ import { ViewerController } from './viewer-controller';
 import { ViewerFindBarComponent } from './viewer-find-bar.component';
 import { ViewerToolbarComponent } from './viewer-toolbar/viewer-toolbar.component';
 
-type ViewState =
+type LoadState =
   | { status: 'empty' }
   | { status: 'loading'; loaded: number; total?: number }
   | { status: 'ready'; file: ResolvedFile }
+  | { status: 'error'; failure: FileFailure; file?: ResolvedFile };
+
+/** the load as the template shows it: a failure put into words */
+type ViewState =
+  | Exclude<LoadState, { status: 'error' }>
   | { status: 'error'; message: string; file?: ResolvedFile };
 
 const KIND_ICONS: Record<FileKind, string> = {
@@ -150,6 +162,7 @@ export class FileViewerComponent {
   protected readonly controller = inject(ViewerController);
   private readonly loader = inject(FileLoaderService);
   private readonly notify = inject(NotificationService);
+  protected readonly t = injectMessages(FILE_VIEWER_MESSAGES);
   private readonly document = inject(DOCUMENT);
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly overlayContainer = inject(OverlayContainer);
@@ -189,7 +202,7 @@ export class FileViewerComponent {
     () => this.closable() && this.params()?.showCloseBtn !== false,
   );
   protected readonly names = computed(() =>
-    this.items().map((item, i) => inputName(item) ?? `File ${i + 1}`),
+    this.items().map((item, i) => inputName(item) ?? this.t().fileNumber(i + 1)),
   );
 
   // ---- loading ----------------------------------------------------------------------------------
@@ -201,21 +214,30 @@ export class FileViewerComponent {
     toObservable(computed(() => ({ input: this.current(), tick: this.reload() }))).pipe(
       switchMap(({ input }) => this.load$(input)),
     ),
-    { initialValue: { status: 'loading', loaded: 0 } as ViewState },
+    { initialValue: { status: 'loading', loaded: 0 } as LoadState },
   );
 
   /** a renderer that couldn't show the file it got (damaged PDF, unplayable video…) */
-  private readonly renderError = signal<string | undefined>(undefined);
+  private readonly renderError = signal<FileFailure | undefined>(undefined);
   /** the user asked for Office Online from the "not available" / error card */
   private readonly useOfficeOnline = signal(false);
 
-  protected readonly view = computed<ViewState>(() => {
+  /** the load, or the renderer's failure over it */
+  private readonly outcome = computed<LoadState>(() => {
     const state = this.state();
-    const error = this.renderError();
-    if (state.status === 'ready' && error && !this.useOfficeOnline()) {
-      return { status: 'error', message: error, file: state.file };
+    const failure = this.renderError();
+    if (state.status === 'ready' && failure && !this.useOfficeOnline()) {
+      return { status: 'error', failure, file: state.file };
     }
     return state;
+  });
+
+  /** …with a failure said in the user's language, which it follows while it is on screen */
+  protected readonly view = computed<ViewState>(() => {
+    const outcome = this.outcome();
+    return outcome.status === 'error'
+      ? { status: 'error', message: failureMessage(outcome.failure, this.t()), file: outcome.file }
+      : outcome;
   });
 
   /** the file in hand — shown, or behind an error card */
@@ -244,16 +266,16 @@ export class FileViewerComponent {
       file?.original?.name ??
       file?.name ??
       this.names()[this.position()] ??
-      'File'
+      this.t().file
     );
   });
   protected readonly details = computed(() => {
     const file = this.file();
     if (!file) return '';
-    const type = (file.original ?? file).extension.toUpperCase() || file.mime || 'File';
+    const type = (file.original ?? file).extension.toUpperCase() || file.mime || this.t().file;
     const parts = [type, formatBytes((file.original ?? file).size)];
-    if (file.converted) parts.push(`shown as ${file.extension.toUpperCase()}`);
-    if (file.external) parts.push('via Office Online');
+    if (file.converted) parts.push(this.t().shownAs(file.extension.toUpperCase()));
+    if (file.external) parts.push(this.t().viaOfficeOnline);
     return parts.filter(Boolean).join(' · ');
   });
   protected readonly icon = computed(
@@ -269,7 +291,7 @@ export class FileViewerComponent {
     const view = this.view();
     if (view.status !== 'loading' || !view.loaded) return '';
     return view.total
-      ? `${formatBytes(view.loaded)} of ${formatBytes(view.total)}`
+      ? this.t().progress(formatBytes(view.loaded), formatBytes(view.total))
       : formatBytes(view.loaded);
   });
   protected readonly officeEligible = computed(() => {
@@ -280,9 +302,7 @@ export class FileViewerComponent {
     const file = this.file();
     if (!file) return '';
     const ext = file.extension.toUpperCase();
-    return file.kind === 'office'
-      ? `There's no in-browser preview for ${ext || 'this kind of'} files. Download it to open it in its app.`
-      : `${ext ? ext + ' files' : 'This kind of file'} can't be previewed. Download it to open it.`;
+    return file.kind === 'office' ? this.t().noPreviewOffice(ext) : this.t().noPreview(ext);
   });
 
   protected readonly initialPage = signal(1);
@@ -321,15 +341,17 @@ export class FileViewerComponent {
         this.loaded.emit(file);
         this.controller.announce(
           this.items().length > 1
-            ? `File ${this.position() + 1} of ${this.items().length}: ${file.name}`
-            : `Opened ${file.name}`,
+            ? this.t().openedOf(this.position() + 1, this.items().length, file.name)
+            : this.t().opened(file.name),
         );
       });
     });
 
+    // once per failure, in the language of the moment: changing language later isn't a new one
     effect(() => {
-      const view = this.view();
-      if (view.status === 'error') untracked(() => this.failed.emit(view.message));
+      const outcome = this.outcome();
+      if (outcome.status !== 'error') return;
+      untracked(() => this.failed.emit(failureMessage(outcome.failure, this.t())));
     });
 
     inject(DestroyRef).onDestroy(() => {
@@ -340,24 +362,28 @@ export class FileViewerComponent {
     });
   }
 
-  private load$(input: ViewerAttachmentInput | undefined): Observable<ViewState> {
+  private load$(input: ViewerAttachmentInput | undefined): Observable<LoadState> {
     if (input === undefined || input === null) return of({ status: 'empty' });
     const cached = this.cache.get(input);
     if (cached) return of({ status: 'ready', file: cached });
     return this.loader.load$(input).pipe(
-      map((event): ViewState => {
+      map((event): LoadState => {
         if (event.type === 'progress')
           return { status: 'loading', loaded: event.loaded, total: event.total };
         this.remember(input, event.file);
         return { status: 'ready', file: event.file };
       }),
-      startWith<ViewState>({ status: 'loading', loaded: 0 }),
+      startWith<LoadState>({ status: 'loading', loaded: 0 }),
       catchError((err: unknown) =>
-        of<ViewState>({
-          status: 'error',
-          message: err instanceof FileViewerError ? err.message : 'This file could not be loaded.',
-          file: err instanceof FileViewerError ? err.file : undefined,
-        }),
+        of<LoadState>(
+          err instanceof FileViewerError
+            ? {
+                status: 'error',
+                failure: (text) => fileErrorMessage(err, text.errors),
+                file: err.file,
+              }
+            : { status: 'error', failure: (text) => text.errors.notLoaded },
+        ),
       ),
     );
   }
@@ -388,8 +414,8 @@ export class FileViewerComponent {
     this.reload.update((n) => n + 1);
   }
 
-  protected renderFailed(message: string): void {
-    this.renderError.set(message);
+  protected renderFailed(failure: FileFailure): void {
+    this.renderError.set(failure);
   }
 
   protected showOfficeOnline(): void {
@@ -411,7 +437,9 @@ export class FileViewerComponent {
       saveBlob(this.document, blob, file.name);
     } catch (err) {
       this.notify.error(
-        err instanceof FileViewerError ? err.message : `Couldn't download ${file.name}.`,
+        err instanceof FileViewerError
+          ? fileErrorMessage(err, this.t().errors)
+          : this.t().downloadFailed(file.name),
       );
     }
   }
@@ -424,10 +452,7 @@ export class FileViewerComponent {
 
   protected async print(): Promise<void> {
     const printed = await this.controller.print();
-    if (!printed)
-      this.notify.warn(
-        "The browser didn't open the print dialog — try opening the file in a new tab.",
-      );
+    if (!printed) this.notify.warn(this.t().printBlocked);
   }
 
   protected focusFindToggle(): void {

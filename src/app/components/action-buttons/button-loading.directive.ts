@@ -11,7 +11,11 @@ import {
 } from '@angular/core';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 
-/** Overlays a `mat-progress-spinner` on the host button and hides its content while loading. */
+/**
+ * Overlays a `mat-progress-spinner` on the host button and hides its content while loading. The
+ * content is hidden by opacity, not visibility, so the button keeps its accessible name; the
+ * spinner itself is decorative — `aria-busy` on the button says it's working.
+ */
 @Directive({
   selector: '[buttonLoading]',
   host: {
@@ -46,6 +50,7 @@ export class ButtonLoadingDirective {
     this.spinnerRef.setInput('mode', 'indeterminate');
 
     const spinnerElement = this.spinnerRef.location.nativeElement as HTMLElement;
+    this.renderer.setAttribute(spinnerElement, 'aria-hidden', 'true');
     this.renderer.setStyle(spinnerElement, 'position', 'absolute');
     this.renderer.setStyle(spinnerElement, 'inset', '0');
     this.renderer.setStyle(spinnerElement, 'margin', 'auto');
@@ -70,7 +75,7 @@ export class ButtonLoadingDirective {
   private setContentHidden(hidden: boolean): void {
     this.host.childNodes.forEach((node: ChildNode) => {
       if (node instanceof HTMLElement && node !== this.spinnerRef?.location.nativeElement) {
-        this.renderer.setStyle(node, 'visibility', hidden ? 'hidden' : '');
+        this.renderer.setStyle(node, 'opacity', hidden ? '0' : '');
       }
     });
   }

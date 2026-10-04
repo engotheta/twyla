@@ -2,6 +2,7 @@ import { computed, effect, Injectable, Injector, signal, Signal } from '@angular
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, firstValueFrom, isObservable, Observable, of, Subscription } from 'rxjs';
 import { catchError, switchMap, tap } from 'rxjs/operators';
+import { injectMessages } from '@services/i18n/message-bundle';
 import {
   applyColumnOverrides,
   applyColumnState,
@@ -14,6 +15,7 @@ import {
   orderColumnsForHeader,
 } from './helpers/grid-column.helpers';
 
+import { GRID_MESSAGES } from './grid.messages';
 import { GridColumn_, GridColumnState } from './interfaces/grid-column.interface';
 import { GridRow } from './interfaces/grid-cell.interface';
 import { resolveSyncDynamic } from './helpers/grid-dynamic.helpers';
@@ -328,6 +330,8 @@ function seedSearchFields<RowType>(
 
 @Injectable({ providedIn: 'root' })
 export class GridEngineService {
+  private readonly t = injectMessages(GRID_MESSAGES);
+
   /**
    * `injector` MUST be the calling component's own `Injector` (`inject(Injector)` in a field
    * initializer), not this service's — every `effect()`/`toObservable()`/`toSignal()` below ties
@@ -420,7 +424,7 @@ export class GridEngineService {
       if (p.rowButtons?.length) {
         trailing.push({
           key: ACTIONS_COLUMN_KEY,
-          label: 'Actions',
+          label: this.t().actions,
           resizable: false,
           pinned: p.autoPinActionColumn !== false ? 'right' : undefined,
         });

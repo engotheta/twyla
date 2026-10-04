@@ -8,6 +8,7 @@ import { FormEngineService, FormInstance } from './form-engine.service';
 import { FormField } from './interfaces/form-field.interface';
 import { FormParameter } from './interfaces/form-parameter.interface';
 import { ObjectField } from './interfaces/container-fields.interface';
+import { AttachmentField } from './interfaces/control-fields.interface';
 import { GenericFormComponent } from './generic-form.component';
 import { VALIDATOR_REQUIRED } from './validators';
 
@@ -321,6 +322,105 @@ describe('FormEngineService (logic)', () => {
       expect(instance.control(newFieldRef)).toBeDefined();
       expect(instance.control(newFieldRef)).toBe(originalControl); // same AbstractControl instance
       expect(instance.control(newFieldRef)?.value).toBe('Ada Lovelace'); // live edit survived
+    });
+
+    it('keeps what was typed through one re-labelled emission after another', () => {
+      // a form built from a page's text is built again each time the language changes: fresh
+      // field objects, new labels and messages, the same keys
+      const template = {};
+      const formIn = (language: string): FormParameter<Record<string, unknown>> => ({
+        fields: [
+          {
+            type: FieldType.input,
+            key: 'username',
+            label: `username (${language})`,
+            validations: [{ ...VALIDATOR_REQUIRED, message: `required (${language})` }],
+          },
+          {
+            type: FieldType.input,
+            key: 'password',
+            label: `password (${language})`,
+            validations: [{ ...VALIDATOR_REQUIRED, message: `required (${language})` }],
+          },
+          { type: FieldType.content, value: template },
+          {
+            type: FieldType.checkbox,
+            key: 'remember',
+            label: `remember (${language})`,
+            value: false,
+          },
+        ],
+      });
+      const paramsSig = signal(formIn('sw'));
+      const instance = buildAndFlush(paramsSig);
+      const username = instance.form.get('username')!;
+      username.setValue('someone');
+      username.markAsDirty();
+
+      for (const language of ['en', 'sw', 'en']) {
+        const next = formIn(language);
+        paramsSig.set(next);
+        appRef.tick();
+
+        expect(instance.form.get('username')).toBe(username); // the same control…
+        expect(instance.control(next.fields![0] as FormField)).toBe(username);
+        expect(instance.form.getRawValue()).toEqual({
+          username: 'someone', // …holding what was typed
+          password: null,
+          remember: false,
+        });
+        expect(username.dirty).toBe(true);
+        expect(instance.fieldState(next.fields![0] as FormField)().label).toBe(
+          `username (${language})`,
+        );
+      }
+    });
+
+    it('keeps a picked file through a re-labelled emission, and still uploads it on submit', async () => {
+      const uploadFn = vi.fn(async (file: File) => `stored:${file.name}`);
+      const formIn = (language: string): FormParameter<Record<string, unknown>> => ({
+        fields: [
+          {
+            type: FieldType.attachment,
+            key: 'slides',
+            label: `slides (${language})`,
+            uploadOn: 'submit',
+            uploadFn,
+          },
+        ],
+      });
+      const paramsSig = signal(formIn('sw'));
+      const instance = buildAndFlush(paramsSig);
+      const file = new File(['x'], 'deck.pdf', { type: 'application/pdf' });
+      await instance.selectAttachment(paramsSig().fields![0] as FormField, file);
+
+      const next = formIn('en');
+      paramsSig.set(next);
+      appRef.tick();
+
+      const state = instance.fieldState(next.fields![0] as FormField)() as AttachmentField;
+      expect(state.label).toBe('slides (en)');
+      expect(state.attachment).toMatchObject({ name: 'deck.pdf', status: 'pending' });
+      expect(await instance.submitValue()).toEqual({ slides: 'stored:deck.pdf' });
+      expect(uploadFn).toHaveBeenCalledTimes(1);
+    });
+
+    it('gives a kept field its label from the key again, when the fresh config has none', () => {
+      const formWith = (hint: string): FormParameter<Record<string, unknown>> => ({
+        fields: [{ type: FieldType.input, key: 'firstName', hint }],
+      });
+      const paramsSig = signal(formWith('one'));
+      const instance = buildAndFlush(paramsSig);
+      expect(instance.fieldState(paramsSig().fields![0] as FormField)().label).toBe('First Name');
+
+      for (const hint of ['two', 'three']) {
+        const next = formWith(hint);
+        paramsSig.set(next);
+        appRef.tick();
+        const state = instance.fieldState(next.fields![0] as FormField)();
+        expect(state.label).toBe('First Name');
+        expect((state as { hint?: string }).hint).toBe(hint);
+      }
     });
 
     it("adds a new field on a later emission without disturbing an existing sibling's live value", () => {
@@ -793,6 +893,38 @@ describe('GenericFormComponent (render)', () => {
     fixture.detectChanges();
 
     expect(formField().classList.contains('hide-subscript')).toBe(true);
+  });
+
+  it('a config built again from fresh objects keeps the field elements, and what is in them', async () => {
+    const formIn = (language: string): FormParameter<Record<string, unknown>> => ({
+      fields: [
+        { type: FieldType.input, key: 'name', label: `name (${language})` },
+        { type: FieldType.input, key: 'email', label: `email (${language})` },
+      ],
+    });
+    const fixture = TestBed.createComponent(GenericFormComponent);
+    fixture.componentRef.setInput('params', formIn('sw'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const inputs = () => Array.from(root.querySelectorAll('input'));
+    const labels = () => Array.from(root.querySelectorAll('mat-label')).map((l) => l.textContent);
+    const [name] = inputs();
+    name.value = 'Ada';
+    name.dispatchEvent(new Event('input'));
+    name.focus();
+
+    for (const language of ['en', 'sw']) {
+      fixture.componentRef.setInput('params', formIn(language));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(labels()).toEqual([`name (${language})`, `email (${language})`]);
+      expect(inputs()[0]).toBe(name); // the same element, not one built anew…
+      expect(name.value).toBe('Ada');
+      expect(document.activeElement).toBe(name); // …so the focus stays where it was
+    }
   });
 
   it('typed input survives an unrelated params() re-emission end to end', async () => {

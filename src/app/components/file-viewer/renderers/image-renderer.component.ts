@@ -14,7 +14,9 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { ResolvedFile } from '../file-viewer.interface';
+import { FILE_VIEWER_MESSAGES, FileFailure } from '../file-viewer.messages';
 import { escapeHtml, printHtml } from '../loader/file-actions.helpers';
 import { MAX_ZOOM, MIN_ZOOM, ViewerController } from '../viewer-controller';
 
@@ -39,7 +41,7 @@ interface Point {
       class="relative size-full touch-none select-none overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
       tabindex="0"
       role="group"
-      aria-roledescription="image viewer"
+      [attr.aria-roledescription]="t().image.viewer"
       [attr.aria-label]="label()"
       [class.cursor-grab]="pannable() && !dragging()"
       [class.cursor-grabbing]="dragging()"
@@ -62,7 +64,7 @@ interface Point {
           [style.height.px]="natural().h || null"
           [style.transform]="transform()"
           (load)="onLoad($event)"
-          (error)="failed.emit('This image could not be displayed.')"
+          (error)="onError()"
         />
       }
     </div>
@@ -75,8 +77,9 @@ export class ImageRendererComponent {
   readonly url = input<string>();
   /** alt text and the stage's accessible name */
   readonly label = input('');
-  readonly failed = output<string>();
+  readonly failed = output<FileFailure>();
 
+  protected readonly t = injectMessages(FILE_VIEWER_MESSAGES);
   private readonly controller = inject(ViewerController);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
@@ -158,6 +161,10 @@ export class ImageRendererComponent {
   protected onLoad(event: Event): void {
     const img = event.target as HTMLImageElement;
     this.natural.set({ w: img.naturalWidth || 300, h: img.naturalHeight || 150 });
+  }
+
+  protected onError(): void {
+    this.failed.emit((text) => text.image.failed);
   }
 
   protected onWheel(event: WheelEvent): void {

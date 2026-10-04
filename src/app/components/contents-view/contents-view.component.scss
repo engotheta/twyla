@@ -6,6 +6,10 @@
 // px offset along the varying axis (`left` for a column gutter, `top` for a row gutter); the
 // 50% here is only the pre-measurement fallback. The visible strip is 12px; the ::after pseudo
 // widens the pointer/touch target past it.
+
+// tints and hairlines are a little of the text colour, so they turn with the theme
+$ink: var(--color-black, #171717);
+
 .cv-gutter {
   position: absolute;
   z-index: 3;
@@ -32,7 +36,7 @@
 
   &:hover,
   &:focus-visible {
-    background-color: rgba(0, 0, 0, 0.08);
+    background-color: color-mix(in srgb, #{$ink} 8%, transparent);
   }
   &:focus-visible {
     outline: 2px solid var(--color-primary, #2563eb);
@@ -46,7 +50,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: rgba(0, 0, 0, 0.25);
+    background-color: color-mix(in srgb, #{$ink} 25%, transparent);
     border-radius: 9999px;
   }
   &[aria-orientation='vertical']::before {
@@ -88,7 +92,7 @@
   cursor: pointer;
 
   &:hover {
-    background-color: rgba(0, 0, 0, 0.06);
+    background-color: color-mix(in srgb, #{$ink} 6%, transparent);
   }
   &:focus-visible {
     outline: 2px solid var(--color-primary, #2563eb);
@@ -124,8 +128,8 @@
   background: linear-gradient(
     to right,
     transparent,
-    rgb(0 0 0 / 0.12) 15%,
-    rgb(0 0 0 / 0.12) 85%,
+    color-mix(in srgb, #{$ink} 12%, transparent) 15%,
+    color-mix(in srgb, #{$ink} 12%, transparent) 85%,
     transparent
   );
 }
@@ -139,14 +143,14 @@
   border: 0;
   border-radius: 0.5rem;
   // a surface of its own, so the strip reads as a control even on a pane with no background
-  background-color: #fff;
+  background-color: var(--color-white, #fff);
   color: inherit;
   font: inherit;
   font-weight: 500;
   cursor: pointer;
 
   &:hover {
-    background-color: #f5f5f5;
+    background-color: var(--color-gray-100, #f5f5f5);
   }
   &:focus-visible {
     outline: 2px solid var(--color-primary, #2563eb);

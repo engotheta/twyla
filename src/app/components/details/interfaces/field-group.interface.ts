@@ -1,5 +1,12 @@
 import { ActionButton } from '@components/action-buttons/action-button.interface';
-import { ArrayConfig, FieldConfig, FieldGroupConfig, FieldsProperties } from './details.interface';
+import { TabNavClasses } from '@components/tab-nav/tab-nav.interface';
+import {
+  ArrayConfig,
+  DetailsTabsClasses,
+  FieldConfig,
+  FieldGroupConfig,
+  FieldsProperties,
+} from './details.interface';
 import { DataField, FieldData, FieldLayout } from './field.interface';
 
 // Three mutually-exclusive strategies, chosen by what inputs are provided, in this priority order:
@@ -20,7 +27,7 @@ export interface FieldsSort {
 }
 
 //user input field group
-export interface FieldGroup {
+export interface FieldGroup extends DetailsTabsClasses {
   class?: string;
   slug?: string;
   icon?: string;
@@ -37,12 +44,17 @@ export interface FieldGroup {
   fieldsContainerClass?: string;
 
   headerClass?: string;
+  // the group's heading (icon + label) above its fields. Default: shown — except for a group
+  // shown as a tab (`showGroupsInTabs`), whose tab already carries both: its `actionButtons`
+  // keep their row, and `true` brings the heading back too. `false` hides heading and buttons.
   showHeader?: boolean;
 
   label?: string;
   labelClass?: string;
   labelsClass?: string;
 
+  // this group's sub-groups (`groups`) as tabs: `groupsClass` wraps the tabs and their panels,
+  // `groupsContainerClass` is on each panel, and the four `DetailsTabsClasses` restyle the tabs
   showGroupsInTabs?: boolean;
 
   // - Optional icon watermark (`bg-icon-mark`) if `group.icon && showBgIconMark`.
@@ -110,6 +122,11 @@ export const GROUP_PROPS = [
   'showGroupsInTabs type(boolean)',
   'groupsClass',
   'groupsContainerClass',
+
+  'tabsContainerClass',
+  'tabClass',
+  'activeTabClass',
+  'tabIndicatorClass',
 ];
 
 // ── the field-group component's own parameter and row view model ──
@@ -123,6 +140,10 @@ export interface FieldGroupParameter<D = unknown> {
   arrayConfig?: ArrayConfig;
   showBgIconMark?: boolean;
   showGroupsInTabs?: boolean;
+  /** the details' own `DetailsTabsClasses`, as `tab-nav` takes them — handed down every level */
+  tabsClasses?: TabNavClasses;
+  /** the group is the panel of a tab, which shows its label and icon: not handed down */
+  asTab?: boolean;
   isArrayItem?: boolean;
   /** Only meaningful when `isArrayItem` — starts the card expanded instead of collapsed. */
   expanded?: boolean;

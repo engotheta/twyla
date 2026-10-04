@@ -31,6 +31,7 @@ import {
   ViewerAttachment,
   ViewerAttachmentInput,
 } from '../file-viewer.interface';
+import { FILE_VIEWER_EN, FileViewerErrorCode } from '../file-viewer.messages';
 import { KindInfo, kindFromHints, resolveKind, SNIFF_BYTES } from './file-kind.helpers';
 import { readBlob } from './text-decode.helpers';
 import {
@@ -100,7 +101,7 @@ export class FileLoaderService {
       this.load$(input, options).subscribe({
         next: (event) => event.type === 'done' && resolve(event.file),
         error: reject,
-        complete: () => reject(new FileViewerError('There is no file to show.')), // no-op once resolved
+        complete: () => reject(nothingToShow()), // no-op once resolved
       });
     });
   }
@@ -319,7 +320,7 @@ export class FileLoaderService {
             )
           : this.url$(picked.value);
       case 'none':
-        return throwError(() => new FileViewerError('There is no file to show.'));
+        return throwError(nothingToShow);
     }
   }
 
@@ -329,10 +330,9 @@ export class FileLoaderService {
     attachment: ViewerAttachment,
     depth: number,
   ): Observable<SourceEvent> {
-    if (depth > MAX_DEPTH)
-      return throwError(() => new FileViewerError('The file source never resolved.'));
+    if (depth > MAX_DEPTH) return throwError(() => coded('sourceNeverResolved'));
     if (value === null || value === undefined || value === '') {
-      return throwError(() => new FileViewerError('There is no file to show.'));
+      return throwError(nothingToShow);
     }
     if (typeof value === 'string') return this.string$(value);
     if (value instanceof Blob) {
@@ -368,9 +368,9 @@ export class FileLoaderService {
       );
     }
     if (isHttpEvent(value)) {
-      return throwError(() => new FileViewerError('A lone HTTP event carries no file.'));
+      return throwError(() => coded('loneEvent'));
     }
-    return throwError(() => new FileViewerError('Unrecognised file source.'));
+    return throwError(() => coded('unrecognised'));
   }
 
   /** An Observable of sources or of `HttpEvent`s (`http.get(url, { observe: 'events', … })`). */
@@ -442,7 +442,7 @@ export class FileLoaderService {
   private url$(url: string): Observable<SourceEvent> {
     const trimmed = url.trim();
     if (!isAllowedUrl(trimmed)) {
-      return throwError(() => new FileViewerError('This file link is not allowed.'));
+      return throwError(() => coded('linkNotAllowed'));
     }
     if (/^blob:/i.test(trimmed)) return fromFetch$(trimmed);
 
@@ -462,8 +462,7 @@ export class FileLoaderService {
             return of({ type: 'progress', loaded: event.loaded, total: event.total });
           }
           if (event.type === HttpEventType.Response) {
-            if (!event.body)
-              return throwError(() => new FileViewerError('The server sent an empty file.'));
+            if (!event.body) return throwError(() => coded('emptyFile'));
             return of({ type: 'blob', blob: event.body, meta: metaFromHeaders(event.headers) });
           }
           return EMPTY;
@@ -477,19 +476,28 @@ export class FileLoaderService {
   }
 }
 
+/** A failure the viewer has words for: its message in English, and the code that finds it in
+ *  the user's language (`fileErrorMessage`). */
+function coded(code: Exclude<FileViewerErrorCode, 'server' | 'http'>): FileViewerError {
+  return new FileViewerError(FILE_VIEWER_EN.errors[code], undefined, undefined, code);
+}
+
+const nothingToShow = (): FileViewerError => coded('nothingToShow');
+
 /** An HTTP failure in words a user can act on. */
-export function httpError(status: number, statusText?: string): FileViewerError {
-  const message =
+export function httpError(status: number, statusText = ''): FileViewerError {
+  const text = FILE_VIEWER_EN.errors;
+  const [code, message]: [FileViewerErrorCode, string] =
     status === 0
-      ? "Couldn't reach the server — check your connection."
+      ? ['offline', text.offline]
       : status === 401 || status === 403
-        ? "You don't have access to this file."
+        ? ['forbidden', text.forbidden]
         : status === 404 || status === 410
-          ? 'The file was not found.'
+          ? ['notFound', text.notFound]
           : status >= 500
-            ? `The server couldn't send the file (${status}).`
-            : `The file couldn't be loaded (${status}${statusText ? ' ' + statusText : ''}).`;
-  return new FileViewerError(message, status);
+            ? ['server', text.server(status)]
+            : ['http', text.http(status, statusText)];
+  return new FileViewerError(message, status, undefined, code, statusText);
 }
 
 /** `fetch()` for `blob:` URLs (HttpClient can't read them), abortable. */
@@ -507,11 +515,7 @@ function fromFetch$(url: string): Observable<SourceEvent> {
       })
       .catch((err: unknown) => {
         if (!controller.signal.aborted) {
-          subscriber.error(
-            err instanceof FileViewerError
-              ? err
-              : new FileViewerError('The file link has expired.'),
-          );
+          subscriber.error(err instanceof FileViewerError ? err : coded('linkExpired'));
         }
       });
     return () => controller.abort();
@@ -544,9 +548,7 @@ export function readStream$(
         subscriber.complete();
       } catch (err) {
         if (!cancelled) {
-          subscriber.error(
-            err instanceof FileViewerError ? err : new FileViewerError('The file stream failed.'),
-          );
+          subscriber.error(err instanceof FileViewerError ? err : coded('streamFailed'));
         }
       }
     })();

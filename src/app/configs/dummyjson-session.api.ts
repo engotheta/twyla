@@ -66,7 +66,11 @@ export function dummyJsonSessionApi(): SessionApi {
           catchError((error: unknown) =>
             throwError(() =>
               error instanceof HttpErrorResponse && (error.status === 400 || error.status === 401)
-                ? new SessionError('Incorrect username or password.', error.status)
+                ? new SessionError(
+                    'Incorrect username or password.',
+                    error.status,
+                    'incorrectCredentials',
+                  )
                 : error,
             ),
           ),

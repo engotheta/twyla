@@ -1,6 +1,7 @@
 import { HttpEvent, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ActionButton } from '@components/action-buttons/action-button.interface';
+import type { FileViewerErrorCode } from './file-viewer.messages';
 
 /**
  * What a file renders as. `office` is a format with no client-side renderer (doc, xls, ppt, pptx…):
@@ -159,12 +160,19 @@ export interface ResolvedFile {
 export type FileLoadEvent =
   { type: 'progress'; loaded: number; total?: number } | { type: 'done'; file: ResolvedFile };
 
-/** A load failure the viewer can describe; `file` is set when the bytes arrived but can't be shown. */
+/**
+ * A load failure the viewer can describe; `file` is set when the bytes arrived but can't be shown.
+ * `code` names one of the viewer's own messages (`FILE_VIEWER_MESSAGES.errors`): where it is set
+ * the viewer shows that, in the user's language, and `message` is its English (`detail` being the
+ * HTTP status text, for the one message that quotes it).
+ */
 export class FileViewerError extends Error {
   constructor(
     message: string,
     readonly status?: number,
     readonly file?: ResolvedFile,
+    readonly code?: FileViewerErrorCode,
+    readonly detail?: string,
   ) {
     super(message);
     this.name = 'FileViewerError';

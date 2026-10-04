@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { LAYOUT_MESSAGES } from '../layout.messages';
 import { Breadcrumb } from './page-header.interface';
 
 /** A breadcrumb trail; the last item is the current page (`aria-current="page"`). */
@@ -8,7 +10,7 @@ import { Breadcrumb } from './page-header.interface';
   selector: 'breadcrumbs',
   imports: [RouterLink, MatIcon],
   template: `
-    <nav [attr.aria-label]="label()">
+    <nav [attr.aria-label]="label() ?? t().page.breadcrumb">
       <ol class="flex flex-wrap items-center gap-x-1 text-xs text-gray-600">
         @for (crumb of items(); track $index; let last = $last) {
           <li class="flex min-w-0 items-center gap-1">
@@ -43,6 +45,9 @@ import { Breadcrumb } from './page-header.interface';
 })
 export class BreadcrumbsComponent {
   readonly items = input.required<Breadcrumb[]>();
-  /** the landmark's name — unique per page when a page shows more than one trail */
-  readonly label = input('Breadcrumb');
+  /** the landmark's name — unique per page when a page shows more than one trail; "Breadcrumb"
+   *  in the user's language when left out */
+  readonly label = input<string>();
+
+  protected readonly t = injectMessages(LAYOUT_MESSAGES);
 }

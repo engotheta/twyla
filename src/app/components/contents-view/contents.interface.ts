@@ -115,10 +115,16 @@ export interface ContentsLayout {
    *  holding only collapsed panes shrinks to fit the strip and the rest share the space; clicking
    *  the strip restores it (a `resizable` split comes back as it was). At least one pane per level
    *  stays expanded (see `keepOneExpanded`). The collapsed pane stays mounted, so a grid's or
-   *  form's state survives. Session-only, not persisted. CASCADES to nested levels like
-   *  `resizable`; set `collapsible: false` on a child to opt its subtree out. See
-   *  `ContentsViewInstance.collapsed` / `setCollapsed`. */
+   *  form's state survives. Which panes are collapsed is remembered (see `persistCollapsed`).
+   *  CASCADES to nested levels like `resizable`; set `collapsible: false` on a child to opt its
+   *  subtree out. See `ContentsViewInstance.collapsed` / `setCollapsed`. */
   collapsible?: boolean;
+  /** default true. With `collapsible`, the panes left collapsed at this level are persisted to
+   *  `localStorage` (keyed by route + content slugs, beside the sizes) and collapsed again on the
+   *  next visit with no wiring — a pane that is gone by then is skipped, and `keepOneExpanded`
+   *  still holds. Set false to keep collapsing in-memory only for the session. Cascades to nested
+   *  levels like `persistSizes` (a child sets its own value to override). */
+  persistCollapsed?: boolean;
   /** default true. With `collapsible`, at least one pane per level stays expanded: the last
    *  expanded pane's collapse button is disabled (its tooltip says why) and `setCollapsed` leaves
    *  it be, a lone pane gets no collapse button at all, and a level whose visible panes all end

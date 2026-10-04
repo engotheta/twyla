@@ -1,7 +1,7 @@
 @let p = effectiveParameter();
 
 @if (loading()) {
-  <mat-progress-bar mode="indeterminate" class="!h-0.5" />
+  <mat-progress-bar mode="indeterminate" class="!h-0.5" [attr.aria-label]="t().loading" />
 }
 
 <div class="flex flex-col gap-4">
@@ -16,25 +16,29 @@
 
   @if (fieldGroups().length) {
     @if (p.showGroupsInTabs) {
-      <mat-tab-group [animationDuration]="'0ms'" class="{{ p.groupConfig?.containerClass ?? '' }}">
-        @for (fg of fieldGroups(); track fg.slug ?? fg.label ?? $index) {
-          <mat-tab [label]="fg.label ?? ''">
-            <div class="pt-3">
-              <field-group
-                [group]="fg"
-                [layout]="p.layout ?? 'list'"
-                [fieldConfig]="p.fieldConfig"
-                [groupConfig]="p.groupConfig"
-                [arrayConfig]="p.arrayConfig"
-                [showBgIconMark]="p.showBgIconMark ?? false"
-                [showGroupsInTabs]="p.showGroupsInTabs"
-                [data]="p.entity"
-                [animation]="p.animation"
-              />
-            </div>
-          </mat-tab>
-        }
-      </mat-tab-group>
+      <tab-panels
+        class="{{ p.groupConfig?.containerClass ?? '' }}"
+        panelClass="pt-3"
+        [tabs]="groupTabs()"
+        [ariaLabel]="p.header?.title || t().sections"
+        [classes]="tabsClasses()"
+      >
+        <ng-template let-index="index">
+          <field-group
+            [group]="fieldGroups()[index]"
+            [layout]="p.layout ?? 'list'"
+            [fieldConfig]="p.fieldConfig"
+            [groupConfig]="p.groupConfig"
+            [arrayConfig]="p.arrayConfig"
+            [showBgIconMark]="p.showBgIconMark ?? false"
+            [showGroupsInTabs]="p.showGroupsInTabs"
+            [tabsClasses]="tabsClasses()"
+            [asTab]="true"
+            [data]="p.entity"
+            [animation]="p.animation"
+          />
+        </ng-template>
+      </tab-panels>
     } @else {
       <div class=" {{ 'flex flex-col gap-2' | mergeClasses: p.groupConfig?.containerClass ?? '' }}">
         @for (fg of fieldGroups(); track fg.slug ?? fg.label ?? $index) {
@@ -46,6 +50,7 @@
             [arrayConfig]="p.arrayConfig"
             [showBgIconMark]="p.showBgIconMark ?? false"
             [showGroupsInTabs]="p.showGroupsInTabs ?? false"
+            [tabsClasses]="tabsClasses()"
             [data]="p.entity"
             [animation]="p.animation"
           />

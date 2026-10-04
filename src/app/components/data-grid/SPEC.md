@@ -553,3 +553,27 @@ used.
   Tab stops are the remove buttons, the text box, clear and search — the
   parts are reached with the keys above; a polite status line announces
   what was added, changed, removed or cleared.
+
+## 13. Text, language and theme
+
+- **Text.** Everything the grid says itself — toolbar, search bar, panels, paginator, empty and
+  loading states, announcements — is `GRID_MESSAGES` (`grid.messages.ts`, Swahili beside it) and
+  follows the user's language. Column titles, row actions and anything else in a config are the
+  app's, shown as written. `provideMessages(GRID_MESSAGES, { … })` rewords it.
+- **Values.** `formatCellValue(value, type, locale, text)` formats dates, numbers and currency
+  with the language's locale (`I18nService.locale()`), and says yes / no from the grid's text.
+  A `Date` is a value, not an object to look a label up in: a `date`, `datetime` or `time`
+  column shows that part of it; an untyped column shows the date, and the time when it has one;
+  an invalid date shows nothing.
+- **Read once.** The classic search fields (`unifiedSearch: false`) take their placeholders and
+  operator names when the grid is created; they change language with the next grid, not the
+  live one. The unified search bar follows at once.
+- **Popovers.** The filter and column panels open as dialogs: named, focus moved in and kept
+  in, Esc closes, focus returns to the button. Menus and selects open under the app's overlay
+  container, which `provideOverlayLandmark()` makes a named landmark.
+- **Theme.** No colour of its own: Tailwind's classes, which turn with `html.dark`. Icons with
+  a text size carry their box in the same unit (`!size-6 !text-base`), so they are whole at any
+  text size.
+- **A short box.** The rows scroll in their own region, which keeps a few rows' height. Where
+  the grid's box is too short for the toolbar, those rows and the paginator, the grid scrolls
+  as a whole: nothing is cut off out of reach.

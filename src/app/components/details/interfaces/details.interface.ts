@@ -6,8 +6,26 @@ export interface FieldsProperties {
   [key: string]: Partial<Field>;
 }
 
+/**
+ * How tabs look where groups are shown in tabs (`showGroupsInTabs`) — the four hooks contents-view
+ * has, by the same names, each merged over `tab-nav`'s defaults (the consumer wins conflicts).
+ * On `DetailsParameter` they reach the tabs of every level; on a `FieldGroup`, the tabs of that
+ * group's own sub-groups, on top of those.
+ */
+export interface DetailsTabsClasses {
+  /** the strip holding the tab toggles */
+  tabsContainerClass?: string;
+  /** every tab toggle */
+  tabClass?: string;
+  /** the active toggle, merged after `tabClass` */
+  activeTabClass?: string;
+  /** the indicator sliding behind the active toggle — `h-0.5 top-auto bottom-0 rounded-none`
+   *  makes it an underline (with an `activeTabClass` such as `text-primary`) */
+  tabIndicatorClass?: string;
+}
+
 // inputs
-export interface DetailsParameter<TEntity = Record<string, unknown>> {
+export interface DetailsParameter<TEntity = Record<string, unknown>> extends DetailsTabsClasses {
   header?: HeaderConfig;
 
   //a css animation class
@@ -41,7 +59,9 @@ export interface DetailsParameter<TEntity = Record<string, unknown>> {
   // from comp 'BgIconMarkComponent'
   showBgIconMark?: boolean;
 
-  // if true, groups will be shown in tabs instead of a list
+  // if true, groups will be shown in tabs instead of a list — `tab-nav`'s tabs, as in
+  // contents-view; `tabsContainerClass` / `tabClass` / `activeTabClass` / `tabIndicatorClass`
+  // restyle them, and `groupConfig.containerClass` wraps the tabs and their panels
   showGroupsInTabs?: boolean;
 
   // fieldsProperties and fieldsStrings, and can be used to modify the field's properties

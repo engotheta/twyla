@@ -3,10 +3,35 @@
 /* Brand colors as Tailwind theme tokens, so `bg-primary`, `text-primary`, `outline-primary`,
    `bg-primary/10`, ... exist as utilities — Tailwind v4 only generates color utilities for
    colors registered here, never for a plain `:root` custom property. `static` always emits both
-   variables on `:root`, even with no utility using them, because the Material override partials
-   (`details/_material-tabs-group.scss`, `generic-form/_material-stepper.scss`) read them
-   with `var(...)` from outside Tailwind's view. */
+   variables on `:root`, even with no utility using them, because the global Sass partials
+   (`styles/material/*.scss`, `styles/_preferences.scss`) read them with `var(...)` from outside
+   Tailwind's view. */
 @theme static {
   --color-primary: #2563eb;
   --color-primary-500: #3b82f6;
+
+  /* The page behind the cards: `bg-page`. Light mode's `gray-100`; in dark mode the darkest
+     thing on screen, where `gray-100` itself turns into a step ABOVE the cards (a hover, a well). */
+  --color-page: #f3f4f6;
+
+  /* The two colours dark mode leaves alone — every other one flips (`styles/_dark.scss`). For
+     what must look the same in both themes: a scrim, a video's backdrop, the paper a document is
+     shown on. `bg-always-black/50`, `text-always-white`. */
+  --color-always-white: #ffffff;
+  --color-always-black: #000000;
+}
+
+/* `dark:` follows the app's own theme (`html.dark`, set by SettingsService), not the OS setting
+   alone. It is seldom needed: the palette itself flips, so `bg-white` is already dark. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* The frosted glass of Material's menus and popovers (`styles/material/_overlays.scss`, which
+   declares these properties), for a popover of the app's own: `class="surface-glass"` in place of
+   a background, a border, a shadow and a corner radius. */
+@utility surface-glass {
+  border-radius: var(--overlay-radius);
+  background-color: var(--overlay-surface);
+  box-shadow: var(--overlay-shadow);
+  -webkit-backdrop-filter: var(--overlay-blur);
+  backdrop-filter: var(--overlay-blur);
 }

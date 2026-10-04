@@ -31,7 +31,7 @@ import { AuthHeaderComponent } from './auth-header.component';
       <app-footer class="mx-auto w-full max-w-7xl" />
     </div>
   `,
-  host: { class: 'block h-full overflow-y-auto bg-gray-50' },
+  host: { class: 'block h-full overflow-y-auto bg-gray-50 dark:bg-page' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuthLayoutComponent {}

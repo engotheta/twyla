@@ -10,19 +10,19 @@
       type="button"
       mat-icon-button
       class="!w-7 !h-7"
-      aria-label="Save"
+      [attr.aria-label]="t().cell.save"
       (click)="commitEdit()"
     >
-      <mat-icon class="!text-base">check</mat-icon>
+      <mat-icon class="!size-6 !text-base">check</mat-icon>
     </button>
     <button
       type="button"
       mat-icon-button
       class="!w-7 !h-7"
-      aria-label="Cancel"
+      [attr.aria-label]="t().cell.cancel"
       (click)="cancelEdit()"
     >
-      <mat-icon class="!text-base">close</mat-icon>
+      <mat-icon class="!size-6 !text-base">close</mat-icon>
     </button>
   </div>
 } @else {
@@ -38,8 +38,8 @@
     @if (template(); as tpl) {
       <ng-container [ngTemplateOutlet]="tpl" [ngTemplateOutletContext]="templateContext()" />
     } @else if (type() === 'boolean') {
-      <span class="sr-only">{{ resolved().value ? 'Yes' : 'No' }}</span>
-      <mat-icon class="!text-base align-middle" aria-hidden="true">
+      <span class="sr-only">{{ resolved().value ? t().format.yes : t().format.no }}</span>
+      <mat-icon class="!size-6 !text-base align-middle" aria-hidden="true">
         {{ resolved().value ? 'check' : 'close' }}
       </mat-icon>
     } @else if (type() === 'html') {
@@ -55,9 +55,11 @@
       }
     } @else {
       @if (resolved().icon; as icon) {
-        <mat-icon class="!text-base align-middle mr-1" [class]="resolved().iconClass ?? ''">{{
-          icon
-        }}</mat-icon>
+        <mat-icon
+          class="!size-6 !text-base align-middle mr-1"
+          [class]="resolved().iconClass ?? ''"
+          >{{ icon }}</mat-icon
+        >
       }
       <span class="min-w-0 break-words">{{ displayValue() }}</span>
     }
@@ -73,10 +75,10 @@
         type="button"
         mat-icon-button
         class="!w-6 !h-6 ml-1"
-        aria-label="Edit"
+        [attr.aria-label]="t().cell.edit"
         (click)="onEditButtonClick($event)"
       >
-        <mat-icon class="!text-sm">edit</mat-icon>
+        <mat-icon class="!size-6 !text-sm">edit</mat-icon>
       </button>
     }
   </div>

@@ -106,7 +106,9 @@ describe('FileLoaderService', () => {
     http
       .expectOne('https://x.test/missing.pdf')
       .flush(new Blob(), { status: 404, statusText: 'Not Found' });
-    await expect(pending).rejects.toEqual(new FileViewerError('The file was not found.', 404));
+    await expect(pending).rejects.toEqual(
+      new FileViewerError('The file was not found.', 404, undefined, 'notFound', 'Not Found'),
+    );
   });
 
   it('refuses javascript: and other non-http schemes without a request', async () => {

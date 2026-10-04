@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { FILE_VIEWER_MESSAGES } from '../file-viewer.messages';
 
 /**
  * The card shown instead of a preview: "preview not available", a load error, an empty viewer.
@@ -31,22 +33,22 @@ import { MatIconModule } from '@angular/material/icon';
       <div class="mt-1 flex flex-wrap justify-center gap-2">
         @if (canRetry()) {
           <button type="button" matButton="outlined" (click)="retry.emit()">
-            <mat-icon aria-hidden="true">refresh</mat-icon> Try again
+            <mat-icon aria-hidden="true">refresh</mat-icon> {{ t().actions.tryAgain }}
           </button>
         }
         @if (canOffice()) {
           <button type="button" matButton="outlined" (click)="office.emit()">
-            <mat-icon aria-hidden="true">public</mat-icon> Open with Office Online
+            <mat-icon aria-hidden="true">public</mat-icon> {{ t().actions.officeOnline }}
           </button>
         }
         @if (canOpen()) {
           <button type="button" matButton="outlined" (click)="open.emit()">
-            <mat-icon aria-hidden="true">open_in_new</mat-icon> Open in new tab
+            <mat-icon aria-hidden="true">open_in_new</mat-icon> {{ t().actions.openInNewTab }}
           </button>
         }
         @if (canDownload()) {
           <button type="button" matButton="filled" (click)="download.emit()">
-            <mat-icon aria-hidden="true">download</mat-icon> Download
+            <mat-icon aria-hidden="true">download</mat-icon> {{ t().actions.download }}
           </button>
         }
       </div>
@@ -56,6 +58,8 @@ import { MatIconModule } from '@angular/material/icon';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FileMessageComponent {
+  protected readonly t = injectMessages(FILE_VIEWER_MESSAGES);
+
   readonly icon = input('description');
   readonly heading = input.required<string>();
   readonly message = input<string>();

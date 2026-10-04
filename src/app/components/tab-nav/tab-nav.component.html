@@ -44,7 +44,7 @@
         (click)="choose(tab)"
       >
         @if (tab.icon) {
-          <mat-icon class="!text-base" aria-hidden="true">{{ tab.icon }}</mat-icon>
+          <mat-icon class="!size-6 !text-base" aria-hidden="true">{{ tab.icon }}</mat-icon>
         }
         <span class="cv-tab-nav-label">{{ tab.label }}</span>
         @if (tab.badge !== undefined) {

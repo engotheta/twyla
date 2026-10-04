@@ -82,7 +82,7 @@
         <div
           panelResize
           axis="x"
-          ariaLabel="Resize columns"
+          [ariaLabel]="t().resizeColumns"
           [valueNow]="colPercent(g)"
           [style.left.px]="colGutterPos(g)"
           (resizeStart)="onGutterStart('x', g)"
@@ -94,7 +94,7 @@
         <div
           panelResize
           axis="y"
-          ariaLabel="Resize rows"
+          [ariaLabel]="t().resizeRows"
           [valueNow]="rowPercent(g)"
           [style.top.px]="rowGutterPos(g)"
           (resizeStart)="onGutterStart('y', g)"
@@ -115,7 +115,7 @@
         <div class="flex items-center gap-1 font-medium">
           @if (headingOf(rc); as heading) {
             @if (heading.icon) {
-              <mat-icon class="!text-base" aria-hidden="true">{{ heading.icon }}</mat-icon>
+              <mat-icon class="!size-6 !text-base" aria-hidden="true">{{ heading.icon }}</mat-icon>
             }
             @if (heading.text) {
               <span>{{ heading.text }}</span>
@@ -165,11 +165,11 @@
       type="button"
       class="cv-pane-control"
       [id]="controlId('collapse', key)"
-      [attr.aria-label]="'Collapse ' + paneLabel(rc)"
+      [attr.aria-label]="t().collapsePane(paneLabel(rc))"
       aria-expanded="true"
       [attr.aria-controls]="bodyId(key)"
       [attr.aria-disabled]="collapseLocked(key) || null"
-      [matTooltip]="collapseLocked(key) ? 'At least one pane stays expanded' : 'Collapse'"
+      [matTooltip]="collapseLocked(key) ? t().keepOneExpanded : t().collapse"
       (click)="setCollapsed(key, true)"
     >
       <mat-icon aria-hidden="true">{{
@@ -182,9 +182,11 @@
       type="button"
       class="cv-pane-control"
       [attr.aria-label]="
-        (isFullscreen(key) ? 'Exit full screen: ' : 'Full screen: ') + paneLabel(rc)
+        isFullscreen(key)
+          ? t().exitFullScreenPane(paneLabel(rc))
+          : t().fullScreenPane(paneLabel(rc))
       "
-      [matTooltip]="isFullscreen(key) ? 'Exit full screen' : 'Full screen'"
+      [matTooltip]="isFullscreen(key) ? t().exitFullScreen : t().fullScreen"
       (click)="toggleFullscreen(key, item)"
     >
       <mat-icon aria-hidden="true">{{
@@ -202,7 +204,7 @@
     [class.cv-strip-row]="collapseAxis() === 'row'"
     [class.cv-strip-column]="collapseAxis() === 'column'"
     [id]="controlId('strip', key)"
-    [attr.aria-label]="'Restore ' + paneLabel(rc)"
+    [attr.aria-label]="t().restorePane(paneLabel(rc))"
     aria-expanded="false"
     [attr.aria-controls]="bodyId(key)"
     (click)="setCollapsed(key, false)"

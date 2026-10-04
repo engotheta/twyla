@@ -1,0 +1,154 @@
+import type { GridMessages } from './grid.messages';
+
+export const GRID_SW: GridMessages = {
+  loading: 'Safu zinapakia',
+  actions: 'Vitendo',
+  details: 'Maelezo',
+  noResults: (label) => (label ? `Hakuna ${label}` : 'Hakuna matokeo yaliyopatikana'),
+  reload: 'Pakia upya',
+
+  rows: {
+    reorder: 'Panga upya safu',
+    selectAll: 'Chagua safu zote kwenye ukurasa huu',
+    select: 'Chagua safu',
+    number: 'Namba ya safu',
+    expand: 'Panua safu',
+    drag: 'Buruta ili kupanga upya safu',
+    toggleDetail: 'Onyesha au ficha maelezo ya safu',
+  },
+
+  cell: {
+    save: 'Hifadhi',
+    cancel: 'Ghairi',
+    edit: 'Hariri',
+  },
+
+  format: {
+    yes: 'Ndiyo',
+    no: 'Hapana',
+  },
+
+  toolbar: {
+    viewOptions: 'Chaguo za mwonekano wa jedwali',
+    filters: 'Vichujio',
+    displayMode: 'Aina ya mwonekano',
+    modes: {
+      table: 'Jedwali',
+      list: 'Orodha',
+      cards: 'Kadi',
+    },
+    export: 'Hamisha',
+    columnSettings: 'Mipangilio ya safu wima',
+  },
+
+  columns: {
+    panel: 'Mwonekano, mpangilio na ubandikaji wa safu wima',
+    dragToReorder: (column) => `Buruta ili kupanga upya ${column}`,
+    moveUp: (column) => `Sogeza ${column} juu`,
+    moveDown: (column) => `Sogeza ${column} chini`,
+    pinnedLeft: 'Imebandikwa kushoto — bofya ili kubandika kulia',
+    pinnedRight: 'Imebandikwa kulia — bofya ili kubandua',
+    notPinned: 'Haijabandikwa — bofya ili kubandika kushoto',
+    reset: 'Rejesha safu wima',
+    addFromData: 'Ongeza safu wima kutoka kwenye data',
+    scanning: 'Inachanganua…',
+  },
+
+  export: {
+    title: (format) => `Chagua safu wima za kuhamisha (${format})`,
+    selectAll: 'Chagua zote',
+    selectNone: 'Ondoa zote',
+    panel: 'Safu wima za kuhamisha, mpangilio na ujumuishaji',
+    selected: (count, total) => `Safu wima ${count} kati ya ${total} zimechaguliwa.`,
+    cancel: 'Ghairi',
+    confirm: 'Hamisha',
+    sheet: 'Laha1',
+  },
+
+  filters: {
+    apply: 'Tumia',
+    clear: 'Futa',
+    invalid: 'Si sahihi',
+  },
+
+  search: {
+    placeholder: {
+      search: 'Tafuta…',
+      searchOrFilter: 'Tafuta au chuja…',
+      filter: 'Chuja…',
+    },
+    region: (label) => (label ? `Tafuta ${label}` : 'Tafuta'),
+    clear: 'Futa',
+    clearSearch: 'Futa utafutaji',
+    search: 'Tafuta',
+    suggestions: (label) => `Mapendekezo ya ${label}`,
+    loading: 'Inapakia…',
+
+    part: {
+      field: (title) => `${title}, sehemu`,
+      operator: (title) => `${title}, kilinganishi`,
+      value: (title) => `${title}, thamani`,
+      text: 'Maandishi ya utafutaji',
+    },
+    change: {
+      field: (name) => `Badilisha sehemu ya ${name}`,
+      operator: (name) => `Badilisha kilinganishi cha ${name}`,
+      value: (name) => `Badilisha thamani ya ${name}`,
+      text: (text) => `Badilisha maandishi ${text}`,
+    },
+    remove: (name) => `Ondoa ${name}`,
+
+    added: (name) => `Imeongezwa: ${name}`,
+    changedTo: (name) => `Imebadilishwa kuwa ${name}`,
+    removed: (name) => `Imeondolewa: ${name}`,
+    cleared: 'Utafutaji umefutwa',
+
+    textOption: 'Tafuta maandishi haya',
+    columnsGroup: 'Safu wima',
+    filtersGroup: 'Vichujio',
+    textPill: (value) => `Maandishi: ${value}`,
+    yes: 'Ndiyo',
+    no: 'Hapana',
+    operators: {
+      equals: { text: '=', words: 'ni' },
+      notEquals: { text: '!=', words: 'si' },
+      like: { text: 'ina', words: 'ina' },
+      greaterThan: { text: '>', words: 'ni zaidi ya' },
+      greaterThanOrEqual: { text: '>=', words: 'ni angalau' },
+      lessThan: { text: '<', words: 'ni chini ya' },
+      lessThanOrEqual: { text: '<=', words: 'haizidi' },
+      in: { text: 'ni mojawapo ya', words: 'ni mojawapo ya' },
+      notIn: { text: 'si mojawapo ya', words: 'si mojawapo ya' },
+      between: { text: 'kati ya', words: 'ni kati ya' },
+      isNull: { text: 'ni tupu', words: 'ni tupu' },
+      isNotNull: { text: 'si tupu', words: 'si tupu' },
+    },
+  },
+
+  classic: {
+    removeField: 'Ondoa sehemu ya utafutaji',
+    fineTune: 'Rekebisha kilinganishi cha utafutaji',
+    viewAll: 'Tazama sehemu zote za utafutaji',
+    addField: 'Ongeza sehemu ya utafutaji',
+    clearSearch: 'Futa utafutaji',
+    dialogTitle: 'Tafuta',
+    column: 'Safu wima',
+    value: 'Thamani…',
+    search: 'Tafuta…',
+    operator: 'Kilinganishi',
+    types: {
+      equals: 'Ni sawa na',
+      notEquals: 'Si sawa na',
+      like: 'Ina',
+      in: 'Ni mojawapo ya',
+      notIn: 'Si mojawapo ya',
+      greaterThan: 'Zaidi ya',
+      greaterThanOrEqual: 'Zaidi ya au sawa na',
+      lessThan: 'Chini ya',
+      lessThanOrEqual: 'Chini ya au sawa na',
+      between: 'Kati ya',
+      isNull: 'Ni tupu',
+      isNotNull: 'Si tupu',
+    },
+  },
+};

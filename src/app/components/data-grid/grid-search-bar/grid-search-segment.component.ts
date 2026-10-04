@@ -11,6 +11,8 @@ import {
   signal,
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { GRID_MESSAGES } from '../grid.messages';
 import {
   GridSearchSegmentEvent,
   GridSearchSuggestion,
@@ -105,6 +107,7 @@ export class GridSearchSegmentComponent {
   readonly event = output<GridSearchSegmentEvent>();
 
   private readonly document = inject(DOCUMENT);
+  protected readonly t = injectMessages(GRID_MESSAGES);
 
   protected readonly listId = `grid-search-list-${++lists}`;
   protected readonly positions: ConnectedPosition[] = [

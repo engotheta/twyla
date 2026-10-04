@@ -10,8 +10,8 @@ export const formResult = signal<{ mode: 'preview' | 'submitted'; value: unknown
   template: `
     <p class="sr-only" role="status">{{ announcement() }}</p>
     @if (formResult(); as result) {
-      <div class="w-full max-w-4xl rounded-lg bg-gray-900 p-4 text-xs text-green-400 shadow">
-        <p class="mb-2 font-semibold text-white">
+      <div class="w-full max-w-4xl rounded-lg bg-[#111827] p-4 text-xs text-[#4ade80] shadow">
+        <p class="mb-2 font-semibold text-always-white">
           {{
             result.mode === 'submitted'
               ? 'Submitted payload:'

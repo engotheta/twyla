@@ -14,9 +14,11 @@ import { MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { GenericFormComponent } from '@components/generic-form';
+import { injectMessages } from '@services/i18n';
 import { SessionService } from '@services/session';
 import { AuthCardComponent } from './auth-card.component';
 import { forgotPasswordForm, ForgotPasswordValue } from './auth.forms';
+import { AUTH_MESSAGES } from './auth.messages';
 
 /** seconds before the link can be sent again */
 const RESEND_AFTER = 30;
@@ -25,14 +27,7 @@ const RESEND_AFTER = 30;
   selector: 'forgot-password-page',
   imports: [RouterLink, MatButton, MatIcon, GenericFormComponent, AuthCardComponent],
   template: `
-    <auth-card
-      heading="Forgot your password?"
-      [lead]="
-        sentTo()
-          ? ''
-          : 'Enter the email you signed up with and we\\'ll send you a link to reset it.'
-      "
-    >
+    <auth-card [heading]="t().forgot.heading" [lead]="sentTo() ? '' : t().forgot.lead">
       @if (sentTo(); as email) {
         <div class="flex flex-col gap-4">
           <div
@@ -41,11 +36,12 @@ const RESEND_AFTER = 30;
             <mat-icon class="shrink-0" aria-hidden="true">mark_email_read</mat-icon>
             <div>
               <h2 #sentHeading class="font-semibold focus:outline-none" tabindex="-1">
-                Check your email
+                {{ t().forgot.sentHeading }}
               </h2>
+              @let sent = sentParts();
               <p class="mt-1 text-sm">
-                If an account exists for <strong>{{ email }}</strong
-                >, a link to reset your password is on its way. It may take a few minutes.
+                {{ sent.before }}<strong>{{ email }}</strong
+                >{{ sent.after }}
               </p>
             </div>
           </div>
@@ -53,14 +49,14 @@ const RESEND_AFTER = 30;
           @if (demoLink(); as link) {
             <a mat-stroked-button [routerLink]="link">
               <mat-icon aria-hidden="true">science</mat-icon>
-              Demo: open the reset link
+              {{ t().forgot.demoLink }}
             </a>
           }
 
           <button mat-button type="button" [disabled]="cooldown() > 0" (click)="resend()">
-            {{ cooldown() > 0 ? 'Resend the link in ' + cooldown() + 's' : 'Resend the link' }}
+            {{ cooldown() > 0 ? t().forgot.resendIn(cooldown()) : t().forgot.resend }}
           </button>
-          <a mat-flat-button routerLink="/auth/login">Back to sign in</a>
+          <a mat-flat-button routerLink="/auth/login">{{ t().backToSignIn }}</a>
         </div>
       } @else {
         @if (error(); as error) {
@@ -72,13 +68,13 @@ const RESEND_AFTER = 30;
             <span>{{ error }}</span>
           </div>
         }
-        <generic-form [params]="params" />
+        <generic-form [params]="params()" />
         <p class="mt-6 text-center text-sm">
           <a
             class="font-medium text-blue-700 underline-offset-2 hover:underline"
             routerLink="/auth/login"
           >
-            Back to sign in
+            {{ t().backToSignIn }}
           </a>
         </p>
       }
@@ -91,12 +87,27 @@ export class ForgotPasswordPage {
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
+  protected readonly t = injectMessages(AUTH_MESSAGES);
   private readonly sentHeading = viewChild<ElementRef<HTMLElement>>('sentHeading');
 
-  protected readonly params = forgotPasswordForm((value) => this.send(value));
-  protected readonly error = signal<string | null>(null);
+  /** built again when the language changes: the form keeps what was typed */
+  protected readonly params = computed(() =>
+    forgotPasswordForm(this.t, (value) => this.send(value)),
+  );
+  /** what the last attempt failed with… */
+  private readonly failure = signal<{ error: unknown } | null>(null);
+  /** …in the user's language, which it follows */
+  protected readonly error = computed(() => {
+    const failure = this.failure();
+    return failure && this.session.errorMessage(failure.error);
+  });
   /** set once the request went through — the form gives way to "Check your email" */
   protected readonly sentTo = signal<string | null>(null);
+  /** the "sent" sentence on either side of the address, which is shown in bold */
+  protected readonly sentParts = computed(() => {
+    const [before, after = ''] = this.t().forgot.sent.split('{email}');
+    return { before, after };
+  });
   private readonly demoResetUrl = signal<string | undefined>(undefined);
   protected readonly demoLink = computed(() => {
     const url = this.demoResetUrl();
@@ -116,7 +127,7 @@ export class ForgotPasswordPage {
   }
 
   private async send({ email }: ForgotPasswordValue): Promise<void> {
-    this.error.set(null);
+    this.failure.set(null);
     try {
       const result = await this.session.forgotPassword({ email: email.trim() });
       const firstTime = !this.sentTo();
@@ -129,7 +140,7 @@ export class ForgotPasswordPage {
         });
       }
     } catch (error) {
-      this.error.set(this.session.errorMessage(error));
+      this.failure.set({ error });
     }
   }
 

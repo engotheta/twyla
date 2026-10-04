@@ -4,17 +4,24 @@
 // Learn more about theming and how to use it for your application's
 // custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
-// Design tokens the two overrides below consume — loaded first so they're defined before anything
+// Design tokens the partials below consume — loaded first so they're defined before anything
 // reads them (custom-property resolution doesn't actually require declaration order, but this
 // reads better).
-// Global (not component-scoped) on purpose — Angular's view encapsulation can't reach into
-// Angular Material's own internal DOM (.mat-mdc-tab-header, .mat-horizontal-stepper-header-container,
-// ...) from a `styleUrl` scoped to the consuming component, same reasoning as `.hide-subscript` below.
 @use './styles/variables';
-@use './app/components/details/material-tabs-group';
-@use './app/components/generic-form/material-stepper';
-@use './app/components/generic-form/material-form-field';
+// what the user's settings change: the dark palette, then text size, font, spacing, density,
+// motion and contrast, then the theme change's reveal
+@use './styles/dark';
+@use './styles/preferences';
+@use './styles/view-transitions';
+@use './styles/scrollbars';
+// Angular Material brought in line with the rest of the app: buttons, form fields, menus and
+// popovers, the stepper. Global (not component-scoped) on purpose — Angular's view encapsulation
+// can't reach into Angular Material's own internal DOM (.mat-mdc-form-field-flex,
+// .mat-horizontal-stepper-header-container, ...) from a `styleUrl` scoped to the consuming
+// component. The two after it are features' own panels, global for the same reason.
+@use './styles/material';
 @use './app/components/file-viewer/file-viewer';
+@use './app/services/settings/settings-sheet';
 
 html {
   height: 100%;
@@ -24,6 +31,12 @@ html {
   // stay inflated, and show a page-level scrollbar, even once every element below body genuinely
   // fits. All real scrolling here happens in those nested regions, so the root never needs to.
   overflow: hidden;
+
+  // Light unless `html.dark` says otherwise (`styles/_dark.scss`): `mat.theme()` emits every
+  // colour as `light-dark(…)`, so this one property turns all of Angular Material. On <html>,
+  // not <body>, so the page's own scrollbar and the canvas behind it follow too.
+  color-scheme: light;
+
   @include mat.theme(
     (
       color: (
@@ -37,11 +50,6 @@ html {
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
-  color-scheme: light;
-
   // Set a default background, font and text colors for the application using
   // Angular Material's system-level CSS variables. Learn more about these
   // variables at https://material.angular.dev/guide/system-variables

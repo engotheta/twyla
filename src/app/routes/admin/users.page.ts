@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '@layout/page-header';
+import { injectMessages } from '@services/i18n';
+import { ADMIN_MESSAGES } from './admin.messages';
 
 const USERS = [
   { id: 1, name: 'Emily Johnson', email: 'emily.johnson@example.com', role: 'Administrator' },
@@ -13,19 +15,20 @@ const USERS = [
   selector: 'users-page',
   imports: [PageHeaderComponent, RouterLink],
   template: `
-    <page-header
-      subtitle="Detail pages aren't in the menu; their breadcrumbs still find their way"
-    />
+    @let text = t().users;
+    <page-header [subtitle]="text.subtitle" />
     <div class="overflow-x-auto rounded-xl bg-white ring-1 ring-gray-200">
       <table class="w-full text-start text-sm">
         <caption class="sr-only">
-          Users
+          {{
+            text.caption
+          }}
         </caption>
         <thead class="border-b border-gray-200 bg-gray-50 text-xs text-gray-600 uppercase">
           <tr>
-            <th scope="col" class="px-4 py-3 text-start font-semibold">Name</th>
-            <th scope="col" class="px-4 py-3 text-start font-semibold">Email</th>
-            <th scope="col" class="px-4 py-3 text-start font-semibold">Role</th>
+            <th scope="col" class="px-4 py-3 text-start font-semibold">{{ text.name }}</th>
+            <th scope="col" class="px-4 py-3 text-start font-semibold">{{ text.email }}</th>
+            <th scope="col" class="px-4 py-3 text-start font-semibold">{{ text.role }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
@@ -52,4 +55,5 @@ const USERS = [
 })
 export class UsersPage {
   protected readonly users = USERS;
+  protected readonly t = injectMessages(ADMIN_MESSAGES);
 }

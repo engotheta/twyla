@@ -14,7 +14,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { ResolvedFile } from '../file-viewer.interface';
+import { FILE_VIEWER_MESSAGES, FileFailure } from '../file-viewer.messages';
 import { printHtml } from '../loader/file-actions.helpers';
 import { ViewerController } from '../viewer-controller';
 
@@ -41,16 +43,20 @@ const SHADOW_CSS = `
   template: `
     <div
       #scroller
-      class="relative size-full overflow-auto bg-[#e5e7eb] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+      class="relative size-full overflow-auto bg-gray-200 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
       tabindex="0"
       role="region"
       data-viewer-scroll
-      [attr.aria-label]="label() + ' — Word document'"
+      [attr.aria-label]="t().docx.document(label())"
     >
       <div #host [style.zoom]="scale()"></div>
       @if (busy()) {
         <div class="absolute inset-0 grid place-items-center" role="status">
-          <mat-progress-spinner mode="indeterminate" diameter="40" aria-label="Opening document" />
+          <mat-progress-spinner
+            mode="indeterminate"
+            diameter="40"
+            [attr.aria-label]="t().docx.opening"
+          />
         </div>
       }
     </div>
@@ -61,8 +67,9 @@ const SHADOW_CSS = `
 export class DocxRendererComponent {
   readonly file = input.required<ResolvedFile>();
   readonly label = input('');
-  readonly failed = output<string>();
+  readonly failed = output<FileFailure>();
 
+  protected readonly t = injectMessages(FILE_VIEWER_MESSAGES);
   private readonly controller = inject(ViewerController);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
@@ -104,7 +111,7 @@ export class DocxRendererComponent {
   private async render(): Promise<void> {
     const blob = this.file().blob;
     if (!blob) {
-      this.failed.emit('There is no document to show.');
+      this.failed.emit((text) => text.docx.empty);
       return;
     }
     try {
@@ -132,9 +139,7 @@ export class DocxRendererComponent {
       this.busy.set(false);
     } catch {
       this.busy.set(false);
-      this.failed.emit(
-        'This Word document could not be opened — it may be damaged or in an older format.',
-      );
+      this.failed.emit((text) => text.docx.failed);
     }
   }
 

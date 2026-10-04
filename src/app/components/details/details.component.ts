@@ -1,10 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, effect, input, signal } from '@angular/core';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTabsModule } from '@angular/material/tabs';
+import { TabNavClasses } from '@components/tab-nav/tab-nav.interface';
+import { TabPanelsComponent } from '@components/tab-nav/tab-panels.component';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { DetailsHeaderComponent } from './details-header/details-header.component';
+import { DETAILS_MESSAGES } from './details.messages';
 import { FieldGroupComponent } from './field-group/field-group.component';
 import { DetailsParameter } from './interfaces/details.interface';
 import { resolveDetailGroups, toObservableSource } from './helpers/details.helpers';
+import { groupTabs } from './helpers/field-group.helpers';
 import { MergeClassesPipe } from '@utils/pipes/merge-classes.pipe';
 
 /**
@@ -19,7 +23,7 @@ import { MergeClassesPipe } from '@utils/pipes/merge-classes.pipe';
   styleUrl: './details.component.scss',
   imports: [
     MatProgressBarModule,
-    MatTabsModule,
+    TabPanelsComponent,
     DetailsHeaderComponent,
     FieldGroupComponent,
     MergeClassesPipe,
@@ -28,6 +32,8 @@ import { MergeClassesPipe } from '@utils/pipes/merge-classes.pipe';
 })
 export class DetailsComponent<Entity = Record<string, unknown>> {
   readonly params = input<DetailsParameter<Entity>>();
+
+  protected readonly t = injectMessages(DETAILS_MESSAGES);
 
   protected readonly resolvedParameter = computed<DetailsParameter<Entity>>(
     () => this.params() ?? {},
@@ -84,6 +90,20 @@ export class DetailsComponent<Entity = Record<string, unknown>> {
   }));
 
   protected readonly fieldGroups = computed(() => resolveDetailGroups(this.effectiveParameter()));
+
+  /** the groups as tabs (`showGroupsInTabs`) */
+  protected readonly groupTabs = computed(() => groupTabs(this.fieldGroups(), this.t().group));
+
+  /** `tabsContainerClass` and its three companions, as `tab-nav` takes them */
+  protected readonly tabsClasses = computed<TabNavClasses>(() => {
+    const p = this.resolvedParameter();
+    return {
+      container: p.tabsContainerClass,
+      tab: p.tabClass,
+      activeTab: p.activeTabClass,
+      indicator: p.tabIndicatorClass,
+    };
+  });
 
   protected readonly showHeader = computed(() => {
     const header = this.resolvedParameter().header;

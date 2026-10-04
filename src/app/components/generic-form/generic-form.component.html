@@ -45,7 +45,7 @@
       @for (entry of steps; track $index) {
         <mat-step [label]="entry.label()" [optional]="entry.optional" [completed]="entry.valid()">
           <div [class]="p.fieldsContainerClass ?? ''">
-            @for (child of entry.fields; track child) {
+            @for (child of entry.fields; track identity(child)) {
               <form-field [field]="child" [instance]="instance" [fieldsClass]="p.fieldsClass" />
             }
           </div>
@@ -55,7 +55,7 @@
               @if ($index === 0) {
                 @if (dialogRef()) {
                   <button mat-button type="button" (click)="cancel()">
-                    {{ p.cancelButtonLabel ?? 'Cancel' }}
+                    {{ p.cancelButtonLabel ?? t().cancel }}
                   </button>
                 } @else {
                   <span></span>
@@ -65,7 +65,7 @@
                   @if (entry.step?.previousIcon) {
                     <mat-icon aria-hidden="true">{{ entry.step?.previousIcon }}</mat-icon>
                   }
-                  {{ entry.step?.previousLabel ?? 'Previous' }}
+                  {{ entry.step?.previousLabel ?? t().previous }}
                 </button>
               }
 
@@ -79,7 +79,7 @@
                   [disabled]="(p.linearSteppers ?? false) && !entry.valid()"
                   (click)="next(entry)"
                 >
-                  {{ entry.step?.nextLabel ?? 'Next' }}
+                  {{ entry.step?.nextLabel ?? t().next }}
                   @if (entry.step?.nextIcon) {
                     <mat-icon aria-hidden="true">{{ entry.step?.nextIcon }}</mat-icon>
                   }
@@ -92,7 +92,7 @@
     </mat-stepper>
   } @else {
     <div [class]="p.fieldsContainerClass ?? ''">
-      @for (child of topFields(); track child) {
+      @for (child of topFields(); track identity(child)) {
         <form-field [field]="child" [instance]="instance" [fieldsClass]="p.fieldsClass" />
       }
     </div>
@@ -105,7 +105,7 @@
   }
   @if (dialogRef()) {
     <button mat-button type="button" (click)="cancel()">
-      {{ p.cancelButtonLabel ?? 'Cancel' }}
+      {{ p.cancelButtonLabel ?? t().cancel }}
     </button>
   }
   @if (p.addSubmitButton !== false) {
@@ -151,5 +151,5 @@
   } @else if (p.submitButtonIcon) {
     <mat-icon aria-hidden="true">{{ p.submitButtonIcon }}</mat-icon>
   }
-  {{ p.submitButtonLabel ?? 'Submit' }}
+  {{ p.submitButtonLabel ?? t().submit }}
 </ng-template>

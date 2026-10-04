@@ -46,7 +46,11 @@ export function createFakeSessionApi(options: FakeSessionOptions = {}): SessionA
     resetPassword: ({ token }) =>
       later(() => {
         if (!token.startsWith('demo-')) {
-          throw new SessionError('This reset link is invalid or has expired.', 400);
+          throw new SessionError(
+            'This reset link is invalid or has expired.',
+            400,
+            'invalidResetLink',
+          );
         }
         return {};
       }),

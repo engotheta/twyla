@@ -1,0 +1,152 @@
+// What the user's settings change besides the theme (`_dark.scss`). `SettingsService` writes
+// each one on `<html>` as a `data-` attribute; what it does to the page is in this file — but for
+// a property that belongs to one kind of thing (a button's outline, a field's height, a
+// scrollbar's thumb), which is set under the same attribute in that thing's own partial.
+
+@use '@angular/material' as mat;
+
+// ── Text size: data-text-size ──
+// Material's type scale and Tailwind's sizes and spacing are all in rem, so the root font size
+// scales text and the room around it together. Breakpoints stay put: they are viewport widths.
+html[data-text-size='large'] {
+  font-size: 112.5%;
+}
+html[data-text-size='larger'] {
+  font-size: 125%;
+}
+html[data-text-size='largest'] {
+  font-size: 150%;
+}
+
+// (A label that larger text wraps needs room in its button: `material/_buttons.scss` gives it.)
+
+// ── Readable font: data-font='readable' ──
+// Material's type tokens again, for the other family. `SettingsService` adds the font's
+// stylesheet to the page the first time it's chosen; an app that hosts the font itself, or
+// prefers another, overrides this property.
+:root {
+  --readable-font-family:
+    'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', system-ui, sans-serif;
+}
+html[data-font='readable'] {
+  @include mat.theme(
+    (
+      typography: (
+        plain-family: var(--readable-font-family),
+        brand-family: var(--readable-font-family),
+      ),
+    )
+  );
+}
+
+// ── Text spacing: data-text-spacing='wide' ──
+// The spacing WCAG 1.4.12 asks content to survive, applied: line height 1.5, letters 0.12em,
+// words 0.16em, paragraphs 2em apart. Icon fonts are left out — spacing would split a ligature
+// from its box — and so is the line height of Material's toggle buttons, which is what gives
+// them their height.
+$icons: '.mat-icon, .material-icons, [class*="material-symbols"]';
+
+html[data-text-spacing='wide'] {
+  body,
+  body *:not(#{$icons}) {
+    letter-spacing: 0.12em !important;
+    word-spacing: 0.16em !important;
+  }
+
+  body,
+  body *:not(#{$icons}, .mat-button-toggle-label-content) {
+    line-height: 1.5 !important;
+  }
+
+  p + p {
+    margin-block-start: 2em;
+  }
+}
+
+// ── Density: data-density='compact' ──
+// Material's own density scale, two steps down. A form field's height is not Material's to
+// begin with: its compact size is beside its usual one, in `material/_form-field.scss`.
+html[data-density='compact'] {
+  @include mat.theme(
+    (
+      density: -2,
+    )
+  );
+}
+
+// ── Reduced motion: data-motion='reduced' ──
+// Nothing moves: animations and transitions end as they start (a duration this short still
+// fires the `animationend` / `transitionend` events code waits for), and scrolling jumps.
+// Spinners and progress bars keep running — their movement is the message.
+$busy: '.mat-mdc-progress-spinner, .mat-mdc-progress-spinner *, .mat-mdc-progress-bar, .mat-mdc-progress-bar *';
+
+html[data-motion='reduced'] {
+  scroll-behavior: auto !important;
+
+  *:not(#{$busy}),
+  *:not(#{$busy})::before,
+  *:not(#{$busy})::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    // a change that waits its turn (the side menu's line lighting up piece by piece) is movement too
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+// ── More contrast: data-contrast='more' ──
+// Secondary text and icons move to stronger steps, hairline borders become solid lines, text
+// that was faded by opacity stops being, focus gets a ring nobody can miss, and a link that
+// underlines on hover is underlined always.
+@mixin more-contrast($line) {
+  --contrast-line: #{$line};
+
+  // Material's faint outlines and secondary text take their full-strength colours
+  --mat-sys-outline-variant: var(--mat-sys-outline);
+  --mat-sys-on-surface-variant: var(--mat-sys-on-surface);
+
+  [class*='border-gray-'],
+  [class*='border-black/'],
+  [class*='divide-gray-'] > * {
+    border-color: var(--contrast-line);
+  }
+
+  [class*='ring-gray-'],
+  [class*='ring-black/'] {
+    --tw-ring-color: var(--contrast-line);
+  }
+
+  [class*='text-black/'] {
+    color: var(--color-black);
+  }
+
+  .hover\:underline {
+    text-decoration-line: underline;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-primary) !important;
+    outline-offset: 2px !important;
+  }
+}
+
+html[data-contrast='more'] {
+  --color-gray-400: #6b7280;
+  --color-gray-500: #4b5563;
+  --color-gray-600: #374151;
+  --color-gray-700: #1f2937;
+  --color-primary: #1d4ed8;
+
+  @include more-contrast(#4b5563);
+}
+
+html.dark[data-contrast='more'] {
+  --color-gray-400: #8d95a3;
+  --color-gray-500: #b7bdc8;
+  --color-gray-600: #d0d4dc;
+  --color-gray-700: #e6e8ed;
+  --color-primary: #93c5fd;
+
+  @include more-contrast(#a9b0bc);
+}

@@ -2,6 +2,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   ElementRef,
   inject,
   Injector,
@@ -11,11 +12,13 @@ import {
 } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
-import { FormParameter, GenericFormComponent } from '@components/generic-form';
+import { GenericFormComponent } from '@components/generic-form';
+import { injectMessages } from '@services/i18n';
 import { NotificationService } from '@services/notification';
 import { SESSION_CONFIG, SessionService } from '@services/session';
 import { AuthCardComponent } from './auth-card.component';
 import { registerForm, RegisterValue } from './auth.forms';
+import { AUTH_MESSAGES } from './auth.messages';
 import { PasswordChecklistComponent } from './password-checklist.component';
 
 @Component({
@@ -32,7 +35,7 @@ import { PasswordChecklistComponent } from './password-checklist.component';
       <password-checklist class="mb-3" [value]="password()" />
     </ng-template>
 
-    <auth-card heading="Create an account" lead="It takes a minute — you'll sign in right after.">
+    <auth-card [heading]="t().register.heading" [lead]="t().register.lead">
       @if (error(); as error) {
         <div
           #alert
@@ -47,19 +50,19 @@ import { PasswordChecklistComponent } from './password-checklist.component';
 
       @if (demo) {
         <p class="mb-5 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
-          Demo: accounts aren't saved. Afterwards, sign in with the demo account.
+          {{ t().register.demoNote }}
         </p>
       }
 
-      <generic-form [params]="formFor(checklist)" />
+      <generic-form [params]="params()" />
 
       <p class="mt-6 text-center text-sm text-gray-600">
-        Already have an account?
+        {{ t().register.haveAccount }}
         <a
           class="font-medium text-blue-700 underline-offset-2 hover:underline"
           routerLink="/auth/login"
         >
-          Sign in
+          {{ t().register.signIn }}
         </a>
       </p>
     </auth-card>
@@ -72,31 +75,40 @@ export class RegisterPage {
   private readonly notifications = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
+  protected readonly t = injectMessages(AUTH_MESSAGES);
   private readonly alert = viewChild<ElementRef<HTMLElement>>('alert');
+  private readonly checklist = viewChild.required<TemplateRef<unknown>>('checklist');
 
   protected readonly demo = inject(SESSION_CONFIG).demoCredentials;
-  protected readonly error = signal<string | null>(null);
+  /** what the last attempt failed with… */
+  private readonly failure = signal<{ error: unknown } | null>(null);
+  /** …in the user's language, which it follows */
+  protected readonly error = computed(() => {
+    const failure = this.failure();
+    return failure && this.session.errorMessage(failure.error);
+  });
   /** feeds the checklist as the password is typed */
   protected readonly password = signal('');
-  private params?: FormParameter;
 
-  /** built once, with the checklist template from this page's view */
-  protected formFor(checklist: TemplateRef<unknown>): FormParameter {
-    return (this.params ??= registerForm(
+  /** with the checklist template from this page's view; built again when the language changes,
+   *  and the form keeps what was typed */
+  protected readonly params = computed(() =>
+    registerForm(
+      this.t,
       (value) => this.register(value),
-      checklist,
+      this.checklist(),
       (password) => this.password.set(password),
-    ));
-  }
+    ),
+  );
 
   private async register(value: RegisterValue): Promise<void> {
-    this.error.set(null);
+    this.failure.set(null);
     try {
       await this.session.register({ ...value });
-      this.notifications.success('Your account is ready — sign in to continue.');
+      this.notifications.success(this.t().register.ready);
       await this.router.navigateByUrl('/auth/login');
     } catch (error) {
-      this.error.set(this.session.errorMessage(error));
+      this.failure.set({ error });
       afterNextRender(() => this.alert()?.nativeElement.focus(), { injector: this.injector });
     }
   }

@@ -1,0 +1,55 @@
+// Scrollbars — one look for every scrolling region of the app: slim, rounded and quiet, with no
+// track behind the thumb. The thumb is a palette grey, so it turns with the theme; "more
+// contrast" makes it solid. An app that wants another size or colour sets the properties below.
+//
+// Two mechanisms, and they must not meet: Chrome and Safari take the `::-webkit-scrollbar`
+// pseudo-elements, which allow any size and a rounded thumb; Firefox has only the standard
+// `scrollbar-width` / `scrollbar-color`. Chrome supports those too — and once either is set it
+// ignores the pseudo-elements — so the standard pair is given to browsers without them only.
+//
+// What a region hides stays hidden (`tab-nav`'s strip): its own rule is more specific. A document
+// shown in an iframe (the Word and Office viewers) keeps the browser's scrollbars: no page's
+// styles reach inside it.
+
+:root {
+  // the room a scrollbar takes; the thumb inside it is inset on every side
+  --scrollbar-size: 0.5rem;
+  --scrollbar-thumb: color-mix(in srgb, var(--color-gray-500, #6b7280) 45%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--color-gray-500, #6b7280) 75%, transparent);
+}
+
+html[data-contrast='more'] {
+  --scrollbar-thumb: var(--color-gray-500, #4b5563);
+  --scrollbar-thumb-hover: var(--color-gray-700, #1f2937);
+}
+
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+// the transparent border is the inset: the thumb is drawn inside it, and thickens under the pointer
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-color: var(--scrollbar-thumb);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  border-width: 1px;
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}

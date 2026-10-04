@@ -1,17 +1,20 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header';
+import { injectMessages } from '@services/i18n';
 import { SessionService } from '@services/session';
+import { ACCOUNT_MESSAGES } from './account.messages';
 
 /** The signed-in user, as the session API returned them. */
 @Component({
   selector: 'profile-page',
   imports: [PageHeaderComponent],
   template: `
-    <page-header subtitle="Who you're signed in as" />
+    @let text = t().profile;
+    <page-header [subtitle]="text.subtitle" />
     @if (session.user(); as user) {
       <section
         class="flex flex-col gap-6 rounded-xl bg-white p-6 ring-1 ring-gray-200 sm:flex-row sm:items-start"
-        aria-label="Profile"
+        [attr.aria-label]="text.label"
       >
         @if (user.avatar) {
           <img
@@ -24,24 +27,26 @@ import { SessionService } from '@services/session';
         }
         <dl class="grid flex-1 gap-x-8 gap-y-4 text-sm sm:grid-cols-2">
           <div>
-            <dt class="text-gray-600">Name</dt>
+            <dt class="text-gray-600">{{ text.name }}</dt>
             <dd class="font-medium text-gray-900">{{ user.name }}</dd>
           </div>
           <div>
-            <dt class="text-gray-600">Username</dt>
+            <dt class="text-gray-600">{{ text.username }}</dt>
             <dd class="font-medium text-gray-900">{{ user.username ?? '—' }}</dd>
           </div>
           <div>
-            <dt class="text-gray-600">Email</dt>
+            <dt class="text-gray-600">{{ text.email }}</dt>
             <dd class="font-medium text-gray-900">{{ user.email ?? '—' }}</dd>
           </div>
           <div>
-            <dt class="text-gray-600">Roles</dt>
+            <dt class="text-gray-600">{{ text.roles }}</dt>
             <dd class="font-medium text-gray-900">{{ user.roles?.join(', ') || '—' }}</dd>
           </div>
           <div class="sm:col-span-2">
-            <dt class="text-gray-600">Permissions</dt>
-            <dd class="font-medium text-gray-900">{{ user.permissions?.join(', ') || 'none' }}</dd>
+            <dt class="text-gray-600">{{ text.permissions }}</dt>
+            <dd class="font-medium text-gray-900">
+              {{ user.permissions?.join(', ') || text.none }}
+            </dd>
           </div>
         </dl>
       </section>
@@ -52,4 +57,5 @@ import { SessionService } from '@services/session';
 })
 export class ProfilePage {
   protected readonly session = inject(SessionService);
+  protected readonly t = injectMessages(ACCOUNT_MESSAGES);
 }

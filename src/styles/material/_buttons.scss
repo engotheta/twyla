@@ -1,0 +1,72 @@
+// Buttons — Material's, and through the same tokens everything built on them: action buttons,
+// toggle groups, the paginator's arrows, a field's icon buttons.
+//
+// Two changes to Material's look. Corners are Tailwind's `rounded-lg` instead of pills and
+// circles — on icon buttons that is the shape of the hover and focus layer. And the bordered
+// kinds get a quieter outline: a palette grey, so it turns with the theme, back to full strength
+// under "more contrast".
+
+@use '@angular/material' as mat;
+
+:root {
+  --button-radius: var(--radius-lg, 0.5rem);
+  --button-outline: var(--color-gray-300, #d1d5db);
+}
+
+html[data-contrast='more'] {
+  --button-outline: var(--contrast-line);
+}
+
+html {
+  @include mat.button-overrides(
+    (
+      filled-container-shape: var(--button-radius),
+      outlined-container-shape: var(--button-radius),
+      protected-container-shape: var(--button-radius),
+      text-container-shape: var(--button-radius),
+      tonal-container-shape: var(--button-radius),
+      outlined-outline-color: var(--button-outline),
+    )
+  );
+
+  @include mat.icon-button-overrides(
+    (
+      container-shape: var(--button-radius),
+    )
+  );
+
+  @include mat.fab-overrides(
+    (
+      container-shape: var(--button-radius),
+      small-container-shape: var(--button-radius),
+      extended-container-shape: var(--button-radius),
+    )
+  );
+
+  // a toggle group's outer border and the lines between its toggles are one token
+  @include mat.button-toggle-overrides(
+    (
+      shape: var(--button-radius),
+      divider-color: var(--button-outline),
+    )
+  );
+}
+
+// Room for a label that wraps — larger text, a narrow screen, a longer translation. Material
+// gives its text buttons a fixed height, which a second line spills out of: the height becomes
+// their least, so a one-line button is as it was and a wrapped one grows. (`html`: Material's
+// own rule is one class and loads later.)
+$kinds: (
+  '.mat-mdc-button': text,
+  '.mat-mdc-unelevated-button': filled,
+  '.mat-mdc-raised-button': protected,
+  '.mat-mdc-outlined-button': outlined,
+  '.mat-tonal-button': tonal,
+);
+@each $selector, $kind in $kinds {
+  html #{$selector} {
+    height: auto;
+    min-height: var(--mat-button-#{$kind}-container-height, 40px);
+    padding-block: 0.25rem;
+  }
+}

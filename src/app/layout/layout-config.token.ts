@@ -56,6 +56,8 @@ export interface LayoutConfig {
   signOut?: () => void;
   /** extra header buttons, left of the notifications bell */
   headerActions: ActionButton[];
+  /** the settings button (theme, language, text size, …) in the headers; default true */
+  showSettings: boolean;
   /** shows the notifications bell when set */
   notifications?: Signal<readonly LayoutNotification[]>;
   onNotification?: (notification: LayoutNotification) => void;
@@ -63,6 +65,13 @@ export interface LayoutConfig {
   footer: { owner: string; ownerUrl?: string; links: LayoutLink[]; version?: string };
   /** prefix for what the layout remembers in localStorage (whether the sidebar is shown) */
   storageKey: string;
+  /**
+   * Puts the app's own names into the user's language: menu and page names, module
+   * descriptions, the user menu's entries and the footer's links are all written in the routes
+   * and in this config, and all pass through here before they are shown. Default: as written.
+   * `translate: injectPhrases(ROUTE_NAMES)` — reading a signal inside keeps the menus live.
+   */
+  translate: (text: string) => string;
 }
 
 export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
@@ -73,8 +82,10 @@ export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   user: signal(null),
   userMenu: [],
   headerActions: [],
+  showSettings: true,
   footer: { owner: 'Studio', links: [] },
   storageKey: 'layout',
+  translate: (text) => text,
 };
 
 export const LAYOUT_CONFIG = new InjectionToken<LayoutConfig>('LAYOUT_CONFIG', {

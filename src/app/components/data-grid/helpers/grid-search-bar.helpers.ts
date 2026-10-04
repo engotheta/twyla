@@ -2,6 +2,7 @@
 // shows, and how what it holds maps to GridState.searchFields
 
 import { FieldType, FormField, isObjectField, isStepField } from '@components/generic-form';
+import { GRID_EN, GridSearchText } from '../grid.messages';
 import { GridColumn_ } from '../interfaces/grid-column.interface';
 import { GridFilterOperator } from '../interfaces/grid-filter.interface';
 import {
@@ -19,25 +20,33 @@ import {
 } from '../interfaces/grid-search.interface';
 import {
   GRID_SEARCH_COLUMN_OPERATORS,
-  GRID_SEARCH_COLUMNS_GROUP,
-  GRID_SEARCH_FILTERS_GROUP,
-  GRID_SEARCH_OPERATORS,
-  GRID_SEARCH_TEXT_OPTION,
   GRID_SEARCH_TEXT_VALUE,
   GRID_SEARCH_VALUELESS_OPERATORS,
 } from './grid-search-bar.constants';
 
-// ── what the bar offers ──
+// Every function here that produces text takes the bar's text as its last argument — `text`,
+// the `search` part of `GRID_MESSAGES` in the user's language — and falls back to English.
 
-const BOOLEAN_OPTIONS: GridSearchOption[] = [
-  { value: 'true', label: 'Yes' },
-  { value: 'false', label: 'No' },
-];
+/** the bar's text, in English */
+const ENGLISH: GridSearchText = GRID_EN.search;
+
+// ── what the bar offers ──
 
 /** `SearchField.value` is a string whatever the column holds (`coerceSearchValue` types it
  *  before a compare), so a column token only ever asks for text — or Yes / No */
-function columnValue(type: GridColumn_['type']): Pick<GridSearchToken, 'valueKind' | 'options'> {
-  if (type === 'boolean') return { valueKind: 'options', options: BOOLEAN_OPTIONS };
+function columnValue(
+  type: GridColumn_['type'],
+  text: GridSearchText,
+): Pick<GridSearchToken, 'valueKind' | 'options'> {
+  if (type === 'boolean') {
+    return {
+      valueKind: 'options',
+      options: [
+        { value: 'true', label: text.yes },
+        { value: 'false', label: text.no },
+      ],
+    };
+  }
   if (type === 'number' || type === 'currency' || type === 'percent')
     return { valueKind: 'number' };
   return { valueKind: 'text' };
@@ -47,6 +56,7 @@ function columnValue(type: GridColumn_['type']): Pick<GridSearchToken, 'valueKin
 export function searchTokensFromColumns<RowType = any>(
   columns: GridColumn_<RowType>[],
   cfg: GridSearchConfig | undefined,
+  text: GridSearchText = ENGLISH,
 ): GridSearchToken[] {
   const pickable = cfg?.searchTypeChangeable
     ? (cfg.enabledSearchTypes ?? DEFAULT_ENABLED_SEARCH_TYPES).filter((type) =>
@@ -68,7 +78,7 @@ export function searchTokensFromColumns<RowType = any>(
         icon: 'search',
         operators: pickable.includes(defaultOperator) ? pickable : [defaultOperator, ...pickable],
         defaultOperator,
-        ...columnValue(column.type),
+        ...columnValue(column.type, text),
         available: true,
       } satisfies GridSearchToken;
     });
@@ -276,13 +286,17 @@ export function inputText(token: GridSearchToken | undefined, value: unknown): s
   return String(value);
 }
 
-/** a date filter's value as its token shows it. Formatted here rather than through
- *  `formatCellValue`, which reads a `Date` instance as a plain object and returns nothing */
-function dateLabel(value: unknown, options: Intl.DateTimeFormatOptions): string {
+/** a date filter's value as its token shows it: by the filter's own kind (a month, a year, a
+ *  time…), which `formatCellValue`'s column types don't cover */
+function dateLabel(
+  value: unknown,
+  options: Intl.DateTimeFormatOptions,
+  locale: string | undefined,
+): string {
   const date = value instanceof Date ? value : new Date(String(value));
   return Number.isNaN(date.getTime())
     ? String(value)
-    : new Intl.DateTimeFormat(undefined, options).format(date);
+    : new Intl.DateTimeFormat(locale, options).format(date);
 }
 
 function optionLabel(token: GridSearchToken, value: unknown): string {
@@ -290,11 +304,16 @@ function optionLabel(token: GridSearchToken, value: unknown): string {
   return token.options?.find((option) => same(option.value, value))?.label ?? String(value ?? '');
 }
 
-/** how a value reads on its token */
-export function valueLabel(token: GridSearchToken | undefined, value: unknown): string {
+/** how a value reads on its token; `locale` is what its dates are written in */
+export function valueLabel(
+  token: GridSearchToken | undefined,
+  value: unknown,
+  text: GridSearchText = ENGLISH,
+  locale?: string,
+): string {
   if (!token) return String(value ?? '');
   if (token.valueKind === 'flag') {
-    return GRID_SEARCH_VALUELESS_OPERATORS.has(token.defaultOperator) ? '' : 'Yes';
+    return GRID_SEARCH_VALUELESS_OPERATORS.has(token.defaultOperator) ? '' : text.yes;
   }
   if (isEmptyValue(value)) return '';
 
@@ -304,11 +323,11 @@ export function valueLabel(token: GridSearchToken | undefined, value: unknown): 
         ? value.map((v) => optionLabel(token, v)).join(', ')
         : optionLabel(token, value);
     case 'date':
-      return dateLabel(value, { dateStyle: 'medium' });
+      return dateLabel(value, { dateStyle: 'medium' }, locale);
     case 'datetime':
-      return dateLabel(value, { dateStyle: 'medium', timeStyle: 'short' });
+      return dateLabel(value, { dateStyle: 'medium', timeStyle: 'short' }, locale);
     case 'month':
-      return dateLabel(value, { month: 'long', year: 'numeric' });
+      return dateLabel(value, { month: 'long', year: 'numeric' }, locale);
     case 'year':
       return value instanceof Date ? String(value.getFullYear()) : String(value);
     default:
@@ -317,11 +336,18 @@ export function valueLabel(token: GridSearchToken | undefined, value: unknown): 
 }
 
 /** the token said in full — its accessible name, and what the status line announces */
-export function itemLabel(item: GridSearchBarItem, token: GridSearchToken | undefined): string {
-  if (!item.token) return `Text: ${String(item.value ?? '')}`;
+export function itemLabel(
+  item: GridSearchBarItem,
+  token: GridSearchToken | undefined,
+  text: GridSearchText = ENGLISH,
+  locale?: string,
+): string {
+  if (!item.token) return text.textPill(String(item.value ?? ''));
   if (!token) return '';
-  const operator = GRID_SEARCH_OPERATORS[item.operator ?? token.defaultOperator];
-  return [token.title, operator.words, valueLabel(token, item.value)].filter(Boolean).join(' ');
+  const operator = text.operators[item.operator ?? token.defaultOperator];
+  return [token.title, operator.words, valueLabel(token, item.value, text, locale)]
+    .filter(Boolean)
+    .join(' ');
 }
 
 // ── the list ──
@@ -342,6 +368,7 @@ export function fieldSuggestions(
   used: ReadonlySet<string>,
   query: string,
   freeText: boolean,
+  text: GridSearchText = ENGLISH,
 ): GridSearchSuggestion[] {
   const grouped =
     tokens.some((token) => token.source === 'search') &&
@@ -356,21 +383,24 @@ export function fieldSuggestions(
       group: !grouped
         ? undefined
         : token.source === 'search'
-          ? GRID_SEARCH_COLUMNS_GROUP
-          : GRID_SEARCH_FILTERS_GROUP,
+          ? text.columnsGroup
+          : text.filtersGroup,
     }));
 
   if (freeText && query.trim()) {
-    rows.push({ value: GRID_SEARCH_TEXT_VALUE, label: GRID_SEARCH_TEXT_OPTION, icon: 'title' });
+    rows.push({ value: GRID_SEARCH_TEXT_VALUE, label: text.textOption, icon: 'title' });
   }
   return rows;
 }
 
 /** a token's operator list: the symbol or words it shows, then what a symbol means */
-export function operatorSuggestions(token: GridSearchToken): GridSearchSuggestion[] {
+export function operatorSuggestions(
+  token: GridSearchToken,
+  text: GridSearchText = ENGLISH,
+): GridSearchSuggestion[] {
   return token.operators.map((operator) => {
-    const { text, words } = GRID_SEARCH_OPERATORS[operator];
-    return { value: operator, label: text, description: words === text ? undefined : words };
+    const { text: label, words } = text.operators[operator];
+    return { value: operator, label, description: words === label ? undefined : words };
   });
 }
 

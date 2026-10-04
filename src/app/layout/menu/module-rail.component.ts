@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { injectMessages } from '@services/i18n/message-bundle';
 import { LAYOUT_CONFIG } from '../layout-config.token';
+import { LAYOUT_MESSAGES } from '../layout.messages';
 import { MenuIconComponent } from './menu-icon.component';
 import { MenuService } from './menu.service';
 
@@ -17,12 +19,12 @@ const RAIL_LINK =
   imports: [RouterLink, RouterLinkActive, MatIcon, MatTooltip, MenuIconComponent],
   template: `
     <nav
-      aria-label="Modules"
+      [attr.aria-label]="t().modules"
       class="flex h-full flex-col items-center gap-3 overflow-y-auto px-2.5 py-3"
     >
       <a
-        aria-label="All modules"
-        matTooltip="All modules"
+        [attr.aria-label]="t().allModules"
+        [matTooltip]="t().allModules"
         matTooltipPosition="right"
         [class]="railLink"
         [routerLink]="homeUrl"
@@ -60,4 +62,5 @@ export class ModuleRailComponent {
   protected readonly menu = inject(MenuService);
   protected readonly homeUrl = inject(LAYOUT_CONFIG).homeUrl;
   protected readonly railLink = RAIL_LINK;
+  protected readonly t = injectMessages(LAYOUT_MESSAGES);
 }
