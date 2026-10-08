@@ -3,8 +3,10 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TabNavClasses } from '@components/tab-nav/tab-nav.interface';
 import { TabPanelsComponent } from '@components/tab-nav/tab-panels.component';
 import { injectMessages } from '@services/i18n/message-bundle';
+import { registerShortcuts } from '@services/shortcuts/shortcuts.service';
 import { DetailsHeaderComponent } from './details-header/details-header.component';
 import { DETAILS_MESSAGES } from './details.messages';
+import { DETAILS_SCOPE, detailsShortcuts } from './details.shortcuts';
 import { FieldGroupComponent } from './field-group/field-group.component';
 import { DetailsParameter } from './interfaces/details.interface';
 import { resolveDetailGroups, toObservableSource } from './helpers/details.helpers';
@@ -35,9 +37,13 @@ export class DetailsComponent<Entity = Record<string, unknown>> {
 
   protected readonly t = injectMessages(DETAILS_MESSAGES);
 
-  protected readonly resolvedParameter = computed<DetailsParameter<Entity>>(
-    () => this.params() ?? {},
-  );
+  /** what the component's shortcuts switched, laid over the params while it is on screen */
+  private readonly overrides = signal<Partial<DetailsParameter<Entity>>>({});
+
+  protected readonly resolvedParameter = computed<DetailsParameter<Entity>>(() => ({
+    ...this.params(),
+    ...this.overrides(),
+  }));
 
   // a DEDICATED computed the fetch effect depends on, not `resolvedParameter()` directly — a
   // fresh `DetailsParameter` object reference (e.g. an inline literal on `[parameter]`) must not
@@ -49,6 +55,31 @@ export class DetailsComponent<Entity = Record<string, unknown>> {
   protected readonly error = signal<unknown>(undefined);
 
   constructor() {
+    // D, six times in a quick run, lists the shortcuts: a layout per digit, and what is shown
+    registerShortcuts(
+      DETAILS_SCOPE,
+      () =>
+        detailsShortcuts(
+          {
+            params: this.resolvedParameter,
+            overrides: this.overrides,
+            override: (patch) =>
+              this.overrides.update((current) => ({
+                ...current,
+                ...(patch as Partial<DetailsParameter<Entity>>),
+              })),
+            reset: () => this.overrides.set({}),
+            groupCount: () => this.fieldGroups().length,
+          },
+          this.t,
+        ),
+      {
+        label: () => this.t().shortcuts.scope,
+        name: () => this.resolvedParameter().header?.title,
+        enabled: () => this.params()?.shortcuts !== false,
+      },
+    );
+
     effect((onCleanup) => {
       const fn = this.fetchFn();
       if (!fn) {

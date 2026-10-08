@@ -176,7 +176,7 @@ export function makeCsv(): Blob {
 export function makeJson(): Blob {
   const data = {
     id: 42,
-    name: 'Studio',
+    name: 'Twyla',
     tags: ['viewer', 'files'],
     nested: { ok: true, count: 3 },
   };

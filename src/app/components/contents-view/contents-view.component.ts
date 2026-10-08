@@ -37,12 +37,15 @@ import { GenericFormComponent } from '@components/generic-form';
 import { mergeClasses } from '@utils/class-name.helpers';
 import { syncOverlayContainer } from '@utils/fullscreen-overlay.helpers';
 import {
+  ContentsLayout,
   ContentsSizes,
   ContentsViewInstance,
   ContentsParameter,
   ContentView,
 } from './contents.interface';
 import { CONTENTS_MESSAGES } from './contents.messages';
+import { CONTENTS_SCOPE, contentsShortcuts } from './contents.shortcuts';
+import { registerShortcuts } from '@services/shortcuts/shortcuts.service';
 import { PanelResizeDirective } from './panel-resize.directive';
 import {
   claimPersistedSelectionKey,
@@ -236,7 +239,20 @@ function contentKey(rc: ResolvedContent, index: number): string {
   },
 })
 export class ContentsViewComponent implements OnInit {
-  readonly params = input.required<ContentsParameter>();
+  /** the params as the parent gives them: `[params]` */
+  readonly paramsInput = input.required<ContentsParameter>({ alias: 'params' });
+  /** what this level's shortcuts switched, laid over its params while it is on screen */
+  private readonly overrides = signal<ContentsLayout>({});
+  /**
+   * The params in force — what everything below reads: as given, with the overrides laid over.
+   * The given object itself while nothing is overridden. What cascades (`resizable`,
+   * `collapsible`, …) reaches the nested levels through `nestedParameter`, as it always does.
+   */
+  readonly params = computed<ContentsParameter>(() => {
+    const given = this.paramsInput();
+    const over = this.overrides();
+    return Object.keys(over).length ? { ...given, ...over } : given;
+  });
   readonly instanceChange = output<ContentsViewInstance>();
   /** internal — set by a parent contents-view on the level it nests: the slot this level hands
    *  its tab navigation up to, so the content owning these tabs renders the toggles itself (in
@@ -1206,7 +1222,32 @@ export class ContentsViewComponent implements OnInit {
   private readonly componentOutlets = viewChildren(NgComponentOutlet);
   private readonly wiredOutputInstances = new WeakSet<object>();
 
+  /** this mount's own handle (`instanceChange`), kept for its shortcuts */
+  private instance?: ContentsViewInstance;
+
   constructor() {
+    // C, six times in a quick run, lists this level's shortcuts; C again moves to the next level
+    registerShortcuts(
+      CONTENTS_SCOPE,
+      () =>
+        contentsShortcuts(
+          {
+            params: this.params,
+            overrides: this.overrides,
+            override: (patch) => this.overrides.update((current) => ({ ...current, ...patch })),
+            reset: () => this.overrides.set({}),
+            contentCount: () => this.visibleContents().length,
+            canResetSizes: this.resizeActive,
+            resetSizes: () => this.instance?.resetSizes(),
+          },
+          this.t,
+        ),
+      {
+        label: () => this.t().shortcuts.scope,
+        enabled: () => this.paramsInput().shortcuts !== false,
+      },
+    );
+
     effect(() => {
       const componentContents = this.visibleContents().filter(
         (rc): rc is ResolvedContent & { content: ContentView & { type: 'component' } } =>
@@ -1363,6 +1404,7 @@ export class ContentsViewComponent implements OnInit {
       fullscreenSlug: () => this.fullscreenKey(),
       exitFullscreen: () => this.exitFullscreen(),
     };
+    this.instance = instance;
     this.instanceChange.emit(instance);
 
     // a nested level hands its toggles to the content owning these tabs (see `tabsHost`)
@@ -1478,6 +1520,8 @@ export class ContentsViewComponent implements OnInit {
       keepOneExpanded: content.keepOneExpanded ?? this.params().keepOneExpanded,
       fullscreenable: content.fullscreenable ?? this.params().fullscreenable,
       preserveInactiveContent: content.preserveInactiveContent,
+      // `shortcuts: false` cascades too: a tree that must stay as configured says so once
+      shortcuts: content.shortcuts ?? this.params().shortcuts,
     };
   }
 

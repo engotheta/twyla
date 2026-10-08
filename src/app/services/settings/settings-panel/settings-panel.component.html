@@ -87,6 +87,37 @@
     />
   </section>
 
+  @if (shortcutsOffered) {
+    <section
+      class="flex flex-col gap-5 border-t border-gray-200 pt-6"
+      [attr.aria-labelledby]="id + '-keyboard'"
+    >
+      <ng-container
+        [ngTemplateOutlet]="heading"
+        [ngTemplateOutletContext]="{ $implicit: text.keyboard, id: id + '-keyboard' }"
+      />
+      <ng-container
+        [ngTemplateOutlet]="onOff"
+        [ngTemplateOutletContext]="{
+          key: 'shortcuts',
+          label: text.shortcuts.label,
+          hint: text.shortcuts.hint(presses),
+        }"
+      />
+      <div>
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="!isOn('shortcuts')"
+          (click)="viewShortcuts()"
+        >
+          <mat-icon aria-hidden="true">keyboard</mat-icon>
+          {{ text.shortcuts.view }}
+        </button>
+      </div>
+    </section>
+  }
+
   <div class="border-t border-gray-200 pt-4">
     <button mat-stroked-button type="button" [disabled]="pristine()" (click)="reset()">
       <mat-icon aria-hidden="true">restart_alt</mat-icon>

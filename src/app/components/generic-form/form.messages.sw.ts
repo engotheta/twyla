@@ -31,10 +31,28 @@ export const FORM_SW: FormMessages = {
     search: 'Tafuta…',
     searchOptions: 'Tafuta chaguo',
     none: 'Hakuna',
+    loading: 'Chaguo zinapakia…',
+    loadingMore: 'Zinapakia zaidi…',
+    noOptions: 'Hakuna chaguo zilizopatikana',
+    loadFailed: 'Imeshindikana kupakia chaguo',
+    typeToSearch: (length) => `Andika herufi ${length} au zaidi ili kutafuta`,
+    found: (count) => `Chaguo ${count} zinapatikana`,
   },
 
   date: {
     time: 'Saa',
+  },
+
+  shortcuts: {
+    scope: 'Fomu',
+    filled: 'Sehemu zilizojazwa rangi',
+    hints: 'Nafasi ya vidokezo na makosa',
+    vertical: 'Hatua pembeni',
+    linear: 'Hatua kwa mpangilio tu',
+    nextStep: 'Hatua inayofuata',
+    previousStep: 'Hatua iliyotangulia',
+    firstInvalid: 'Nenda kwenye sehemu ya kwanza ya kurekebisha',
+    reset: 'Rejesha ilivyopangwa',
   },
 
   color: {

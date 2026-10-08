@@ -8,6 +8,7 @@ import { GRID_MESSAGES } from './components/data-grid/grid.messages';
 import { DETAILS_MESSAGES } from './components/details/details.messages';
 import { FILE_VIEWER_MESSAGES } from './components/file-viewer/file-viewer.messages';
 import { FORM_MESSAGES } from './components/generic-form/form.messages';
+import { TAB_NAV_MESSAGES } from './components/tab-nav/tab-nav.messages';
 import { ROUTE_NAMES } from './configs/route-names';
 import { LAYOUT_CONFIG } from './layout/layout-config.token';
 import { LAYOUT_MESSAGES } from './layout/layout.messages';
@@ -22,6 +23,7 @@ import { LOADING_MESSAGES } from './services/loading/loading.messages';
 import { NOTIFICATION_MESSAGES } from './services/notification/notification.messages';
 import { SESSION_MESSAGES } from './services/session/session.messages';
 import { SETTINGS_MESSAGES } from './services/settings/settings.messages';
+import { SHORTCUTS_MESSAGES } from './services/shortcuts/shortcuts.messages';
 import { VIEW_MESSAGES } from './services/view/view.messages';
 
 /** every feature's text — a new `*.messages.ts` belongs in this list */
@@ -43,14 +45,16 @@ const BUNDLES = [
   PAGES_MESSAGES,
   SESSION_MESSAGES,
   SETTINGS_MESSAGES,
+  SHORTCUTS_MESSAGES,
+  TAB_NAV_MESSAGES,
   VIEW_MESSAGES,
 ] as MessageBundle<object>[];
 
 /** the languages the app offers besides English (`provideI18n` in `app.config.ts`) */
 const LANGUAGES = ['sw'];
 
-/** text that reads the same in every language: symbols… */
-const SAME_EVERYWHERE = new Set(['=', '!=', '>', '>=', '<', '<=']);
+/** text that reads the same in every language: symbols, and what is printed on a key… */
+const SAME_EVERYWHERE = new Set(['=', '!=', '>', '>=', '<', '<=', 'Esc']);
 /** …and, by `bundle id:path`, messages that only arrange their values */
 const SAME_FORMAT = new Set(['file-viewer:pdf.frame', 'settings:changed']);
 

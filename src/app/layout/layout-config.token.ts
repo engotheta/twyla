@@ -75,7 +75,7 @@ export interface LayoutConfig {
 }
 
 export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
-  brand: { name: 'Studio' },
+  brand: { name: 'Twyla' },
   homeUrl: '/modules',
   signInUrl: '/auth/login',
   canAccess: () => true,
@@ -83,7 +83,7 @@ export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   userMenu: [],
   headerActions: [],
   showSettings: true,
-  footer: { owner: 'Studio', links: [] },
+  footer: { owner: 'Twyla', links: [] },
   storageKey: 'layout',
   translate: (text) => text,
 };

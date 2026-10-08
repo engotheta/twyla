@@ -505,6 +505,61 @@ describe('tidyDividers', () => {
   });
 });
 
+describe('ActionButtonsComponent — a key of its own (ActionButton.shortcut)', () => {
+  let fixture: ComponentFixture<ActionButtonsComponent>;
+
+  async function mount(buttons: ActionButton[]): Promise<HTMLElement> {
+    TestBed.configureTestingModule({
+      imports: [ActionButtonsComponent],
+      providers: [
+        provideRouter([]),
+        { provide: ANIMATION_MODULE_TYPE, useValue: 'NoopAnimations' },
+      ],
+    });
+    fixture = TestBed.createComponent(ActionButtonsComponent);
+    fixture.componentRef.setInput('buttons', buttons);
+    for (let round = 0; round < 3; round++) {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve));
+    }
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  /** what `ShortcutsService` looks for: the key, and the name the button goes by */
+  const marked = (host: HTMLElement) =>
+    Array.from(host.querySelectorAll<HTMLElement>('[data-shortcut]')).map((element) => [
+      element.dataset['shortcut'],
+      element.dataset['shortcutLabel'],
+    ]);
+
+  it('marks the button with its key and its name, for the shortcuts of what it sits in', async () => {
+    const host = await mount([
+      { label: 'New employee', icon: 'add', shortcut: 'n' },
+      { type: 'icon', icon: 'print', tooltip: 'Print the list', shortcut: 'i' },
+      { type: 'icon', icon: 'sync', ariaLabel: 'Synchronise', tooltip: 'Sync', shortcut: 'y' },
+      { label: 'Plain' },
+    ]);
+
+    expect(marked(host)).toEqual([
+      ['n', 'New employee'],
+      ['i', 'Print the list'],
+      ['y', 'Synchronise'],
+    ]);
+  });
+
+  it('runs the button’s own click when what it is marked on is clicked through', async () => {
+    const click = vi.fn();
+    const host = await mount([{ label: 'New employee', shortcut: 'n', click }]);
+
+    // the service clicks the button inside the marked wrapper
+    host.querySelector<HTMLElement>('[data-shortcut="n"] button')!.click();
+
+    expect(click).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('initialsOf', () => {
   it('takes the first letters of the first two words', () => {
     expect(initialsOf('Ada Lovelace')).toBe('AL');

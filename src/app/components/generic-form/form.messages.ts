@@ -40,10 +40,32 @@ export const FORM_EN = {
     search: 'Search…',
     searchOptions: 'Search options',
     none: 'None',
+    // a list that comes from a source (`optionsParameter`, SPEC §17)
+    loading: 'Loading options…',
+    loadingMore: 'Loading more…',
+    noOptions: 'No options found',
+    loadFailed: 'The options could not be loaded',
+    /** a search too short to send: "Type 3 or more characters to search" */
+    typeToSearch: (length: number) => `Type ${length} or more characters to search`,
+    /** said after a search, or a new page, has brought its options */
+    found: (count: number) => `${count} options available`,
   },
 
   date: {
     time: 'Time',
+  },
+
+  /** the form's keyboard shortcuts (`form.shortcuts.ts`, SPEC §18): what each key switches */
+  shortcuts: {
+    scope: 'Form',
+    filled: 'Filled fields',
+    hints: 'Room for hints and errors',
+    vertical: 'Steps down the side',
+    linear: 'Steps in order only',
+    nextStep: 'Next step',
+    previousStep: 'Previous step',
+    firstInvalid: 'Go to the first field to fix',
+    reset: 'Back to how it was set up',
   },
 
   color: {

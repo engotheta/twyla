@@ -25,6 +25,8 @@ export * from './fields/input-field.component';
 export * from './fields/boolean-field.component';
 export * from './fields/select-field/select-field.component';
 export * from './fields/select-field/options.helpers';
+export * from './fields/select-field/options-source';
+export * from './fields/select-field/scroll-end.directive';
 export * from './fields/textarea-field.component';
 export * from './fields/date-field.component';
 export * from './fields/color-field/color-field.component';

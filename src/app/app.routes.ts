@@ -37,7 +37,7 @@ export const APP_ROUTES: TypedRoutes = [
     data: {
       isMenu: true,
       icon: 'widgets',
-      description: 'The studio demos: grids, forms, viewers and more.',
+      description: 'The Twyla demos: grids, forms, viewers and more.',
     },
     loadComponent: () =>
       import('./routes/components-demo/components-demo.module').then((m) => m.ComponentsDemoShell),

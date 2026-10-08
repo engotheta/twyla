@@ -26,11 +26,13 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { Observable, Subscription, firstValueFrom, isObservable } from 'rxjs';
 import { provideMaterialIntl } from '@services/i18n/material-intl';
 import { injectMessages } from '@services/i18n/message-bundle';
+import { registerShortcuts } from '@services/shortcuts/shortcuts.service';
 import { controlStatus } from './helpers/control-status.helpers';
 import { FormFieldComponent } from './fields/form-field.component';
 import { StepField } from './interfaces/container-fields.interface';
 import { fieldIdentity, FormEngineService, FormInstance } from './form-engine.service';
 import { FORM_MESSAGES } from './form.messages';
+import { FORM_SCOPE, formShortcuts } from './form.shortcuts';
 import { FormField, isStepField, isValueField } from './interfaces/form-field.interface';
 import { FormParameter } from './interfaces/form-parameter.interface';
 import { StepState } from './interfaces/form-state.interface';
@@ -76,7 +78,21 @@ interface DisplayStep {
   templateUrl: './generic-form.component.html',
 })
 export class GenericFormComponent implements OnInit, OnDestroy {
-  readonly params = input.required<FormParameter>();
+  /** the params as the parent gives them: `[params]` */
+  readonly paramsInput = input.required<FormParameter>({ alias: 'params' });
+  /** what the form's shortcuts switched, laid over the params while it is on screen (SPEC §18) */
+  private readonly overrides = signal<Partial<FormParameter>>({});
+  /**
+   * The params in force — what everything here, the engine and the fields read: as given, with
+   * the overrides laid over. The given object itself while nothing is overridden, so nothing
+   * sees a change that isn't one; and `fields` is never overridden, so the engine has nothing to
+   * reconcile (SPEC §16).
+   */
+  readonly params = computed<FormParameter>(() => {
+    const given = this.paramsInput();
+    const over = this.overrides();
+    return Object.keys(over).length ? { ...given, ...over } : given;
+  });
   /** emits the built FormInstance once, at the end of ngOnInit (SPEC §15) — lets a parent
    *  embedding <generic-form> call instance.form.reset()/.submit()/.formState() directly */
   readonly instanceChange = output<FormInstance>();
@@ -114,6 +130,37 @@ export class GenericFormComponent implements OnInit, OnDestroy {
   protected banner!: Signal<string | null>;
 
   private readonly subs = new Subscription();
+
+  constructor() {
+    // SPEC §18: F, six times in a quick run, lists the form's shortcuts
+    registerShortcuts(
+      FORM_SCOPE,
+      () =>
+        formShortcuts(
+          {
+            params: this.params,
+            overrides: this.overrides,
+            override: (patch) => this.overrides.update((current) => ({ ...current, ...patch })),
+            reset: () => this.overrides.set({}),
+            stepCount: () => this.steps.length,
+            stepIndex: this.currentIndex,
+            nextStep: () => void this.next(this.steps[this.currentIndex()]),
+            previousStep: () => this.back(this.steps[this.currentIndex()]),
+            focusFirstInvalid: () => {
+              // the errors show once the controls are touched: then the first of them takes focus
+              this.instance.form.markAllAsTouched();
+              afterNextRender(() => this.focusFirstInvalid(), { injector: this.injector });
+            },
+          },
+          this.t,
+        ),
+      {
+        label: () => this.t().shortcuts.scope,
+        name: () => this.params().title,
+        enabled: () => !!this.instance && this.paramsInput().shortcuts !== false,
+      },
+    );
+  }
 
   ngOnInit(): void {
     this.instance = this.engine.build(this.params, this.injector);

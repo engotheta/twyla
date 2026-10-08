@@ -54,6 +54,13 @@ export const LAYOUT_EN = {
     links: 'Footer',
   },
 
+  /** the layout's keyboard shortcuts (`layout.shortcuts.ts`): what each key does */
+  shortcuts: {
+    scope: 'Layout',
+    sidebar: 'Navigation',
+    main: 'Go to main content',
+  },
+
   page: {
     back: 'Back',
     /** a page header's toggle group, when the page doesn't name it */

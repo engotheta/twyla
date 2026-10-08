@@ -136,6 +136,14 @@ export interface FormParameter<T = Record<string, unknown>> {
   /** default false; close the modal automatically after a successful submit */
   closeOnSubmit?: boolean;
 
+  /**
+   * default true: the form answers its keyboard shortcuts (SPEC §18) — its key, F, pressed six
+   * times in a quick run lists them: how the fields are drawn, how the steps are laid out, a step
+   * forward or back, the first field to fix. None of them submits or resets. Set false on a form
+   * that is a part of something else (a grid's filters), or that must stay as configured.
+   */
+  shortcuts?: boolean;
+
   /** @deprecated use onClose */
   onModalClose?: (data?: unknown) => unknown;
   /** @deprecated use onClose */

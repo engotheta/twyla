@@ -9,7 +9,7 @@ import {
 import { LAYOUT_CONFIG } from './layout-config.token';
 
 /**
- * Document titles like "Data grid · Studio": the deepest route's menu `data.name`, else its
+ * Document titles like "Data grid · Twyla": the deepest route's menu `data.name`, else its
  * `title` — so GASCO-style routes, which name pages in `data`, get titles without repeating them.
  * The name goes through `LayoutConfig.translate`, and the title is written again when the
  * language changes. `{ provide: TitleStrategy, useClass: PageTitleStrategy }`.

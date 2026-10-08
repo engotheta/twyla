@@ -14,11 +14,14 @@ import { Title } from '@angular/platform-browser';
 import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { injectMessages } from '@services/i18n/message-bundle';
+import { registerShortcuts } from '@services/shortcuts/shortcuts.service';
 import { AppFooterComponent } from './app-footer.component';
 import { AppHeaderComponent } from './app-header/app-header.component';
 import { AppSidebarComponent } from './app-sidebar/app-sidebar.component';
+import { LAYOUT_CONFIG } from './layout-config.token';
 import { LAYOUT_MESSAGES } from './layout.messages';
 import { LayoutService } from './layout.service';
+import { LAYOUT_SCOPE, layoutShortcuts } from './layout.shortcuts';
 import { ModuleRailComponent } from './menu/module-rail.component';
 
 /**
@@ -107,6 +110,23 @@ export class AppLayoutComponent {
 
   constructor() {
     const injector = inject(Injector);
+    const homeUrl = inject(LAYOUT_CONFIG).homeUrl;
+
+    registerShortcuts(
+      LAYOUT_SCOPE,
+      () =>
+        layoutShortcuts(
+          {
+            sidebarVisible: () => this.layout.sidebarVisible(),
+            toggleSidebar: () => this.layout.toggleSidebar(),
+            focusMain: () => this.main().nativeElement.focus(),
+            goHome: () => void this.router.navigateByUrl(homeUrl),
+          },
+          this.t,
+        ),
+      { label: () => this.t().shortcuts.scope },
+    );
+
     this.navigated$.pipe(takeUntilDestroyed()).subscribe((event) => {
       this.layout.closeDrawer();
       const scroller = this.content()?.getElementRef().nativeElement;

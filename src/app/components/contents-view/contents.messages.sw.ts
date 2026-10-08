@@ -13,4 +13,16 @@ export const CONTENTS_SW: ContentsMessages = {
   exitFullScreen: 'Ondoka kwenye skrini nzima',
   fullScreenPane: (pane) => `Skrini nzima: ${pane}`,
   exitFullScreenPane: (pane) => `Ondoka kwenye skrini nzima: ${pane}`,
+
+  shortcuts: {
+    scope: 'Mwonekano wa maudhui',
+    tabs: 'Maudhui kwenye vichupo',
+    vertical: 'Vichupo pembeni',
+    resizable: 'Paneli zinazobadilika ukubwa',
+    collapsible: 'Vitufe vya kukunja',
+    fullscreen: 'Vitufe vya skrini nzima',
+    fit: 'Tosheleza kwenye dirisha',
+    resetSizes: 'Sawazisha ukubwa wa paneli',
+    reset: 'Rejesha ilivyopangwa',
+  },
 };

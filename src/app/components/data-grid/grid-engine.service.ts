@@ -63,9 +63,12 @@ const EMPTY_SPAN: CellSpan = { rowspan: 1, colspan: 1, hidden: false };
 
 /** per-instance runtime handle returned by `GridEngineService.build()` — components render, the engine derives/mutates state */
 export interface GridInstance<RowType = any> {
-  /** live, `gridOptions`-merged config — reacts to both a new `parameter()` input and a
-   *  `selectOption()` slug swap; see `GridEngineService.build`'s `activeParams` */
+  /** live, `gridOptions`-merged config — reacts to a new `parameter()` input, a
+   *  `selectOption()` slug swap and an `override()`; see `GridEngineService.build`'s
+   *  `activeParams` */
   params: Signal<GridParameter<RowType>>;
+  /** what `override()` has laid over the configured params, and nothing else */
+  overrides: Signal<Partial<GridParameter<RowType>>>;
 
   loading: Signal<boolean>;
   error: Signal<unknown>;
@@ -149,6 +152,16 @@ export interface GridInstance<RowType = any> {
   resetColumnState(): void;
 
   setRenderMode(mode: GridRenderMode): void;
+
+  /**
+   * Lays `patch` over the configured params for as long as the grid lives: a feature switched on
+   * or off at runtime (the grid's keyboard shortcuts do, SPEC.md §14). The override wins over
+   * the params and over the selected `gridOptions` entry; a key given `undefined` goes back to
+   * what was configured. Nothing is saved.
+   */
+  override(patch: Partial<GridParameter<RowType>>): void;
+  /** back to the params as they were configured */
+  resetOverrides(): void;
 
   /** reorders `rows()` (table/list render modes only) and fires `params.onRowDrag`; a no-op unless `rowsDraggable` is set */
   dragRow(fromIndex: number, toIndex: number): void;
@@ -353,7 +366,7 @@ export class GridEngineService {
     const selectedOptionSlug = signal<string | undefined>(
       initialParams.slug ?? initialParams.gridOptions?.[0]?.slug,
     );
-    const activeParams = computed<GridParameter<RowType>>(() => {
+    const configuredParams = computed<GridParameter<RowType>>(() => {
       const params = paramsSignal();
       const options = params.gridOptions;
       if (!options?.length) return params;
@@ -364,6 +377,16 @@ export class GridEngineService {
         if (value !== undefined && !excluded.has(key)) merged[key] = value;
       }
       return merged as GridParameter<RowType>;
+    });
+
+    // ── runtime overrides (`GridInstance.override`): laid over all of the above, never saved ──
+    const overrides = signal<Partial<GridParameter<RowType>>>({});
+    const activeParams = computed<GridParameter<RowType>>(() => {
+      const configured = configuredParams();
+      const over = overrides();
+      // the configured object itself while nothing is overridden: what compares params by
+      // identity sees no change it didn't cause
+      return Object.keys(over).length ? { ...configured, ...over } : configured;
     });
 
     // ── columns: static config, or auto-generated once the first row of data is known ──
@@ -850,6 +873,7 @@ export class GridEngineService {
 
     const instance: GridInstance<RowType> = {
       params: activeParams,
+      overrides: overrides.asReadonly(),
       loading,
       error,
       headerRows,
@@ -1001,6 +1025,17 @@ export class GridEngineService {
       resetColumnState: () => columnOverrides.set({}),
 
       setRenderMode: (mode) => renderModeSig.set(mode),
+
+      override: (patch) =>
+        overrides.update((current) => {
+          const next: Record<string, unknown> = { ...current };
+          for (const [key, value] of Object.entries(patch)) {
+            if (value === undefined) delete next[key];
+            else next[key] = value;
+          }
+          return next as Partial<GridParameter<RowType>>;
+        }),
+      resetOverrides: () => overrides.set({}),
 
       dragRow: (fromIndex, toIndex) => {
         const params = activeParams();

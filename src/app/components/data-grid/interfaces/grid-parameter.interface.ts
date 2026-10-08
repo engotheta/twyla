@@ -200,4 +200,12 @@ export interface GridParameter<RowType = any> {
   // hosted in a `ViewService` dialog), showing every field of the row with no extra config
   // needed. Default is 7; set to 0 to disable.
   viewDetailsClicks?: number;
+
+  /**
+   * default true: the grid answers its keyboard shortcuts (SPEC.md §14) — its key, G, pressed
+   * six times in a quick run lists them, and each switches one of the features above for as long
+   * as the grid is on screen. They can switch on what was left off here (export, adding columns
+   * from the data): set false on a grid that must stay exactly as configured.
+   */
+  shortcuts?: boolean;
 }

@@ -58,6 +58,8 @@
        aria-haspopup / aria-expanded on its host, which a plain button or a wrapper must not carry -->
   <div
     class="inline-flex"
+    [attr.data-shortcut]="shortcutKey()"
+    [attr.data-shortcut-label]="shortcutLabel()"
     [matTooltip]="vm.tooltip ?? ''"
     [matTooltipDisabled]="!vm.tooltip"
     [matTooltipPosition]="vm.tooltipPosition"

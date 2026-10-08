@@ -46,6 +46,8 @@ export class GridFilterPanelComponent<RowType = any> {
     return {
       fields: this.fields(),
       showFooter: false,
+      // the filters are part of the grid: this is not a form with shortcuts of its own
+      shortcuts: false,
       // inline mode sits in the toolbar's own flex row — lay fields out the same way
       // grid-search-fields does, instead of generic-form's default vertical stack, and free the
       // vertical space every mat-form-field otherwise reserves for a hint/error strip (the

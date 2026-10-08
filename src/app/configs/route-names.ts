@@ -14,8 +14,8 @@ export const ROUTE_NAMES: Phrases = {
     Welcome: 'Karibu',
     Modules: 'Moduli',
     Components: 'Vijenzi',
-    'The studio demos: grids, forms, viewers and more.':
-      'Maonyesho ya studio: majedwali, fomu, vitazamaji na zaidi.',
+    'The Twyla demos: grids, forms, viewers and more.':
+      'Maonyesho ya Twyla: majedwali, fomu, vitazamaji na zaidi.',
     Layout: 'Mpangilio',
     'Page headers and menus nested to any depth.': 'Vichwa vya kurasa na menyu zenye ngazi nyingi.',
     Administration: 'Utawala',
@@ -52,6 +52,7 @@ export const ROUTE_NAMES: Phrases = {
     Details: 'Maelezo',
     'Forms & actions': 'Fomu na vitendo',
     'Generic form': 'Fomu ya jumla',
+    'Select options': 'Chaguo za orodha',
     'Action buttons': 'Vitufe vya vitendo',
     'Contents view': 'Mwonekano wa maudhui',
     'File viewer': 'Kitazamaji cha faili',

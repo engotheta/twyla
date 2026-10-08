@@ -577,3 +577,54 @@ used.
 - **A short box.** The rows scroll in their own region, which keeps a few rows' height. Where
   the grid's box is too short for the toolbar, those rows and the paginator, the grid scrolls
   as a whole: nothing is cut off out of reach.
+
+## 14. Keyboard shortcuts
+
+The grid is one of the app's shortcut scopes (`services/shortcuts/README.md`): its key, **G**,
+pressed six times in a quick run arms it and lists what its keys do; one more key runs one.
+With several grids on a page, G again moves to the next.
+
+| Key | What it does | Through |
+| --- | --- | --- |
+| `T` | toolbar | `showToolbar` |
+| `S` | search | `showSearch` |
+| `U` | one search bar, or the classic search fields | `unifiedSearch` |
+| `F` | filters (a grid that has some) | `gridFilters` |
+| `P` | paginator | `showPaginator` |
+| `C` | the column settings button | `showTableControlsToggle` |
+| `I` | row numbers | `addIndexColumn` |
+| `B` | row selection: none, single, multiple | `selectionMode` |
+| `V` | view: table, list, cards | `setRenderMode()`, among `renderMode.modes` |
+| `M` | merge equal cells | `mergeCells` |
+| `Z` | resizable columns | `columnsResizable` |
+| `E` | export | `export.formats` |
+| `A` | adding columns from the data | `canAddColumns` |
+| `R` | reload | `refetch()` |
+| `X` | details of the row last clicked (§10) | `ROW_DETAILS_COMPONENT`; closes the hint |
+| `0` | back to how it was set up | `resetOverrides()` |
+
+- **An override, not a new config.** `GridInstance.override(patch)` lays a patch over the
+  configured params; `GridInstance.params` — what the engine and the component read — is the
+  result. It wins over the params and over the selected `gridOptions` entry, a key given
+  `undefined` goes back to what was configured, and `overrides` holds what is laid over and
+  nothing else. It lasts as long as the grid is on screen: nothing is saved, and the app's own
+  `parameter` object is never written to. While nothing is overridden `params` is the configured
+  object itself, so what compares params by identity sees no change it did not cause.
+- **`0`** drops the overrides. The view (`V`) is the same state the toolbar's own switch sets,
+  not an override: it stays where it was put.
+- **On, off, or left to the grid.** A feature the params leave `undefined` is shown as the grid
+  shows it now (`showToolbar`, `showSearch` and `showPaginator` are worked out from what the
+  grid has), and its key switches it from there.
+- **`E` with no formats of its own** offers CSV, Excel and PDF; with formats configured it
+  switches those. **`F`** hides the filters by overriding them with none, and shows them by
+  taking that override away; a grid with no filters is not offered it.
+- **`X`** is offered once a row has been clicked and a details component is provided. It opens
+  what `viewDetailsClicks` opens (§10), without the clicks.
+- **Toolbar buttons** with `ActionButton.shortcut` join the list under their own key, and the key
+  clicks the button: its confirmation, its menu or its file picker open as they do for a click.
+  A key the grid already uses wins.
+- **These can switch on what a page left off** — export, adding columns from the data.
+  `GridParameter.shortcuts: false` takes a grid out, for one that must stay exactly as it was
+  configured; the grid sets it on the forms inside it (the filter panel, a cell's editor), which
+  are parts of the grid and not forms of their own.
+- The text is `GRID_MESSAGES.shortcuts`; the list is built in `grid.shortcuts.ts`.

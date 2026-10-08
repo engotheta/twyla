@@ -51,6 +51,23 @@ export const SETTINGS_SW: SettingsMessages = {
     hint: 'Nafasi zaidi kati ya mistari, herufi na maneno.',
   },
 
+  keyboard: 'Kibodi',
+  shortcuts: {
+    label: 'Njia za mkato za kibodi',
+    hint: (presses) =>
+      `Bonyeza kitufe cha sehemu mara ${presses} haraka ili kuona njia zake za mkato. Zikizimwa, hakuna kitufe kilicho njia ya mkato.`,
+    view: 'Tazama njia za mkato',
+
+    scope: 'Programu',
+    dark: 'Mandhari ya giza',
+    language: 'Lugha',
+    textSize: 'Ukubwa wa maandishi',
+    compact: 'Msongamano uliobanwa',
+    contrast: 'Utofautishaji zaidi',
+    fullScreen: 'Skrini nzima',
+    settings: 'Fungua mipangilio',
+  },
+
   reset: 'Rejesha chaguo-msingi',
 
   on: 'imewashwa',

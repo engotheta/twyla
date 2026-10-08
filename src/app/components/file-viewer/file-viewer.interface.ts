@@ -131,6 +131,10 @@ export interface FileViewerParameter {
   initialZoom?: ZoomValue;
   /** PDFs: page to open on */
   initialPage?: number;
+  /** default true: the viewer joins the app's keyboard shortcuts — its key, V, pressed six times
+   *  in a quick run lists its commands, so they can be reached without first putting focus in
+   *  it. The keys it answers to while it has focus are not affected. */
+  shortcuts?: boolean;
 }
 
 /** A file whose bytes (or public URL) are in hand and whose kind is known. */

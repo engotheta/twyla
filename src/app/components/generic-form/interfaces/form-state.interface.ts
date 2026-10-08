@@ -59,11 +59,70 @@ export interface FieldChange<V = unknown> extends Omit<FormState, 'value'> {
   field: FormField;
 }
 
+/** What `optionsFunction` is asked for. SPEC §17 */
+export interface OptionsRequest<T = Record<string, unknown>> {
+  /** the search box's text, where the search is the server's (`searchMode: 'server'`); else '' */
+  search: string;
+  /** 1-based; always 1 unless the source is `paginated` */
+  page: number;
+  /** how many to answer with: `pageSize` */
+  size: number;
+  /** `OptionsParameter.filters`, as declared: the fixed criteria of every request */
+  filters: Record<string, unknown>;
+  /** the form as the request is made; `formState.value` is the top-most form's value */
+  formState: FormState<T>;
+}
+
+/** One page of raw options: the grid's `GridData` shape, so one `resFn` serves both. */
+export interface OptionsPage<T = unknown> {
+  content: T[];
+  /** how many there are in all: the select stops asking once it holds them */
+  totalLength?: number;
+  /** or, plainly, whether another page follows; it wins over `totalLength` */
+  hasMore?: boolean;
+}
+
+/** what `optionsFunction` answers with: the raw options, or a page of them */
+export type OptionsResult<T = unknown> = T[] | OptionsPage<T>;
+
 export interface OptionsParameter<T = any, V = unknown> {
   labelKey?: string;
   valueKey?: string;
   mapper?: { label: string; value: string } | ((option: T) => Option<V>);
+  /** sorts what was loaded; left to the server where the source is `paginated` */
   sortBy?: string;
   sortDirection?: 'ASC' | 'DESC';
-  optionsFunction?: (data?: unknown) => T[] | Promise<T[]> | Observable<T[]>;
+  /**
+   * The options' source: an API call, usually. Answers with the raw options (mapped by
+   * `labelKey` / `valueKey` / `mapper`), or with a page of them. Asked again whenever this
+   * parameter is a new object, the search changes (`searchMode: 'server'`) or the next page is
+   * due (`paginated`). An Observable may answer more than once, each answer replacing the last;
+   * a `paginated` source is heard once per page. SPEC §17
+   */
+  optionsFunction?: (
+    request: OptionsRequest,
+  ) => OptionsResult<T> | Promise<OptionsResult<T>> | Observable<OptionsResult<T>>;
+  /** criteria every request carries, whatever is typed: handed back as `request.filters` */
+  filters?: Record<string, unknown>;
+  /**
+   * Who narrows the options as the user types. `'local'` (default): the select, among what it
+   * has loaded. `'server'`: the source, asked again with `request.search`; the select then shows
+   * its search box whatever `searchable` says.
+   */
+  searchMode?: 'local' | 'server';
+  /** `searchMode: 'server'`: ms of quiet before a typed search is sent. Default 300 */
+  searchDebounce?: number;
+  /** `searchMode: 'server'`: nothing is asked for until this much is typed. Default 0 */
+  minSearchLength?: number;
+  /** the source answers page by page: scrolling to the end of the list asks for the next */
+  paginated?: boolean;
+  /** `request.size`. Default 25 */
+  pageSize?: number;
+  /**
+   * The raw options of values the control holds but no loaded page has (a value set from far
+   * down the list), so they show their label. Without it such a value shows as it is.
+   * (Written as a method so that a field typed for its own values — `(ids: number[]) => …` —
+   * still fits `FormField`, whose values are `unknown`.)
+   */
+  selectedFunction?(values: V[]): T[] | Promise<T[]> | Observable<T[]>;
 }

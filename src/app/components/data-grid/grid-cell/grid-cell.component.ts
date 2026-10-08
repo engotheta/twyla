@@ -167,7 +167,8 @@ export class GridCellComponent<RowType = any> {
     const key = this.column().key;
     if (!field) return { fields: [] };
     const seeded = { ...field, key: field.key || key, value: this.resolved().value } as FormField;
-    return { fields: [seeded], showFooter: false };
+    // a cell's editor is part of the grid: it is not a form with shortcuts of its own
+    return { fields: [seeded], showFooter: false, shortcuts: false };
   });
 
   protected onCellClick(): void {

@@ -12,6 +12,8 @@ export type TextSize = 'default' | 'large' | 'larger' | 'largest';
 export type FontSetting = 'default' | 'readable';
 export type TextSpacing = 'default' | 'wide';
 export type Density = 'comfortable' | 'compact';
+/** off, no key is a shortcut — the way out WCAG 2.1.4 asks of shortcuts that are single keys */
+export type ShortcutsSetting = 'on' | 'off';
 
 export interface AppSettings {
   theme: ThemeSetting;
@@ -23,6 +25,7 @@ export interface AppSettings {
   font: FontSetting;
   textSpacing: TextSpacing;
   density: Density;
+  shortcuts: ShortcutsSetting;
 }
 
 /** every value a setting may hold — what a stored value is checked against (`language` is free) */
@@ -34,6 +37,7 @@ export const SETTING_CHOICES = {
   font: ['default', 'readable'],
   textSpacing: ['default', 'wide'],
   density: ['comfortable', 'compact'],
+  shortcuts: ['on', 'off'],
 } as const satisfies { [K in Exclude<keyof AppSettings, 'language'>]: readonly AppSettings[K][] };
 
 /** how much each text size scales the page: the root font size, as a factor */

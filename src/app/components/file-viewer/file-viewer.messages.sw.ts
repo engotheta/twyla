@@ -87,6 +87,11 @@ export const FILE_VIEWER_SW: FileViewerMessages = {
     closeViewer: 'Funga kitazamaji',
   },
 
+  shortcuts: {
+    resetZoom: 'Rejesha ukuzaji',
+    titleBar: 'Upau wa kichwa',
+  },
+
   zoom: {
     fit: 'Tosheleza kwenye mwonekano',
     'fit-width': 'Tosheleza upana',

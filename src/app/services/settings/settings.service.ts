@@ -1,5 +1,15 @@
-import { computed, DestroyRef, DOCUMENT, effect, inject, Injectable, signal } from '@angular/core';
+import {
+  computed,
+  DestroyRef,
+  DOCUMENT,
+  effect,
+  inject,
+  Injectable,
+  signal,
+  untracked,
+} from '@angular/core';
 import { I18nService } from '@services/i18n/i18n.service';
+import { ShortcutsService } from '@services/shortcuts/shortcuts.service';
 import { mediaQuerySignal } from '@utils/viewport.helpers';
 import { SETTINGS_CONFIG } from './settings-config.token';
 import { AppSettings, RevealOrigin, SETTING_CHOICES, TEXT_SCALE } from './settings.interface';
@@ -9,8 +19,9 @@ const FONT_LINK_ATTRIBUTE = 'data-readable-font';
 
 /**
  * What the person set for themselves — theme, language, text size, contrast, motion, font, text
- * spacing, density — kept in localStorage and applied to `<html>`, where the stylesheets pick it
- * up (`styles/_dark.scss`, `styles/_preferences.scss`).
+ * spacing, density, keyboard shortcuts — kept in localStorage and applied: most of it to `<html>`,
+ * where the stylesheets pick it up (`styles/_dark.scss`, `styles/_preferences.scss`), the
+ * language to `I18nService` and the shortcuts' switch to `ShortcutsService`.
  *
  * `settings()` is what they chose; `dark()`, `moreContrast()`, `reducedMotion()` and `language()`
  * are what that comes to once "system" is resolved against the browser — and they stay live:
@@ -23,6 +34,7 @@ const FONT_LINK_ATTRIBUTE = 'data-readable-font';
 export class SettingsService {
   private readonly config = inject(SETTINGS_CONFIG);
   private readonly i18n = inject(I18nService);
+  private readonly shortcuts = inject(ShortcutsService);
   private readonly document = inject(DOCUMENT);
   private readonly window = this.document.defaultView;
   private readonly storage = localStorageOf(this.window);
@@ -119,6 +131,8 @@ export class SettingsService {
     );
 
     this.i18n.use(this.language());
+    // (untracked: what the service reads to switch itself is not a reason to apply again)
+    untracked(() => this.shortcuts.setEnabled(settings.shortcuts === 'on'));
     if (settings.font === 'readable') this.loadReadableFont();
   }
 

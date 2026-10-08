@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideI18n } from '@services/i18n/i18n-config.token';
 import { I18nService } from '@services/i18n/i18n.service';
+import { ShortcutsService } from '@services/shortcuts/shortcuts.service';
 import { provideSettings } from './provide-settings';
 import { DEFAULT_SETTINGS, SettingsConfigOverrides } from './settings-config.token';
 import { AppSettings } from './settings.interface';
@@ -294,6 +295,45 @@ describe('SettingsService', () => {
     TestBed.tick();
     expect(service.settings()).toMatchObject({ theme: 'dark', textSize: 'largest' });
     expect(applied()).toMatchObject({ dark: true, textSize: 'largest' });
+  });
+
+  describe('keyboard shortcuts', () => {
+    it('are on until switched off, and the switch is the shortcut service’s', () => {
+      const service = setUp();
+      const shortcuts = TestBed.inject(ShortcutsService);
+      expect(service.settings().shortcuts).toBe('on');
+      expect(shortcuts.enabled()).toBe(true);
+
+      service.update({ shortcuts: 'off' });
+      expect(shortcuts.enabled()).toBe(false);
+      expect(JSON.parse(local().getItem(KEY)!)).toMatchObject({ shortcuts: 'off' });
+
+      service.reset();
+      expect(shortcuts.enabled()).toBe(true);
+    });
+
+    it('stay off across a visit, once switched off', () => {
+      store({ shortcuts: 'off' });
+      setUp();
+      expect(TestBed.inject(ShortcutsService).enabled()).toBe(false);
+    });
+
+    it('registers the app’s own: the settings a key away', () => {
+      setUp();
+      const shortcuts = TestBed.inject(ShortcutsService);
+      const press = (key: string): void => {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      };
+
+      for (let i = 0; i < shortcuts.presses; i++) press('a');
+      const keys = shortcuts.hint()?.shortcuts.map((row) => row.id);
+      expect(keys).toEqual(expect.arrayContaining(['dark', 'language', 'textSize', 'compact']));
+
+      press('d');
+      expect(TestBed.inject(SettingsService).settings().theme).toBe('dark');
+      press('Escape');
+      expect(shortcuts.hint()).toBeNull();
+    });
   });
 
   describe('the theme reveal', () => {

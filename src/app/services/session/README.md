@@ -38,7 +38,7 @@ await session.logout(); // clears, tells the API, goes to loginUrl
 | `logout?(session)` | Best effort; the local session is cleared regardless. |
 
 `createFakeSessionApi()` runs entirely in the browser, for demos, tests and backends that don't
-exist yet. The studio signs in for real against dummyjson.com
+exist yet. Twyla signs in for real against dummyjson.com
 (`configs/dummyjson-session.api.ts`) and fakes the rest.
 
 ## Guards

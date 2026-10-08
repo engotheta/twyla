@@ -23,3 +23,9 @@ export function syncOverlayContainer(doc: Document, container: HTMLElement): voi
       : null;
   if (parent && container.parentElement !== parent) parent.appendChild(container);
 }
+
+/** Puts the whole page in browser full screen, or takes it out again. */
+export function toggleDocumentFullscreen(doc: Document): void {
+  if (doc.fullscreenElement) void doc.exitFullscreen();
+  else void doc.documentElement.requestFullscreen();
+}

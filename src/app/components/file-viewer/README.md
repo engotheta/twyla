@@ -67,11 +67,34 @@ How the viewer handles these sources:
 | audio / video | the browser's player. URLs are streamed rather than downloaded first. | — |
 | doc, xls, ppt, pptx… | the app's `convert` hook if there is one, then Office Online if enabled, otherwise a "Preview not available" card with Download | — |
 
-Every viewer also has Download, Open in new tab and Fullscreen. Keyboard shortcuts:
+Every viewer also has Download, Open in new tab and Fullscreen.
+
+## Keyboard shortcuts
+
+**While the viewer has focus,** a single key:
 
 - `+` / `-` / `0`: zoom in, zoom out, reset
 - `R`: rotate
 - ← / →: previous / next file
+
+**From anywhere on the page,** the viewer is one of the app's shortcut scopes
+(`file-viewer.shortcuts.ts`, [shortcuts README](../../services/shortcuts/README.md)): **V** six
+times in a quick run lists its keys, and one more key runs one.
+
+| Key | |
+| --- | --- |
+| `+` `-` `0` | zoom in, zoom out, reset |
+| `R` | rotate |
+| `N` `P` | next / previous file |
+| `F` | find; the hint closes, and focus goes to the find bar |
+| `H` | thumbnails |
+| `S` | full screen |
+| `D` | download |
+| `T` | the title bar, for as long as the viewer is on screen |
+
+A key is offered only where the file shown allows it and the toolbar was not told to hide it
+(`toolbar: { download: false }` takes `D` away too). `FileViewerParameter.shortcuts: false`
+takes a viewer out.
 
 ## Text, languages and themes
 

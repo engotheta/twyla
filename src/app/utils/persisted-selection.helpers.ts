@@ -5,7 +5,7 @@
  * selection is restored across a page refresh without any wiring from the consumer.
  */
 
-const STORAGE_PREFIX = 'studio.tab-state.';
+const STORAGE_PREFIX = 'twyla.tab-state.';
 
 /** keys already handed out during this session, so two structurally-identical groups (e.g. same
  *  labels, same route) rendered on the same view don't read/write the same storage slot */

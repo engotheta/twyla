@@ -1,9 +1,10 @@
-# Studio
+# Twyla
 
 An Angular 21 starter built from reusable parts: an app layout with route-driven menus, session
 pages and guards, and config-driven components (data grid, generic form, details, contents view,
 file viewer, action buttons). Tailwind v4 and Angular Material for styling; Vitest for unit tests.
-Light and dark themes, English and Swahili, and settings each person keeps for themselves.
+Light and dark themes, English and Swahili, settings each person keeps for themselves, and
+keyboard shortcuts for every component.
 
 ```bash
 npm start        # ng serve, http://localhost:4200
@@ -25,7 +26,7 @@ src/
    ├─ configs/              app wiring that app.config.ts reads (today: the demo's)
    ├─ utils/                helpers and pipes that several features share
    ├─ services/             app-wide features: fetch, i18n, loading, notification, session,
-   │                        settings, view
+   │                        settings, shortcuts, view
    ├─ components/           reusable UI, one folder each
    ├─ layout/               the app frame: layout, header, sidebar, menu, page-header, auth-layout
    └─ routes/               pages, grouped into modules
@@ -41,6 +42,8 @@ offers, and its `README.md` or `SPEC.md`, where it has one, explains how to use 
   its translations, route names.
 - [`services/settings/README.md`](src/app/services/settings/README.md): theme, language and the
   accessibility settings; writing code that is ready for dark mode and larger text.
+- [`services/shortcuts/README.md`](src/app/services/shortcuts/README.md): the keyboard shortcuts
+  every component answers to, and giving a feature its own.
 - [`components/generic-form/README.md`](src/app/components/generic-form/README.md) and
   [`SPEC.md`](src/app/components/generic-form/SPEC.md).
 - [`components/data-grid/SPEC.md`](src/app/components/data-grid/SPEC.md).
@@ -70,6 +73,7 @@ offers, and its `README.md` or `SPEC.md`, where it has one, explains how to use 
    | `.helpers.ts` `.constants.ts` | pure functions, constants |
    | `.guards.ts` `.interceptor.ts` `.api.ts` `.forms.ts` | route guards, an HTTP interceptor, a backend adapter, form configs |
    | `.messages.ts`, `.messages.<code>.ts` | a feature's built-in text in English, and in another language (`.messages.sw.ts`) |
+   | `.shortcuts.ts` | a feature's keyboard shortcuts: its scope, and the function that builds the list |
    | `.demo.ts` | the config a demo page feeds its component |
 
    A file that is one named thing may go without a suffix (`validators.ts`,
@@ -110,6 +114,9 @@ offers, and its `README.md` or `SPEC.md`, where it has one, explains how to use 
 - **Settings:** `provideSettings({ storageKey, defaults })`. The inline script in `index.html`
   that prevents a light flash reads the same key: change the two together. `showSettings: false`
   in the layout config hides the settings button.
+- **Keyboard shortcuts:** on by default; each person can turn them off in Settings.
+  `provideShortcuts({ … })` changes how many presses arm a scope, re-keys or removes a shortcut,
+  or (`enabled: false`) turns them off for the app. See the shortcuts README.
 - **Backend sign-in:** write a `SessionApi` and pass it to `provideSessionConfig`.
 - **Modules:** add `routes/<module>/` and its entry in `app.routes.ts`; see the layout README.
 - **Remove the demos:** delete `routes/components-demo/`, `routes/layout-demo/`,

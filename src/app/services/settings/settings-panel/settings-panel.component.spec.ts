@@ -1,6 +1,9 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Subject } from 'rxjs';
 import { provideI18n } from '@services/i18n/i18n-config.token';
+import { provideShortcuts } from '@services/shortcuts/shortcuts-config.token';
+import { ShortcutsService } from '@services/shortcuts/shortcuts.service';
 import { provideSettings } from '../provide-settings';
 import { SettingsService } from '../settings.service';
 import { SettingsPanelComponent } from './settings-panel.component';
@@ -186,12 +189,88 @@ describe('SettingsPanelComponent', () => {
       'Appearance',
       'Language',
       'Accessibility',
+      'Keyboard',
     ]);
 
     fixture.componentRef.setInput('headingLevel', 2);
     await settle();
     expect(host.querySelectorAll('h3').length).toBe(0);
-    expect(host.querySelectorAll('h2').length).toBe(3);
+    expect(host.querySelectorAll('h2').length).toBe(4);
+  });
+
+  describe('keyboard shortcuts', () => {
+    const viewButton = (): HTMLButtonElement =>
+      Array.from(host.querySelectorAll('button')).find((b) => text(b).includes('View shortcuts'))!;
+
+    it('has a switch that turns them off for this person, and on again', async () => {
+      const shortcuts = TestBed.inject(ShortcutsService);
+      expect(toggle('Keyboard shortcuts').getAttribute('aria-checked')).toBe('true');
+      expect(shortcuts.enabled()).toBe(true);
+
+      toggle('Keyboard shortcuts').click();
+      await settle();
+      expect(service.settings().shortcuts).toBe('off');
+      expect(shortcuts.enabled()).toBe(false);
+      expect(announce).toHaveBeenLastCalledWith('Keyboard shortcuts: off', 'polite');
+
+      toggle('Keyboard shortcuts').click();
+      await settle();
+      expect(shortcuts.enabled()).toBe(true);
+    });
+
+    it('says how many presses arm a section', () => {
+      const hint = document.getElementById(
+        toggle('Keyboard shortcuts').getAttribute('aria-describedby')!,
+      );
+      expect(text(hint)).toContain('6 times');
+    });
+
+    it('opens the list of shortcuts — while there are any to list', async () => {
+      const openPanel = vi
+        .spyOn(TestBed.inject(ShortcutsService), 'openPanel')
+        .mockResolvedValue(undefined);
+
+      viewButton().click();
+      expect(openPanel).toHaveBeenCalledTimes(1);
+
+      toggle('Keyboard shortcuts').click();
+      await settle();
+      expect(viewButton().disabled).toBe(true);
+    });
+
+    it('as a sheet, closes itself first: only what is in an open dialog can be listed', async () => {
+      const shortcuts = TestBed.inject(ShortcutsService);
+      const openPanel = vi.spyOn(shortcuts, 'openPanel').mockResolvedValue(undefined);
+      const closed = new Subject<void>();
+      const sheet = { close: vi.fn(() => closed.next()), afterClosed: () => closed };
+      fixture.componentRef.setInput('dialogRef', sheet);
+      await settle();
+
+      viewButton().click();
+
+      expect(sheet.close).toHaveBeenCalled();
+      expect(openPanel).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe('SettingsPanelComponent in an app without shortcuts', () => {
+  it('has no keyboard section', async () => {
+    TestBed.configureTestingModule({
+      imports: [SettingsPanelComponent],
+      providers: [
+        provideShortcuts({ enabled: false }),
+        provideSettings({ storageKey: 'test.settings' }),
+      ],
+    });
+    const fixture = TestBed.createComponent(SettingsPanelComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const headings = Array.from(host.querySelectorAll('h3')).map((h) => h.textContent?.trim());
+    expect(headings).toEqual(['Appearance', 'Accessibility']);
+    expect(host.querySelectorAll('[role="switch"]').length).toBe(3);
   });
 });
 
@@ -218,6 +297,7 @@ describe('SettingsPanelComponent in an app with one language', () => {
       (legend.textContent ?? '').replace(/\s+/g, ' ').trim(),
     );
     expect(legends).toEqual(['Theme', 'Text size', 'Density', 'Contrast']);
-    expect(host.querySelectorAll('[role="switch"]').length).toBe(3);
+    // reduce motion, readable font, wider spacing — and keyboard shortcuts
+    expect(host.querySelectorAll('[role="switch"]').length).toBe(4);
   });
 });

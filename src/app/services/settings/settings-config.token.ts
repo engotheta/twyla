@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   font: 'default',
   textSpacing: 'default',
   density: 'comfortable',
+  shortcuts: 'on',
 };
 
 export const DEFAULT_SETTINGS_CONFIG: SettingsConfig = {

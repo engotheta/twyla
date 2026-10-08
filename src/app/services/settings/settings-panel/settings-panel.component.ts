@@ -9,10 +9,12 @@ import {
   input,
 } from '@angular/core';
 import { MatButton } from '@angular/material/button';
+import { MatDialogRef } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { I18nService } from '@services/i18n/i18n.service';
 import { injectMessages } from '@services/i18n/message-bundle';
+import { ShortcutsService } from '@services/shortcuts/shortcuts.service';
 import { AppSettings, RevealOrigin } from '../settings.interface';
 import { SETTINGS_MESSAGES } from '../settings.messages';
 import { SettingsService } from '../settings.service';
@@ -33,6 +35,7 @@ const SWITCHES = {
   motion: { on: 'reduced', off: 'system' },
   font: { on: 'readable', off: 'default' },
   textSpacing: { on: 'wide', off: 'default' },
+  shortcuts: { on: 'on', off: 'off' },
 } as const;
 type SwitchKey = keyof typeof SWITCHES;
 
@@ -56,11 +59,14 @@ let nextId = 0;
 export class SettingsPanelComponent {
   private readonly service = inject(SettingsService);
   private readonly i18n = inject(I18nService);
+  private readonly shortcuts = inject(ShortcutsService);
   private readonly announcer = inject(LiveAnnouncer);
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
 
   /** the level of the section headings: 3 under a dialog's title, 2 under a page's */
   readonly headingLevel = input<2 | 3>(3);
+  /** set by `ViewService` where the panel is a sheet: the dialog it is in */
+  readonly dialogRef = input<MatDialogRef<unknown>>();
 
   protected readonly t = injectMessages(SETTINGS_MESSAGES);
   protected readonly settings = this.service.settings;
@@ -69,6 +75,9 @@ export class SettingsPanelComponent {
   protected readonly id = `settings-${nextId++}`;
   /** an app in one language has no language to choose */
   protected readonly languageChoice = this.i18n.languages.length > 1;
+  /** …and one without shortcuts has none to switch off */
+  protected readonly shortcutsOffered = this.shortcuts.available;
+  protected readonly presses = this.shortcuts.presses;
 
   protected readonly choices = computed<Record<ChoiceKey, Choice[]>>(() => {
     const t = this.t();
@@ -123,6 +132,19 @@ export class SettingsPanelComponent {
   protected reset(): void {
     this.service.reset();
     void this.announcer.announce(this.t().resetDone, 'polite');
+  }
+
+  /** Opens the list of every shortcut on the page. As a sheet this panel is a dialog, and with
+   *  one open only what is inside it can be reached: it closes first, and the list opens over
+   *  the page itself. */
+  protected viewShortcuts(): void {
+    const sheet = this.dialogRef();
+    if (!sheet) {
+      void this.shortcuts.openPanel();
+      return;
+    }
+    sheet.afterClosed().subscribe(() => void this.shortcuts.openPanel());
+    sheet.close();
   }
 
   private announce(setting: string, value: string): void {

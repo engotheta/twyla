@@ -16,6 +16,19 @@ export const CONTENTS_EN = {
   exitFullScreen: 'Exit full screen',
   fullScreenPane: (pane: string) => `Full screen: ${pane}`,
   exitFullScreenPane: (pane: string) => `Exit full screen: ${pane}`,
+
+  /** the keyboard shortcuts (`contents.shortcuts.ts`): what each key switches */
+  shortcuts: {
+    scope: 'Contents view',
+    tabs: 'Contents in tabs',
+    vertical: 'Tabs down the side',
+    resizable: 'Resizable panes',
+    collapsible: 'Collapse buttons',
+    fullscreen: 'Full-screen buttons',
+    fit: 'Fit to the window',
+    resetSizes: 'Even pane sizes',
+    reset: 'Back to how it was set up',
+  },
 };
 
 export type ContentsMessages = typeof CONTENTS_EN;

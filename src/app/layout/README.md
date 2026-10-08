@@ -18,7 +18,7 @@ module rail │ sidebar (brand, module card, menu) │ header
 | `AppFooterComponent` | `app-footer` | © year and owner, links, version. |
 | `UserMenuComponent` | `user-menu` | Avatar or initials and the account menu. Shows "Sign in" when nobody is signed in. |
 | `MenuService` | — | `modules`, `module`, `menu` and `trail`, all signals. |
-| `PageTitleStrategy` | — | Document titles such as "Data grid · Studio". |
+| `PageTitleStrategy` | — | Document titles such as "Data grid · Twyla". |
 
 Page headers (`<page-header>`) live in `layout/page-header`, imported from `@layout/page-header`.
 The public pages share `AuthLayoutComponent` (`layout/auth-layout`): the auth header, the page
@@ -128,6 +128,21 @@ A barrel loads every component it re-exports into the initial bundle.
   messages.
 
 See the [i18n README](../services/i18n/README.md).
+
+## Keyboard shortcuts
+
+The layout is one of the app's shortcut scopes (`layout.shortcuts.ts`): **L** six times in a
+quick run, then
+
+| Key | |
+| --- | --- |
+| `S` | Shows or hides the navigation: the docked sidebar, or the drawer on a narrow screen. |
+| `M` | Moves focus to the main content, past the header and the menus: the skip link's job. |
+| `H` | Goes to `homeUrl`. |
+
+A `headerActions` button with a `shortcut` of its own (`{ icon: 'add', shortcut: 'n', … }`) joins
+these under its key, which clicks the button. See the
+[shortcuts README](../services/shortcuts/README.md).
 
 ## Accessibility
 

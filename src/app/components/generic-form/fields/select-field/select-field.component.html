@@ -1,0 +1,173 @@
+@let f = state();
+@let opts = resolvedOptions();
+@let text = t().select;
+
+@switch (f.variant ?? 'dropdown') {
+  @case ('dropdown') {
+    @let remote = remoteState();
+
+    <mat-form-field
+      [appearance]="appearance()"
+      class="w-full"
+      [class.hide-subscript]="!showSubscript()"
+    >
+      @if (f.showLabel !== false && f.label) {
+        <mat-label>{{ f.label }}</mat-label>
+      }
+      <mat-select
+        [formControl]="control()"
+        [multiple]="f.multiple === true"
+        [compareWith]="compare()"
+        [sortComparator]="sortSelected"
+        [required]="required()"
+        (openedChange)="onOpenedChange($event)"
+      >
+        @if (searchable()) {
+          <div
+            class="sticky top-0 z-10 bg-(--overlay-surface) p-2 backdrop-blur-lg"
+            (keydown)="onSearchKeydown($event)"
+          >
+            <input
+              #searchInput
+              type="text"
+              class="w-full rounded-lg border border-(--field-outline) px-2 py-1 text-sm"
+              [placeholder]="text.search"
+              [attr.aria-label]="text.searchOptions"
+              [value]="search()"
+              (input)="onSearchInput($event)"
+            />
+            @if (remote.loading) {
+              <!-- decoration only: what is loading is said by the rows below and announced -->
+              <div
+                class="absolute inset-x-2 bottom-0.5 h-0.5 animate-pulse rounded-full bg-primary motion-reduce:animate-none"
+                aria-hidden="true"
+              ></div>
+            }
+          </div>
+        }
+
+        <!-- The options' own element. Material's panel is the listbox, and a listbox may hold
+             options only — not the search box above. So where there is a search box this takes
+             the listbox role over from the panel (`adoptListbox`), and the box sits beside the
+             list instead of inside it; with no search box it is only a wrapper. -->
+        <div #listbox [attr.role]="searchable() ? 'listbox' : 'presentation'">
+          <!-- what is selected but not mounted below (searched, paged or scrolled away) stays
+               mounted here: the select takes its value, and the label it shows, from its options -->
+          @for (opt of retainedOptions(); track opt.value) {
+            <mat-option
+              [value]="opt.value"
+              [disabled]="!retainedShown()"
+              [class.hidden!]="!retainedShown()"
+              >{{ opt.label }}</mat-option
+            >
+          }
+
+          @if (virtual()) {
+            <cdk-virtual-scroll-viewport [itemSize]="42" [style.height.px]="viewportHeight()">
+              <mat-option
+                *cdkVirtualFor="let opt of filteredOptions()"
+                [value]="opt.value"
+                [disabled]="opt.disabled"
+              >
+                {{ opt.label }}
+              </mat-option>
+            </cdk-virtual-scroll-viewport>
+          } @else {
+            @for (opt of filteredOptions(); track opt.value) {
+              <mat-option [value]="opt.value" [disabled]="opt.disabled">{{ opt.label }}</mat-option>
+            }
+          }
+
+          <!-- rows that say where the list stands are options too: the listbox holds nothing else -->
+          @if (statusRow(); as status) {
+            <mat-option disabled>{{ status }}</mat-option>
+          }
+          @if (remote.loadingMore) {
+            <mat-option disabled>{{ text.loadingMore }}</mat-option>
+          }
+          @if (pagesOnScroll()) {
+            <div
+              class="h-px"
+              aria-hidden="true"
+              scrollEnd
+              [scrollEndKey]="remote.options.length"
+              (scrollEnd)="loadMore()"
+            ></div>
+          }
+        </div>
+      </mat-select>
+      @if (f.hint && !errorMessage()) {
+        <mat-hint>{{ f.hint }}</mat-hint>
+      }
+      @if (errorMessage(); as message) {
+        <mat-error>{{ message }}</mat-error>
+      }
+    </mat-form-field>
+  }
+  @case ('radio') {
+    <div
+      class="flex flex-col gap-1"
+      [matTooltip]="f.tooltip ?? ''"
+      [matTooltipDisabled]="!f.tooltip"
+    >
+      @if (f.showLabel !== false && f.label) {
+        <span class="text-sm font-medium">{{ f.label }}</span>
+      }
+      <mat-radio-group [formControl]="control()">
+        @for (opt of opts; track opt.value) {
+          <mat-radio-button [value]="opt.value" [disabled]="opt.disabled">{{
+            opt.label
+          }}</mat-radio-button>
+        }
+      </mat-radio-group>
+      @if (errorMessage(); as message) {
+        <span class="text-xs text-red-600">{{ message }}</span>
+      }
+    </div>
+  }
+  @case ('checkbox') {
+    <div
+      class="flex flex-col gap-1"
+      [matTooltip]="f.tooltip ?? ''"
+      [matTooltipDisabled]="!f.tooltip"
+    >
+      @if (f.showLabel !== false && f.label) {
+        <span class="text-sm font-medium">{{ f.label }}</span>
+      }
+      @for (opt of opts; track opt.value) {
+        <mat-checkbox
+          [checked]="isChecked(opt.value)"
+          [disabled]="opt.disabled || status().disabled"
+          (change)="toggleValue(opt.value)"
+        >
+          {{ opt.label }}
+        </mat-checkbox>
+      }
+      @if (errorMessage(); as message) {
+        <span class="text-xs text-red-600">{{ message }}</span>
+      }
+    </div>
+  }
+  @default {
+    <!-- 'toggle' | 'button' -->
+    <div
+      class="flex flex-col gap-1"
+      [matTooltip]="f.tooltip ?? ''"
+      [matTooltipDisabled]="!f.tooltip"
+    >
+      @if (f.showLabel !== false && f.label) {
+        <span class="text-sm font-medium">{{ f.label }}</span>
+      }
+      <mat-button-toggle-group [formControl]="control()" [multiple]="f.multiple === true">
+        @for (opt of opts; track opt.value) {
+          <mat-button-toggle [value]="opt.value" [disabled]="opt.disabled">{{
+            opt.label
+          }}</mat-button-toggle>
+        }
+      </mat-button-toggle-group>
+      @if (errorMessage(); as message) {
+        <span class="text-xs text-red-600">{{ message }}</span>
+      }
+    </div>
+  }
+}

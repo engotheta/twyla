@@ -90,6 +90,11 @@ export interface DetailsParameter<TEntity = Record<string, unknown>> extends Det
   tableConfig?: TableConfig;
   arrayConfig?: ArrayConfig;
   groupConfig?: FieldGroupConfig;
+
+  // default true: the component answers its keyboard shortcuts — its key, D, pressed six times in
+  // a quick run lists them: a layout per digit, and what is shown (lists expanded, groups in
+  // tabs, fields with no value). They last while it is on screen; false leaves it as configured.
+  shortcuts?: boolean;
 }
 
 export interface ModifierProps {

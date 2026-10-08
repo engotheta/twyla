@@ -45,6 +45,12 @@ export const LAYOUT_SW: LayoutMessages = {
     links: 'Kijachini',
   },
 
+  shortcuts: {
+    scope: 'Mpangilio',
+    sidebar: 'Menyu',
+    main: 'Nenda kwenye maudhui makuu',
+  },
+
   page: {
     back: 'Rudi',
     view: 'Mwonekano',

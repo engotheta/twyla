@@ -15,6 +15,7 @@ import { provideSessionConfig } from './services/session/session-config.token';
 import { sessionInterceptor } from './services/session/session.interceptor';
 import { SessionService } from './services/session/session.service';
 import { provideSettings } from './services/settings/provide-settings';
+import { provideShortcuts } from './services/shortcuts/shortcuts-config.token';
 import { provideOverlayLandmark } from './services/view/landmark-overlay-container';
 import { APP_ROUTES } from './app.routes';
 import {
@@ -31,7 +32,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     // query params (`?token=`, `?returnUrl=`) arrive as page inputs
     provideRouter(APP_ROUTES, withComponentInputBinding()),
-    // document titles: "Data grid · Studio"
+    // document titles: "Data grid · Twyla"
     { provide: TitleStrategy, useClass: PageTitleStrategy },
     // requests carry the session's token, and the language the user reads (`Accept-Language`)
     provideHttpClient(withFetch(), withInterceptors([sessionInterceptor, languageInterceptor])),
@@ -44,7 +45,10 @@ export const appConfig: ApplicationConfig = {
     }),
     // the user's own theme, language, text size, … — applied as the app starts. The key and the
     // default theme are also known to the script in index.html that prevents a light flash.
-    provideSettings({ storageKey: 'studio.settings' }),
+    provideSettings({ storageKey: 'twyla.settings' }),
+    // keyboard shortcuts: a component's key, pressed six times in a quick run, lists what its
+    // keys do. `keys` re-keys or removes one; `enabled: false` turns the lot off for the app.
+    provideShortcuts(),
     // menus, selects and tooltips open under <body>: a named landmark there keeps them inside one
     provideOverlayLandmark(),
     // the demo pages talk to dummyjson.com, so their slugs resolve against it; the fetch demo's
@@ -62,14 +66,14 @@ export const appConfig: ApplicationConfig = {
     // sign-in is real (dummyjson.com, emilys / emilyspass); sign-up and password resets are local
     provideSessionConfig(() => ({
       api: dummyJsonSessionApi(),
-      storageKey: 'studio.session',
+      storageKey: 'twyla.session',
       tokenUrls: ['https://dummyjson.com/auth/'],
       demoCredentials: DUMMYJSON_DEMO_CREDENTIALS,
     })),
     provideLayoutConfig(() => {
       const session = inject(SessionService);
       return {
-        brand: { name: 'Studio', tagline: 'An Angular starter built from reusable parts.' },
+        brand: { name: 'Twyla', tagline: 'An Angular starter built from reusable parts.' },
         user: session.user,
         canAccess: session.canAccess,
         signOut: () => void session.logout(),
@@ -82,14 +86,14 @@ export const appConfig: ApplicationConfig = {
         onNotification: markNotificationRead,
         markAllRead: markAllNotificationsRead,
         footer: {
-          owner: 'Studio',
+          owner: 'Twyla',
           links: [
             { label: 'Home', route: '/home' },
             { label: 'Angular', href: 'https://angular.dev' },
           ],
           version: '0.0.0',
         },
-        storageKey: 'studio.layout',
+        storageKey: 'twyla.layout',
         // menu and page names are written in English in the routes: their other languages
         translate: injectPhrases(ROUTE_NAMES),
       };

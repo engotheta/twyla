@@ -99,6 +99,12 @@ export const FILE_VIEWER_EN = {
     closeViewer: 'Close viewer',
   },
 
+  /** the shortcuts the toolbar has no words for yet (`file-viewer.shortcuts.ts`) */
+  shortcuts: {
+    resetZoom: 'Reset zoom',
+    titleBar: 'Title bar',
+  },
+
   zoom: {
     fit: 'Fit to view',
     'fit-width': 'Fit width',

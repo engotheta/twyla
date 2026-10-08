@@ -35,11 +35,13 @@ import { ActionButtonsComponent } from '@components/action-buttons/action-button
 import { I18nService } from '@services/i18n/i18n.service';
 import { provideMaterialIntl } from '@services/i18n/material-intl';
 import { injectMessages } from '@services/i18n/message-bundle';
+import { registerShortcuts } from '@services/shortcuts/shortcuts.service';
 import { mergeClasses } from '@utils/class-name.helpers';
 import { ViewService } from '@services/view';
 import { ColumnResizeDirective } from './column-resize.directive';
 import { GridCellComponent } from './grid-cell/grid-cell.component';
 import { GRID_MESSAGES } from './grid.messages';
+import { GRID_SCOPE, gridShortcuts } from './grid.shortcuts';
 import { GridRow } from './interfaces/grid-cell.interface';
 import { GridColumn_ } from './interfaces/grid-column.interface';
 import { resolveSyncDynamic } from './helpers/grid-dynamic.helpers';
@@ -157,8 +159,35 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   );
 
   private clickCounts = new Map<unknown, number>();
+  /** the row a click last landed on: what the "details of the row last clicked" shortcut opens */
+  private readonly lastClickedRow = signal<RowType | undefined>(undefined);
 
   constructor() {
+    // SPEC.md §14: G, six times in a quick run, lists the grid's shortcuts
+    registerShortcuts(
+      GRID_SCOPE,
+      () =>
+        gridShortcuts<RowType>(
+          {
+            instance: () => this.instance,
+            showToolbar: this.showToolbar,
+            showSearch: this.showSearch,
+            showPaginator: this.showPaginator,
+            canViewDetails: () => !!this.rowDetailsComponent && this.lastClickedRow() !== undefined,
+            viewDetails: () => {
+              const row = this.lastClickedRow();
+              if (row !== undefined) this.viewDetails(row);
+            },
+          },
+          this.t,
+        ),
+      {
+        label: () => this.t().shortcuts.scope,
+        name: () => this.instance?.params().label,
+        enabled: () => !!this.instance && this.instance.params().shortcuts !== false,
+      },
+    );
+
     // Keep `headerRowOffsets` in sync with the rendered header's real height so grouped
     // header rows stack (each sticks below the previous) instead of piling up at top: 0.
     afterNextRender(() => {
@@ -405,6 +434,7 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
   // ── row interaction ──
 
   protected onRowClick(row: RowType): void {
+    this.lastClickedRow.set(row);
     this.instance.params().rowClick?.(row);
     const configured = this.instance.params().viewDetailsClicks;
     // explicit opt-out, or no details component registered (see ROW_DETAILS_COMPONENT)
@@ -418,7 +448,12 @@ export class DataGridComponent<RowType = any> implements OnInit, OnDestroy {
     if (!(count >= threshold)) return;
 
     this.clickCounts.set(id, 0);
+    this.viewDetails(row);
+  }
 
+  /** every field of a row, in a dialog (the `ROW_DETAILS_COMPONENT`, where one is registered) */
+  private viewDetails(row: RowType): void {
+    if (!this.rowDetailsComponent) return;
     this.view.open(this.rowDetailsComponent, {
       title: () => this.t().details,
       width: '640px',

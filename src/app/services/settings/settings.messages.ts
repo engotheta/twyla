@@ -54,6 +54,25 @@ export const SETTINGS_EN = {
     hint: 'More room between lines, letters and words.',
   },
 
+  keyboard: 'Keyboard',
+  shortcuts: {
+    label: 'Keyboard shortcuts',
+    hint: (presses: number) =>
+      `Press a section's key ${presses} times quickly to see its shortcuts. Off, no key is a shortcut.`,
+    /** opens the list of every shortcut on the page */
+    view: 'View shortcuts',
+
+    // the app's own shortcuts (`settings.shortcuts.ts`): what each key switches
+    scope: 'App',
+    dark: 'Dark theme',
+    language: 'Language',
+    textSize: 'Text size',
+    compact: 'Compact density',
+    contrast: 'More contrast',
+    fullScreen: 'Full screen',
+    settings: 'Open settings',
+  },
+
   reset: 'Reset to defaults',
 
   // what a screen reader hears after a change

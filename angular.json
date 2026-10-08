@@ -7,7 +7,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "studio": {
+    "twyla": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -128,10 +128,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "studio:build:production"
+              "buildTarget": "twyla:build:production"
             },
             "development": {
-              "buildTarget": "studio:build:development"
+              "buildTarget": "twyla:build:development"
             }
           },
           "defaultConfiguration": "development"

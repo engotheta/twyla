@@ -108,6 +108,16 @@ export class ActionButtonComponent<D = unknown> implements OnDestroy {
     acceptAttribute(this.viewModel().fileConfig?.extensions),
   );
 
+  /** `ActionButton.shortcut`: the key this button has in the shortcuts of the component it sits
+   *  in. `ShortcutsService` finds it by the attribute this becomes, and clicks the button. */
+  protected readonly shortcutKey = computed(() => this.button().shortcut || null);
+  /** …and the name it is listed under there */
+  protected readonly shortcutLabel = computed(() => {
+    if (!this.shortcutKey()) return null;
+    const vm = this.viewModel();
+    return vm.ariaLabel || this.displayLabel() || vm.tooltip || this.t().action;
+  });
+
   constructor() {
     this.subs.add(
       toObservable(computed(() => this.viewModel().fileConfig?.removeFile$))

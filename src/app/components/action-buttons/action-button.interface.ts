@@ -55,6 +55,16 @@ export interface ActionButton<D = any> {
   visible?: DynamicValue<boolean, D>;
 
   /**
+   * A key of its own in the keyboard shortcuts of the component it sits in: one character, such
+   * as `'n'`. A grid's toolbar button with one joins the grid's shortcuts (G six times, then the
+   * key), a details header's the details', a layout header action the layout's. The key clicks
+   * the button, so its confirmation, its menu or its file picker open as for a click. It gives
+   * way to a key the component already uses, has no effect outside a component with shortcuts,
+   * and is not for row buttons, where one key would mean a button in every row.
+   */
+  shortcut?: string;
+
+  /**
    * Where the button goes in the app: a router URL, or the commands of a `routerLink`. In a menu
    * the item is a real link — it can be opened in a new tab — and `click`, if there is one, runs
    * as it is followed; a confirmation or a file picker has no place on a link. A button outside

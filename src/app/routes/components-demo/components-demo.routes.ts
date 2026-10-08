@@ -1,7 +1,7 @@
 import { findFirstAccessibleRoute, TypedRoutes } from '@layout';
 
 /**
- * The Components module — the studio's demos. Every `isMenu` route is a side-menu entry; a
+ * The Components module — Twyla's demos. Every `isMenu` route is a side-menu entry; a
  * `path: ''` route with children is a menu group that adds nothing to the URL.
  */
 export const COMPONENTS_DEMO_ROUTES: TypedRoutes = [
@@ -40,6 +40,11 @@ export const COMPONENTS_DEMO_ROUTES: TypedRoutes = [
         path: 'form',
         data: { isMenu: true, name: 'Generic form' },
         loadComponent: () => import('./form/form.page').then((m) => m.FormPage),
+      },
+      {
+        path: 'select',
+        data: { isMenu: true, name: 'Select options' },
+        loadComponent: () => import('./form/select.page').then((m) => m.SelectPage),
       },
       {
         path: 'buttons',

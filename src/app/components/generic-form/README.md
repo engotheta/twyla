@@ -25,6 +25,7 @@ generic-form/
 ├── fields/                       one renderer per field type, see below
 ├── validators.ts                 ready-made validators and the password rules
 ├── form-engine.service.ts        build / observers / submit / lists / attachments
+├── form.shortcuts.ts             the form's keyboard shortcuts (SPEC §18)
 ├── generic-form.component.ts     renderer shell (stepper / footer / modal)
 ├── generic-form.component.html
 └── stepper-progress-indicator.directive.ts
@@ -46,7 +47,9 @@ fields/
 ├── input-field.component.ts       input-field
 ├── boolean-field.component.ts     boolean-field    (checkbox / toggle / radio)
 ├── select-field/                  select-field     (dropdown / toggle / button / checkbox / radio)
-│   └── options.helpers.ts         optionsParameter raw-data mapping
+│   ├── options-source.ts          an optionsParameter's requests: search, pages, latest wins
+│   ├── options.helpers.ts         raw-data mapping, the request, pages
+│   └── scroll-end.directive.ts    the end of the list came into view: the next page
 ├── textarea-field.component.ts    textarea-field   (textarea / richText)
 ├── date-field.component.ts        date-field       (date / dateTime / time / monthYear / year)
 ├── color-field/                   color-field
@@ -87,6 +90,60 @@ const params: FormParameter<{ name: string; country: string; city: string }> = {
 ```html
 <generic-form [params]="params" />
 ```
+
+### Selects backed by an API
+
+`options` is a list; `optionsParameter` is a source with how to map, search and page it (SPEC §17).
+`optionsFunction` gets one request (`search`, `page`, `size`, `filters`, `formState`) and answers
+with the raw options, or a page of them.
+
+```typescript
+const api = inject(FetchService);
+
+const fields: FormField[] = [
+  {
+    type: FieldType.select,
+    key: 'region',
+    // API options: fetched once, searched in the browser
+    optionsParameter: { labelKey: 'name', valueKey: 'id', optionsFunction: () => api.fetch$({ url: 'regions' }) },
+  },
+  {
+    type: FieldType.select,
+    key: 'district',
+    // fetched on a form event: a new parameter, and so a new list, each time `region` changes
+    optionsParameter: observe('region', (region: number | null) => ({
+      labelKey: 'name',
+      valueKey: 'id',
+      filters: { region },
+      optionsFunction: ({ filters }) =>
+        filters['region'] ? api.fetch$({ url: 'districts', method: 'GET', variables: filters }) : [],
+    })),
+  },
+  {
+    type: FieldType.select,
+    key: 'owner',
+    optionsParameter: {
+      searchMode: 'server', // API filter: what is typed is sent as `request.search`
+      paginated: true, // scrolling to the end of the list asks for the next page
+      pageSize: 20,
+      filters: { active: true }, // fixed: on every request, whatever is typed
+      mapper: (user: User) => ({ label: user.fullName, value: user.id }),
+      optionsFunction: ({ search, page, size, filters }) =>
+        api.fetch$({
+          url: 'users',
+          method: 'GET',
+          variables: { q: search, page, size, ...filters },
+          resFn: (res: UsersResponse) => ({ content: res.users, totalLength: res.total }),
+        }),
+      // the label of a value that is not on a loaded page
+      selectedFunction: (ids: number[]) => api.fetch$({ url: 'users/by-ids', variables: { ids } }),
+    },
+  },
+];
+```
+
+The Select options demo (`routes/components-demo/form/select.demo.ts`) runs each of these against
+dummyjson.com.
 
 ### Sign-in style forms
 
@@ -136,6 +193,14 @@ prompts, the stepper's labels — is `FORM_MESSAGES` (`form.messages.ts`, Swahil
   the focus and the errors on screen stay, and the labels and messages change.
 - **Cross rules** are attached once, when the form is built. Give one a function for a message
   that should follow the language: `message: () => t().errors.mismatch` (SPEC §9).
+
+## Keyboard shortcuts
+
+**F** six times in a quick run lists the form's shortcuts: filled or outlined fields, room for
+hints, and on a form with steps their orientation, their order, the next step and the one before.
+`I` goes to the first field to fix. They change how the form is drawn for as long as it is on
+screen, never what was typed, and none submits or empties it. `shortcuts: false` in the params
+takes a form out. See SPEC §18 and the [shortcuts README](../../services/shortcuts/README.md).
 
 ## `fieldsClass` vs `fieldsContainerClass`
 

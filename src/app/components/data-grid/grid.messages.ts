@@ -2,6 +2,7 @@ import { defineMessages } from '@services/i18n/message-bundle';
 import { GRID_SW } from './grid.messages.sw';
 import type { GridSearchOperatorText } from './helpers/grid-search-bar.constants';
 import type { GridFilterOperator } from './interfaces/grid-filter.interface';
+import type { GridSelectionMode } from './interfaces/grid-parameter.interface';
 import type { GridRenderMode } from './interfaces/grid-render-mode.interface';
 import type { SearchType } from './interfaces/grid-search.interface';
 
@@ -42,6 +43,13 @@ const MODES: Record<GridRenderMode, string> = {
   table: 'Table',
   list: 'List',
   cards: 'Cards',
+};
+
+/** how rows are selected, as the Row selection shortcut says where it stands */
+const SELECTION_MODES: Record<GridSelectionMode, string> = {
+  none: 'Off',
+  single: 'One row',
+  multiple: 'Several rows',
 };
 
 export const GRID_EN = {
@@ -181,6 +189,28 @@ export const GRID_EN = {
     search: 'Search…',
     operator: 'Operator',
     types: SEARCH_TYPES,
+  },
+
+  /** the grid's keyboard shortcuts (`grid.shortcuts.ts`, SPEC.md §14): what each key switches */
+  shortcuts: {
+    scope: 'Data grid',
+    toolbar: 'Toolbar',
+    search: 'Search',
+    unifiedSearch: 'One search bar',
+    filters: 'Filters',
+    paginator: 'Paginator',
+    columnSettings: 'Column settings',
+    indexColumn: 'Row numbers',
+    selection: 'Row selection',
+    selectionModes: SELECTION_MODES,
+    view: 'View',
+    mergeCells: 'Merge equal cells',
+    resizable: 'Resizable columns',
+    export: 'Export',
+    addColumns: 'Adding columns from data',
+    reload: 'Reload',
+    rowDetails: 'Details of the row last clicked',
+    reset: 'Back to how it was set up',
   },
 };
 

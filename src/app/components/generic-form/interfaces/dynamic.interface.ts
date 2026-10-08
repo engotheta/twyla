@@ -1,3 +1,5 @@
+import type { Observable } from 'rxjs';
+
 // ─────────────────────────────────────────────
 // Dynamic prop system
 // ─────────────────────────────────────────────
@@ -5,7 +7,8 @@
 /**
  * Observes one or more control paths (top-most form scope, dot-notation for
  * nesting: 'address.street'). The callback receives the observed values in
- * path order and RETURNS the new prop value. Also invoked once at init.
+ * path order and RETURNS the new prop value — itself, as a Promise, or as an
+ * Observable (each emission is applied; SPEC §2). Also invoked once at init.
  *
  * For a field that lives inside an `isList` item (e.g. one row of an
  * `ObjectField` with `isList: true`), a path starting with `'./'` resolves
@@ -18,7 +21,7 @@
  */
 export interface ObserverParameter<T = unknown> {
   paths: string | string[];
-  callback: (...values: any[]) => T | Promise<T>;
+  callback: (...values: any[]) => T | Promise<T> | Observable<T>;
 }
 
 /** Every field prop can be static, or observed/derived from other controls. */
@@ -26,7 +29,7 @@ export type Dynamic<T> = T | ObserverParameter<T>;
 
 export const observe = <T>(
   paths: string | string[],
-  callback: (...values: any[]) => T | Promise<T>,
+  callback: (...values: any[]) => T | Promise<T> | Observable<T>,
 ): ObserverParameter<T> => ({ paths, callback });
 
 /** alias */

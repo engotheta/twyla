@@ -1029,7 +1029,7 @@ describe('ContentsViewComponent', () => {
     // rAF-batched apply), so the first column's share grew past 50
     expect(changes.length).toBeGreaterThan(0);
     expect(changes.at(-1)!.columns![0]).toBeGreaterThan(changes.at(-1)!.columns![1]);
-    expect(localStorage.getItem('studio.tab-state.contents-sizes:/:a|b|c')).toBeTruthy();
+    expect(localStorage.getItem('twyla.tab-state.contents-sizes:/:a|b|c')).toBeTruthy();
     // the handle itself moved right with the drag (live offset — the drag-end re-measure is a
     // later frame), it doesn't wait for a refresh
     expect(parseFloat(vGutter.style.left)).toBeGreaterThan(leftBefore);
@@ -1097,7 +1097,7 @@ describe('ContentsViewComponent', () => {
 
   it('restores a shape-compatible saved distribution from localStorage on mount', async () => {
     localStorage.setItem(
-      'studio.tab-state.contents-sizes:/:a|b|c',
+      'twyla.tab-state.contents-sizes:/:a|b|c',
       JSON.stringify({ columns: [4, 1], rows: [2, 1] }),
     );
     let instance: ContentsViewInstance | undefined;
@@ -1112,7 +1112,7 @@ describe('ContentsViewComponent', () => {
 
   it('ignores a saved distribution whose length no longer matches (falls back to equal)', async () => {
     localStorage.setItem(
-      'studio.tab-state.contents-sizes:/:a|b',
+      'twyla.tab-state.contents-sizes:/:a|b',
       JSON.stringify({ columns: [4, 1, 9] }), // 3 entries, only 2 columns now
     );
     let instance: ContentsViewInstance | undefined;
@@ -1413,7 +1413,7 @@ describe('ContentsViewComponent', () => {
 
   // ── collapsed panes are remembered, as the sizes are ──
 
-  const COLLAPSED_SLOT = 'studio.tab-state.contents-collapsed:/:a|b|c';
+  const COLLAPSED_SLOT = 'twyla.tab-state.contents-collapsed:/:a|b|c';
 
   it('remembers the collapsed panes: a new mount starts with them collapsed', async () => {
     const first = await mountSettled({ contents: threeContents, collapsible: true });
@@ -1450,7 +1450,7 @@ describe('ContentsViewComponent', () => {
 
   it('a restore skips panes that are gone and still keeps one open', async () => {
     localStorage.setItem(
-      'studio.tab-state.contents-collapsed:/:a|b',
+      'twyla.tab-state.contents-collapsed:/:a|b',
       JSON.stringify(['a', 'b', 'gone']),
     );
     let instance: ContentsViewInstance | undefined;
@@ -1507,8 +1507,8 @@ describe('ContentsViewComponent', () => {
 
     byLabel(on, 'Collapse X')!.click();
     on.detectChanges();
-    expect(localStorage.getItem('studio.tab-state.contents-collapsed:/:x|y')).toBe('["x"]');
-    expect(localStorage.getItem('studio.tab-state.contents-collapsed:/:g|a')).toBeNull();
+    expect(localStorage.getItem('twyla.tab-state.contents-collapsed:/:x|y')).toBe('["x"]');
+    expect(localStorage.getItem('twyla.tab-state.contents-collapsed:/:g|a')).toBeNull();
   });
 
   describe('full screen', () => {

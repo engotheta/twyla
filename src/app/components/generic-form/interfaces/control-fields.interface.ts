@@ -31,11 +31,14 @@ export interface SelectField<V = unknown> extends ValueField<V | V[]> {
   multiple?: boolean; // default false; invalid with variant 'radio'
   searchable?: boolean; // default true when options are long
   options?: Dynamic<Option<V>[]> | Observable<Option<V>[]> | Option<V>[];
-  optionsParameter?: OptionsParameter<any, V>;
+  /** an options source with its mapping, search and paging (SPEC §17). As an `observe()` it is
+   *  built again from other controls: the list starts over and is fetched anew */
+  optionsParameter?: Dynamic<OptionsParameter<any, V>>;
   hasNoneOption?: boolean; // prepends { label: 'None', value: null }
   /** object-valued options: equality fn for preselection */
   compareWith?: (a: V, b: V) => boolean;
-  virtualScroll?: boolean; // for very long option lists
+  /** for very long option lists; a `paginated` source renders plainly instead, a page at a time */
+  virtualScroll?: boolean;
 }
 
 export interface TextareaField extends ValueField<string> {

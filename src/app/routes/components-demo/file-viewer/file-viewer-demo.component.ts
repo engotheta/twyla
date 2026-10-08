@@ -135,9 +135,9 @@ export class FileViewerDemoComponent {
         attachment: { src: () => makePdf(), fileName: 'quarterly-report.pdf' },
       },
       {
-        label: 'Confidential (password: studio)',
+        label: 'Confidential (password: twyla)',
         source: 'Encrypted PDF',
-        attachment: { src: () => makePdf('studio'), fileName: 'confidential.pdf' },
+        attachment: { src: () => makePdf('twyla'), fileName: 'confidential.pdf' },
       },
       {
         label: 'Streamed report',

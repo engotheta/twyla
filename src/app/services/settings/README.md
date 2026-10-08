@@ -1,8 +1,8 @@
 # Settings
 
 What a person sets for themselves, on this device: theme, language, text size, contrast, motion,
-a more readable font, wider text spacing and density. Each change applies at once and is saved;
-there is no Save button.
+a more readable font, wider text spacing, density and keyboard shortcuts. Each change applies at
+once and is saved; there is no Save button.
 
 ```ts
 // app.config.ts
@@ -15,7 +15,7 @@ provideSettings({ storageKey: 'my-app.settings' }),
 <settings-panel [headingLevel]="2" />     <!-- the same controls, inside a page -->
 ```
 
-The studio has the button in the app header, the public header and the Modules page
+Twyla has the button in the app header, the public header and the Modules page
 (`LayoutConfig.showSettings`, default true), and the panel as a page at `/account/preferences`.
 
 ## The settings
@@ -30,9 +30,14 @@ The studio has the button in the app header, the public header and the Modules p
 | `font` | `default`, `readable` (Atkinson Hyperlegible Next) | `default` |
 | `textSpacing` | `default`, `wide` (the WCAG 1.4.12 values) | `default` |
 | `density` | `comfortable`, `compact` (Material density −2) | `comfortable` |
+| `shortcuts` | `on`, `off` | `on` |
 
 - **`system` stays live.** It follows the browser or operating system and changes when they do;
   the stored value stays `system`.
+- **`shortcuts`** is the person's own switch for the app's keyboard shortcuts (WCAG 2.1.4). Off,
+  no key is a shortcut. The panel shows it under "Keyboard", with a "View shortcuts" button that
+  opens the list of every shortcut on the page; an app that has turned shortcuts off
+  (`provideShortcuts({ enabled: false })`) shows neither.
 - **Motion has no "full".** Where the operating system asks for less motion, the browser and
   Angular Material hold back on their own; nothing here can make them move again.
 - **An app can change the defaults:** `provideSettings({ defaults: { theme: 'light' } })`.
@@ -48,6 +53,14 @@ settings.textScale(); // 1, 1.125, 1.25 or 1.5
 settings.update({ theme: 'dark' }, { x, y }); // the reveal opens from that point
 settings.reset(); // back to the defaults; the stored choice is forgotten
 ```
+
+## From the keyboard
+
+`provideSettings` also registers the app's own shortcuts (`settings.shortcuts.ts`), there on
+every page: **A** six times in a quick run, then `D` dark theme, `L` the next language, `T` the
+next text size, `C` compact density, `K` more contrast, `F` full screen, `S` this panel. Each
+goes through `settings.update`, so it is saved like a change made in the panel, and said as it
+is made. See the [shortcuts README](../shortcuts/README.md).
 
 ## How a setting reaches the page
 
@@ -108,6 +121,8 @@ remains the full-fidelity way to enlarge a page.
 
 - Each setting with choices is a radio group in a `<fieldset>`; each on/off setting is a switch.
   Every control has a visible label, and a hint tied to it.
+- "View shortcuts" closes the sheet before it opens the list, so the list is of the page's
+  shortcuts and not of what a dialog leaves in reach.
 - The sheet is a dialog: focus moves in, Tab stays inside, Esc closes and focus returns to the
   button.
 - A change is announced politely ("Theme: Dark").

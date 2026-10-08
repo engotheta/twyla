@@ -7,8 +7,11 @@ import {
   FormField,
   FormInstance,
   FormParameter,
+  isObserver,
   mapRawOptions,
+  optionsRequest,
   resolveOptionsSource,
+  toOptionsPage,
 } from '@components/generic-form';
 import { map, Subscription } from 'rxjs';
 import { FORM_MESSAGES } from '@components/generic-form/form.messages';
@@ -104,7 +107,8 @@ export class GridSearchFilters<RowType = any> {
       { injector },
     );
 
-    // options a select filter loads through `optionsParameter` — once per form, like the panel
+    // options a select filter loads through `optionsParameter` — once per form: the first page of
+    // a source declared as it is (one built by `observe()` is the panel's to follow)
     effect(
       (onCleanup) => {
         const built = this.built();
@@ -175,8 +179,9 @@ export class GridSearchFilters<RowType = any> {
     for (const field of built.fields) {
       if (field.type !== FieldType.select || !field.key) continue;
       const params = field.optionsParameter;
-      const load = params?.optionsFunction;
-      if (!params || !load) continue;
+      if (!params || isObserver(params)) continue;
+      const load = params.optionsFunction;
+      if (!load) continue;
 
       const key = field.key;
       const settle = (): void =>
@@ -187,8 +192,8 @@ export class GridSearchFilters<RowType = any> {
         });
       this.loading.update((keys) => new Set(keys).add(key));
       subs.push(
-        resolveOptionsSource(() => load(built.instance.formState().value))
-          .pipe(map((raw) => mapRawOptions(raw, params)))
+        resolveOptionsSource(() => load(optionsRequest(params, built.instance.formState())))
+          .pipe(map((result) => mapRawOptions(toOptionsPage(result).content, params)))
           .subscribe({
             next: (options) => {
               this.loaded.update((all) => ({ ...all, [key]: options }));

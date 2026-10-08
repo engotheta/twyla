@@ -25,9 +25,13 @@ Vocabulary: "the engine" = `FormEngineService` + `FormInstance`. "config" = a
 
 ## 2. Async Dynamic callbacks
 
-- Callbacks may return `T | Promise<T>`. Resolution is **latest-wins**
-  (`switchMap` semantics): if the observed controls change again before the
-  previous promise resolves, the stale result is discarded.
+- Callbacks may return `T | Promise<T> | Observable<T>`. Resolution is
+  **latest-wins** (`switchMap` semantics): if the observed controls change
+  again before the previous promise resolves, the stale result is discarded.
+- An Observable is subscribed to, and **each emission is applied** — so a
+  callback can hand back `FetchService.fetch$(…)` as it is, and a
+  `cache-and-network` call shows the cached value, then the fresh one. It is
+  unsubscribed when the observed controls change again, or the field goes.
 - While a promise is pending the prop keeps its previous resolved value
   (no flicker to `undefined`).
 
@@ -217,7 +221,8 @@ index?)` to remove one — it never touches `uploadFn`, status, or the
 - `readonly` renders the control non-editable but keeps it enabled — it stays
   in the form value (unlike `disabled`).
 - `hasNoneOption` prepends `{ label: 'None', value: null }` after options
-  resolve, before sorting.
+  resolve, before sorting. A server search (§17) leaves it out while there is
+  text in the search box.
 - Deprecated `onModalClose` / `onCloseAction` both forward to `onClose`.
 - `inputType: 'password'` fields get a "Show password" suffix toggle
   (`aria-pressed`, switches the input to `type="text"`); `revealable: false`
@@ -342,3 +347,113 @@ language.
   field was first declared with — so a kept field keeps its component, and with it the focus,
   the caret and whatever it has open.
 - The same array reference twice is nothing to do. The first emission is the build itself.
+
+## 17. Select option sources
+
+A select's options come from one of two places.
+
+- **`options`**: the list itself — an array, a bare Observable of one, or an `observe()` whose
+  callback returns one (§1, §2). Nothing more is asked of it.
+- **`optionsParameter`**: a _source_ — `optionsFunction`, with how to map, search and page what it
+  answers with. `optionsParameter.optionsFunction` set, `options` is not read.
+
+**The request.** `optionsFunction(request)` is handed one `OptionsRequest`: `search` (the search
+box's text under `searchMode: 'server'`, else `''`), `page` (1-based; 1 unless `paginated`), `size`
+(`pageSize`, default 25), `filters` (`optionsParameter.filters`, as declared) and `formState`. It
+answers with the raw options or with a page of them (`{ content, totalLength?, hasMore? }`, the
+grid's `GridData` shape) — as a value, a Promise or an Observable. Raw options become `Option`s
+through `mapper`, else `labelKey` / `valueKey`.
+
+**When it is asked.**
+
+- Once, as the select is created — eagerly, so a held value has its label.
+- Again whenever `optionsParameter` is a **new object**: the list starts over, empty, and loads
+  from the first page. This is how options follow another field: declare the parameter as
+  `observe('country', (country) => ({ filters: { country }, optionsFunction }))` and the engine
+  hands the select a new one each time `country` changes (§1). A function that should not fetch
+  yet answers `[]`.
+- `searchMode: 'server'`: again each time the search box's text changes, after `searchDebounce`
+  ms of quiet (default 300), trimmed, and never twice running for the same text. The list on
+  screen stays until the new one is in. Under `minSearchLength`, nothing is asked for and the
+  list says how much to type. Closing the select clears the search, which asks for the whole
+  list again.
+- `paginated`: for the next page each time the end of the list scrolls into view, one page at a
+  time, until `hasMore` is false, `totalLength` options are held, or — where the answer says
+  neither — a page comes back short. A new search starts again from page 1.
+
+**Latest wins.** A new parameter or a new search drops the request before it (`switchMap`): its
+answer, if it still comes, is ignored. A non-paginated Observable may answer more than once, each
+answer replacing the last; a paginated one is heard once per page.
+
+**`filters`** are the request's fixed criteria: sent with every call, whatever is typed or paged.
+They are the function's to put on the wire.
+
+**Searching.** `searchMode: 'local'` (default) narrows what was loaded, by label, in the browser;
+with `paginated` that is only the pages loaded so far, and the end of the list asks for nothing
+while there is text in the box (a search that leaves little on screen would otherwise pull page
+after page). `'server'` shows the search box whatever `searchable` says, and shows what the source
+answered, unfiltered.
+
+**The search box's keys.** The box sits inside the list, and the list (a popover) inside the
+select, so a key left to bubble would be answered twice. The box stops every key; arrows, Enter
+and Tab are handed to the select once, Esc closes it, and the rest is typing. Opening the list
+moves focus to the box; closing it returns focus to the select.
+
+**The search box and the listbox.** Material's panel is the `listbox` the select controls, and a
+listbox may hold options only. So the options sit in an element of their own; where there is a
+search box that element takes the listbox role over from the panel on every open — its id (what
+the select's `aria-controls` names), its name, its multi-select flag — and the panel becomes a
+plain container, with the box beside the list rather than inside it. The rows that say where the
+list stands ("Loading options…", "No options found") are disabled options for the same reason.
+
+**Order.** `sortBy` sorts what a non-paginated source answered. A paginated source's order is the
+server's.
+
+**What is selected stays.** `mat-select` reads its value, and the label it shows, from the options
+it has. So the options of selected values that are not mounted — left out by a search, on a page
+not loaded yet, or scrolled out of a `virtualScroll` window — stay mounted all the same: ahead of
+the list while nothing is searched for, hidden during a search and in a virtual list. A multiple
+select therefore keeps what it held when something else is searched for, scrolled to and picked,
+and its value stays in the order of the list (`sortComparator`). This holds for a plain `options`
+list too. For a value no loaded page has, `selectedFunction(values)` is asked once for its raw
+option; without one the value is shown as it is.
+
+**Failure.** A source that fails (or throws) shows "The options could not be loaded"; opening the
+select asks again. A further page that fails leaves the pages before it, and is asked for again
+the next time the end of the list is reached.
+
+**Where it lives.** `fields/select-field/options-source.ts` holds the request lifecycle as
+signals; the component subscribes to no control (README rule 1). `virtualScroll` is ignored for a
+paginated source, which renders a page at a time instead. The radio, checkbox, toggle and button
+variants show the first answer only: they have no search box and no end to scroll to. The grid's
+filter bar (data-grid SPEC §12) loads the first page of a parameter declared as an object.
+
+## 18. Keyboard shortcuts
+
+The form is one of the app's shortcut scopes (`services/shortcuts/README.md`): its key, **F**,
+pressed six times in a quick run arms it and lists what its keys do; one more key runs one.
+
+| Key | What it does | Offered |
+| --- | --- | --- |
+| `A` | filled fields (`appearance`) | always |
+| `H` | room for hints and errors (`showSubscript`) | always |
+| `O` | steps down the side (`stepperOrientation`) | a form with steps |
+| `L` | steps in order only (`linearSteppers`) | a form with steps |
+| `N` | next step | while there is one |
+| `P` | previous step | while there is one |
+| `I` | go to the first field to fix | always; it closes the hint |
+| `0` | back to how it was set up | once something has been switched |
+
+- **An override, not a new config.** A key lays a patch over the form's params for as long as the
+  form is on screen. `GenericFormComponent.params` is the params in force — the `[params]` it was
+  given with that patch over them — and it is what the engine, the template and the fields read.
+  `fields` is never overridden, so §16 has nothing to reconcile: the controls, what was typed and
+  the focus stay as they are. Nothing is saved; `0` drops the patch.
+- **`N` and `P` are the stepper's own buttons:** `N` is held back by `linearSteppers` and by a
+  step's `onProceed`, exactly as the Next button is.
+- **`I`** marks every control touched, so the errors show, then moves focus to the first invalid
+  one — what a failed submit does (§7), without submitting.
+- **Nothing here submits the form or empties it.** A key pressed in passing must not do either.
+- **`FormParameter.shortcuts: false`** takes a form out: for one that is part of something else
+  (the grid sets it on its filter panel and its cell editors), or that must stay as configured.
+- The text is `FORM_MESSAGES.shortcuts`; the list is built in `form.shortcuts.ts`.

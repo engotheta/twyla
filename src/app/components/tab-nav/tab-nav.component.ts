@@ -19,10 +19,14 @@ import {
   viewChildren,
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { injectMessages } from '@services/i18n/message-bundle';
+import { registerShortcuts } from '@services/shortcuts/shortcuts.service';
 import { mergeClasses } from '@utils/class-name.helpers';
 import { prefersReducedMotion } from '@utils/motion.helpers';
 import { TabNavItemDirective } from './tab-nav-item.directive';
 import { TabNavClasses, TabNavItem } from './tab-nav.interface';
+import { TAB_NAV_MESSAGES } from './tab-nav.messages';
+import { TAB_NAV_SCOPE, tabNavShortcuts } from './tab-nav.shortcuts';
 
 /** Material's paginated tab header: a held arrow starts repeating after this long… */
 const PAGING_DELAY_MS = 650;
@@ -97,6 +101,7 @@ export class TabNavComponent {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
+  private readonly t = injectMessages(TAB_NAV_MESSAGES);
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly dir = inject(Directionality, { optional: true });
 
@@ -149,6 +154,21 @@ export class TabNavComponent {
   private pagingRepeat?: ReturnType<typeof setInterval>;
 
   constructor() {
+    // T, six times in a quick run, lists the shortcuts: a step to the next tab or the one before
+    registerShortcuts(
+      TAB_NAV_SCOPE,
+      () =>
+        tabNavShortcuts(
+          {
+            tabs: this.tabs,
+            activeKey: this.activeKey,
+            select: (key) => this.tabSelect.emit(key),
+          },
+          this.t,
+        ),
+      { label: () => this.t().shortcuts.scope, name: () => this.ariaLabel() },
+    );
+
     effect(() => {
       const vertical = this.vertical();
       this.keyManager

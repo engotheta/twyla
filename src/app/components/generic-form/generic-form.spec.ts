@@ -1,7 +1,7 @@
 import { ANIMATION_MODULE_TYPE, ApplicationRef, Component, Injector, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Validators } from '@angular/forms';
-import { map, tap, timer } from 'rxjs';
+import { map, Subject, tap, timer } from 'rxjs';
 import { FieldType } from './interfaces/field-type.interface';
 import { observe } from './interfaces/dynamic.interface';
 import { FormEngineService, FormInstance } from './form-engine.service';
@@ -98,6 +98,54 @@ describe('FormEngineService (logic)', () => {
     const state = instance.fieldState(cityField)();
     expect((state as { options: unknown[] }).options).toEqual([{ label: 'NYC', value: 'nyc' }]);
     expect(state.visible).toBe(true);
+  });
+
+  it('subscribes to an Observable an observer returns, applying each emission (SPEC §2)', () => {
+    const cities$ = new Subject<{ label: string; value: string }[]>();
+    const params: FormParameter<Record<string, unknown>> = {
+      fields: [
+        { type: FieldType.select, key: 'country', value: 'us', options: [] },
+        { type: FieldType.select, key: 'city', options: observe('country', () => cities$) },
+      ],
+    };
+    const instance = engine.build(signal(params), injector);
+    const cityField = instance.fields.find((f) => f.key === 'city')!;
+    const options = () => (instance.fieldState(cityField)() as { options: unknown }).options;
+
+    cities$.next([{ label: 'NYC', value: 'nyc' }]);
+    expect(options()).toEqual([{ label: 'NYC', value: 'nyc' }]);
+
+    cities$.next([]);
+    expect(options()).toEqual([]);
+  });
+
+  it('builds an optionsParameter from another control, anew each time that control changes', async () => {
+    const params: FormParameter<Record<string, unknown>> = {
+      fields: [
+        { type: FieldType.select, key: 'country', value: 'us', options: [] },
+        {
+          type: FieldType.select,
+          key: 'city',
+          optionsParameter: observe('country', (country: string) => ({ filters: { country } })),
+        },
+      ],
+    };
+    const instance = engine.build(signal(params), injector);
+    const cityField = instance.fields.find((f) => f.key === 'city')!;
+    const parameter = () =>
+      (instance.fieldState(cityField)() as { optionsParameter?: unknown }).optionsParameter;
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const first = parameter();
+    expect(first).toEqual({ filters: { country: 'us' } });
+
+    instance.form.get('country')!.setValue('tz');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(parameter()).toEqual({ filters: { country: 'tz' } });
+    expect(parameter()).not.toBe(first);
   });
 
   describe('isList object fields', () => {

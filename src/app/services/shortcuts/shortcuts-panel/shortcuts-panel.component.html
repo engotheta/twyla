@@ -1,0 +1,42 @@
+@let text = t();
+
+<div class="flex flex-col gap-5">
+  <div class="flex flex-col gap-1 text-sm text-gray-700">
+    <p>{{ text.panel.intro(presses) }}</p>
+    <p>{{ text.panel.alsoHere }}</p>
+  </div>
+
+  @for (group of groups(); track group.target; let i = $index) {
+    <section class="border-t border-gray-200 pt-4" [attr.aria-labelledby]="id + '-' + i">
+      <!-- (the space between the two is spelled out: without it they are read as one word) -->
+      <h3 class="flex items-baseline justify-between gap-3" [id]="id + '-' + i">
+        <span class="min-w-0 truncate text-base font-semibold text-gray-900">{{ group.title }}</span
+        >&ngsp;<span class="shrink-0 text-xs font-normal text-gray-700">{{
+          text.panel.times(keyCap(group.key), presses)
+        }}</span>
+      </h3>
+
+      <ul class="mt-2 flex flex-col">
+        @for (row of group.shortcuts; track row.id) {
+          <li>
+            <!-- named in full: what it does, where it stands, its key -->
+            <button
+              type="button"
+              class="flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-lg px-2 text-start text-sm text-gray-900 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              [attr.aria-label]="name(row)"
+              (click)="run(group.target, row.id)"
+            >
+              <span class="min-w-0 flex-1">{{ row.label }}</span>
+              @if (row.state) {
+                <span class="shrink-0 text-xs text-gray-700">{{ row.state }}</span>
+              }
+              <kbd [class]="cap">{{ keyCap(row.key) }}</kbd>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  } @empty {
+    <p class="border-t border-gray-200 pt-4 text-sm text-gray-700">{{ text.panel.none }}</p>
+  }
+</div>

@@ -146,6 +146,12 @@ export interface ContentsLayout {
    *  destroyed on tab switch; set false to free resources for a rarely-revisited or expensive tab
    *  instead. Only relevant when `showContentsInTabs` is true. */
   preserveInactiveContent?: boolean;
+  /** default true: this level answers its keyboard shortcuts — its key, C, pressed six times in
+   *  a quick run lists them (tabs or a list, where the tabs go, resizing, collapsing, full
+   *  screen, the fit), and C again moves to the next level on the page. What they switch lasts
+   *  while the level is on screen. CASCADES to nested levels like `resizable`: `shortcuts: false`
+   *  on an ancestor leaves the whole tree as configured. */
+  shortcuts?: boolean;
 }
 
 /**

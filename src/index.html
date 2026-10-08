@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Studio</title>
+    <title>Twyla</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
@@ -19,7 +19,7 @@
          security policy, allow this script by hash or move it to a file. -->
     <script>
       try {
-        var theme = (JSON.parse(localStorage.getItem('studio.settings')) || {}).theme;
+        var theme = (JSON.parse(localStorage.getItem('twyla.settings')) || {}).theme;
         var systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
         if (theme === 'dark' || (theme !== 'light' && systemDark)) {
           document.documentElement.classList.add('dark');

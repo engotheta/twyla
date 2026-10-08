@@ -25,6 +25,7 @@ import {
 import { ActionButtonsComponent } from '@components/action-buttons/action-buttons.component';
 import { injectMessages } from '@services/i18n/message-bundle';
 import { SettingsButtonComponent } from '@services/settings/settings-button.component';
+import { toggleDocumentFullscreen } from '@utils/fullscreen-overlay.helpers';
 import { BrandLogoComponent } from '../brand-logo.component';
 import { LAYOUT_CONFIG, LayoutNotification } from '../layout-config.token';
 import { LAYOUT_MESSAGES } from '../layout.messages';
@@ -100,8 +101,7 @@ export class AppHeaderComponent {
   }
 
   protected toggleFullscreen(): void {
-    if (this.document.fullscreenElement) void this.document.exitFullscreen();
-    else void this.document.documentElement.requestFullscreen();
+    toggleDocumentFullscreen(this.document);
   }
 
   protected syncFullscreen(): void {

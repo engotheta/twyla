@@ -93,7 +93,7 @@ $gray-dark: (
     }
   }
 
-  // ── studio's own tokens (`_variables.scss`, `tailwind.css`) ──
+  // ── Twyla's own tokens (`_variables.scss`, `tailwind.css`) ──
   --color-dark: #ffffff;
   --color-neutral: #{map.get($gray-dark, 200)};
   --color-pale: #{map.get($gray-dark, 100)};

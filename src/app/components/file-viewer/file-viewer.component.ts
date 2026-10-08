@@ -25,6 +25,8 @@ import { ActionButton } from '@components/action-buttons/action-button.interface
 import { syncOverlayContainer } from '@utils/fullscreen-overlay.helpers';
 import { injectMessages } from '@services/i18n/message-bundle';
 import { NotificationService } from '@services/notification';
+import { registerShortcuts } from '@services/shortcuts/shortcuts.service';
+import { FILE_VIEWER_SCOPE, fileViewerShortcuts } from './file-viewer.shortcuts';
 import {
   FileKind,
   FileViewerError,
@@ -191,8 +193,10 @@ export class FileViewerComponent {
   });
   private readonly current = computed(() => this.items()[this.position()]);
 
+  /** what the title-bar shortcut switched, until the viewer goes: it wins over the inputs */
+  private readonly titleOverride = signal<boolean | undefined>(undefined);
   protected readonly showTitle_ = computed(
-    () => this.showTitle() ?? this.params()?.showTitle ?? true,
+    () => this.titleOverride() ?? this.showTitle() ?? this.params()?.showTitle ?? true,
   );
   protected readonly toolbar_ = computed(() => this.toolbar() ?? this.params()?.toolbar ?? {});
   protected readonly actionButtons_ = computed(
@@ -313,6 +317,51 @@ export class FileViewerComponent {
   private firstFile = true;
 
   constructor() {
+    // V, six times in a quick run, lists the viewer's commands: a way to them from anywhere on
+    // the page. The keys it answers to while it has focus (`handleKeydown`) stay as they are.
+    registerShortcuts(
+      FILE_VIEWER_SCOPE,
+      () => {
+        const capable = this.controller.capabilities();
+        const shown = this.toolbar_();
+        return fileViewerShortcuts(
+          {
+            canZoom: () => !!capable.zoom && shown.zoom !== false,
+            canRotate: () => !!capable.rotate && shown.rotate !== false,
+            canSearch: () => !!capable.search && shown.search !== false,
+            canShowThumbnails: () => !!capable.thumbnails && shown.thumbnails !== false,
+            canFullscreen: () => this.fullscreenSupported && shown.fullscreen !== false,
+            canDownload: () => !!this.file() && shown.download !== false,
+            several: () => this.items().length > 1 && shown.navigation !== false,
+
+            zoomIn: () => this.controller.zoomIn(),
+            zoomOut: () => this.controller.zoomOut(),
+            resetZoom: () =>
+              this.controller.setZoom(DEFAULT_ZOOM[this.file()?.kind ?? 'image'] ?? 'fit'),
+            rotate: () => this.controller.rotate(90),
+            step: (by) => {
+              const count = this.items().length;
+              this.navigate((this.position() + by + count) % count);
+            },
+            find: () => this.controller.openFind(),
+            toggleFullscreen: () => this.toggleFullscreen(),
+            isFullscreen: this.isFullscreen,
+            download: () => void this.download(),
+            thumbnailsOpen: this.controller.thumbnailsOpen,
+            toggleThumbnails: () => this.controller.toggleThumbnails(),
+            titleShown: this.showTitle_,
+            showTitle: (shown) => this.titleOverride.set(shown),
+          },
+          this.t,
+        );
+      },
+      {
+        label: () => this.t().toolbar.label,
+        name: () => this.file()?.name,
+        enabled: () => this.params()?.shortcuts !== false,
+      },
+    );
+
     // object URL for the bytes, revoked as soon as the file changes or the viewer goes
     effect((onCleanup) => {
       const blob = this.file()?.blob;

@@ -561,7 +561,11 @@ export class FormEngineService {
       return src;
     });
     return combineLatestValues(sources).pipe(
-      switchMap((values) => from(Promise.resolve(def.callback(...values)))),
+      switchMap((values) => {
+        // an Observable is subscribed to (`FetchService.fetch$()`), not handed on as the value
+        const result = def.callback(...values);
+        return isObservable(result) ? result : from(Promise.resolve(result));
+      }),
     );
   }
 

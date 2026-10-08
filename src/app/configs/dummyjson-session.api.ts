@@ -31,7 +31,7 @@ interface DummyLogin extends DummyUser {
 }
 
 /**
- * The studio's session backend: a real sign-in against dummyjson.com (`POST /auth/login`, then
+ * Twyla's session backend: a real sign-in against dummyjson.com (`POST /auth/login`, then
  * `GET /auth/me` for the role), so tokens, avatars and permissions are real; registering and
  * password resets stay local (`createFakeSessionApi`) — dummyjson can't send emails. Call it from
  * `provideSessionConfig(() => ({ api: dummyJsonSessionApi() }))`: it injects HttpClient.
@@ -87,7 +87,7 @@ function toSessionUser(user: DummyUser): SessionUser {
     avatar: user.image,
     type: 'internal',
     roles: user.role ? [user.role] : [],
-    // the studio's Administration module asks for 'admin'
+    // Twyla's Administration module asks for 'admin'
     permissions: user.role === 'admin' ? ['admin'] : [],
   };
 }
